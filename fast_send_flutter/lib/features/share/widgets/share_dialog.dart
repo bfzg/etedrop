@@ -1,0 +1,213 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+
+import '../models/share_record.dart';
+import '../providers/share_provider.dart';
+
+/// 创建分享对话框
+/// 对应 Electron: src/components/cloud/share-dialog.tsx
+class ShareDialog extends ConsumerStatefulWidget {
+  final String relativePath;
+  final String fileName;
+  final int fileSize;
+
+  const ShareDialog({
+    super.key,
+    required this.relativePath,
+    required this.fileName,
+    required this.fileSize,
+  });
+
+  static Future<ShareInfo?> show(
+    BuildContext context, {
+    required String relativePath,
+    required String fileName,
+    required int fileSize,
+  }) {
+    return showDialog<ShareInfo>(
+      context: context,
+      builder: (_) => ShareDialog(
+        relativePath: relativePath,
+        fileName: fileName,
+        fileSize: fileSize,
+      ),
+    );
+  }
+
+  @override
+  ConsumerState<ShareDialog> createState() => _ShareDialogState();
+}
+
+class _ShareDialogState extends ConsumerState<ShareDialog> {
+  final _passwordController = TextEditingController();
+  bool _usePassword = false;
+  int? _expiresIn;
+  bool _loading = false;
+  ShareInfo? _result;
+  String? _error;
+
+  static const _expiresOptions = <(String, int?)>[
+    ('永不过期', null),
+    ('1 小时', 3600000),
+    ('24 小时', 86400000),
+    ('7 天', 604800000),
+    ('30 天', 2592000000),
+  ];
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _createShare() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+
+    try {
+      final info = await ref.read(shareListProvider.notifier).createShare(
+            widget.relativePath,
+            fileName: widget.fileName,
+            fileSize: widget.fileSize,
+            password: _usePassword ? _passwordController.text : null,
+            expiresIn: _expiresIn,
+          );
+      setState(() => _result = info);
+    } catch (e) {
+      setState(() => _error = '创建分享失败: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    if (_result != null) {
+      return AlertDialog(
+        title: const Text('分享已创建'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('文件: ${widget.fileName}', style: theme.textTheme.bodyMedium),
+            const SizedBox(height: 16),
+            Text('分享码', style: theme.textTheme.labelMedium),
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      _result!.code,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 2,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.copy),
+                    tooltip: '复制分享码',
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: _result!.code));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('已复制分享码'), duration: Duration(seconds: 1)),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            if (_result!.hasPassword) ...[
+              const SizedBox(height: 8),
+              Text('密码: ${_passwordController.text}',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
+            ],
+            if (_result!.expiresAt != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                '过期时间: ${DateTime.fromMillisecondsSinceEpoch(_result!.expiresAt!).toString().substring(0, 16)}',
+                style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(_result),
+            child: const Text('完成'),
+          ),
+        ],
+      );
+    }
+
+    return AlertDialog(
+      title: const Text('创建分享'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('文件: ${widget.fileName}', style: theme.textTheme.bodyMedium),
+          const SizedBox(height: 16),
+          // 密码选项
+          SwitchListTile(
+            title: const Text('设置密码'),
+            value: _usePassword,
+            contentPadding: EdgeInsets.zero,
+            onChanged: (v) => setState(() => _usePassword = v),
+          ),
+          if (_usePassword)
+            TextField(
+              controller: _passwordController,
+              decoration: const InputDecoration(
+                hintText: '输入密码',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          const SizedBox(height: 16),
+          // 过期时间
+          Text('过期时间', style: theme.textTheme.labelMedium),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<int?>(
+            initialValue: _expiresIn,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            items: _expiresOptions
+                .map((e) => DropdownMenuItem(value: e.$2, child: Text(e.$1)))
+                .toList(),
+            onChanged: (v) => setState(() => _expiresIn = v),
+          ),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            Text(_error!, style: TextStyle(color: theme.colorScheme.error, fontSize: 13)),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _loading ? null : () => Navigator.of(context).pop(),
+          child: const Text('取消'),
+        ),
+        FilledButton(
+          onPressed: _loading ? null : _createShare,
+          child: _loading
+              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('创建分享'),
+        ),
+      ],
+    );
+  }
+}

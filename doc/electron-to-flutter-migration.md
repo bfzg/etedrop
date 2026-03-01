@@ -1,0 +1,814 @@
+# FastSend Flutter + NestJS 技术方案（迁移后）
+
+> 更新时间：2026-03
+>
+> 说明：Electron 侧迁移已基本完成，本文档由“迁移计划”升级为“迁移后现状 + 下一阶段实施方案（含 NestJS 信令服务器/心理服务器规划）”。
+
+## 一、项目现状分析（迁移后）
+
+### 1.1 Electron 项目 (`fast_send_desktop`) 功能清单
+
+| 模块 | 功能 | 技术实现 | 迁移优先级 |
+|------|------|----------|-----------|
+| **网盘文件管理** | 文件列表、导航、面包屑 | React + IPC → Node.js fs | ⭐⭐⭐⭐⭐ |
+| **文件操作** | 上传、删除、新建文件夹、拖拽上传 | Electron IPC + Node.js fs | ⭐⭐⭐⭐⭐ |
+| **文件分享** | 生成分享码/链接、密码保护、过期时间 | 本地 shares.json 持久化 | ⭐⭐⭐⭐⭐ |
+| **设备管理** | 设备ID生成、设备名称、WebSocket 注册 | device-config.json + ws | ⭐⭐⭐⭐⭐ |
+| **WebRTC 发送** | 选文件/文件夹 → 生成取件码 → P2P 传输 | SignalingService + PeerDataChannel | ⭐⭐⭐⭐ |
+| **WebRTC 接收** | 输入取件码 → 连接 → 接收文件 | SignalingService + PeerDataChannel | ⭐⭐⭐⭐ |
+| **系统托盘** | 最小化到托盘、托盘菜单 | Electron Tray API | ⭐⭐⭐ |
+| **开机自启** | 系统登录时自动启动 | app.setLoginItemSettings | ⭐⭐⭐ |
+| **设置页** | 主题切换、语言切换、下载路径、启动项 | React + IPC | ⭐⭐⭐ |
+| **国际化** | 中/英文切换 | i18next | ⭐⭐ |
+| **信令服务连接** | 启动时自动连接信令服务器、心跳、重连 | ws (Node.js WebSocket) | ⭐⭐⭐⭐⭐ |
+
+### 1.2 Flutter 项目 (`fast_send_flutter`) 现状
+
+**已有基础设施：**
+- **状态管理**：Riverpod (hooks_riverpod + riverpod_annotation + riverpod_generator)
+- **路由**：go_router（已配置 StatefulShellRoute）
+- **网络请求**：Dio + 拦截器（Auth + Log）
+- **本地存储**：SharedPreferences（封装为 LocalStorageService）
+- **数据模型**：freezed + json_serializable
+- **UI 组件库**：tdesign_flutter
+- **日志**：logger
+- **加密**：crypto
+
+**当前功能实现状态（已落地）：**
+- **网盘模块（cloud）**：文件列表、面包屑、上传、删除、新建目录、切换存储目录
+- **分享模块（share）**：本地分享记录持久化（`shares.json`）、分享码生成、密码/过期时间
+- **设备模块（device）**：设备配置持久化（`device-config.json`）、WebSocket 连接、心跳、重连
+- **传输模块（transfer）**：WebRTC DataChannel + 信令服务、发送页/接收页基础状态机
+- **设置模块（settings）**：主题/语言、设备名、存储路径、桌面端开机自启/托盘行为
+
+**当前目录结构（实际）：**
+```
+lib/
+├── main.dart                    # 入口
+├── app.dart                     # MaterialApp.router
+├── core/
+│   ├── http/                    # Dio 网络层
+│   ├── models/                  # 数据模型 (freezed)
+│   ├── router/                  # go_router 路由
+│   └── utils/                   # 工具类
+├── features/
+│   ├── cloud/
+│   ├── device/
+│   ├── settings/
+│   ├── share/
+│   └── transfer/
+├── l10n/                        # 国际化
+├── providers/                   # Riverpod providers
+├── services/                    # 服务层
+├── styles/                      # 全局样式
+└── widgets/                     # 通用组件
+```
+
+### 1.3 Electron vs Flutter 技术对照
+
+| Electron 技术 | Flutter 对应方案 | 说明 |
+|---------------|-----------------|------|
+| Node.js `fs` 模块 | `dart:io` (File/Directory) | Flutter 桌面端可直接访问文件系统 |
+| Electron IPC (oRPC) | 不需要 | Flutter 无进程隔离，直接调用 Dart 代码 |
+| WebSocket (`ws` npm) | `web_socket_channel` | Dart 原生 WebSocket 支持 |
+| WebRTC (`RTCPeerConnection`) | `flutter_webrtc` | 成熟的 Flutter WebRTC 插件 |
+| React + shadcn-ui | Flutter Widget + tdesign_flutter | 已有 tdesign_flutter |
+| i18next | `flutter_localizations` + `intl` | Flutter 官方国际化方案 |
+| Electron Tray | `system_tray` / `tray_manager` | Flutter 桌面托盘插件 |
+| `app.setLoginItemSettings` | `launch_at_startup` | Flutter 开机自启插件 |
+| `electron-forge` 打包 | `flutter build` | Flutter 原生打包 |
+| CryptoJS (MD5) | `crypto` (已有) | Dart crypto 包 |
+| localStorage | SharedPreferences (已有) | 已封装 LocalStorageService |
+
+### 1.4 NestJS 服务端 (`fast_send_server`) 现状
+
+**当前状态：**
+- 项目已用 NestJS 初始化，但仍处于脚手架阶段
+- `AppModule` 仅注册默认 `AppController` / `AppService`
+- 暂未落地业务模块（认证、分享、设备、信令、WebSocket Gateway）
+
+**结论：**
+- Flutter 客户端基础能力已具备；
+- 下一阶段重心应转为：**NestJS 信令服务器（你说的“心理服务器”）+ 分享/设备 API 完整化 + Flutter 联调收口**。
+
+---
+
+## 二、Flutter 项目结构（已完成 + 待优化）
+
+项目已基本完成从 `pages/` 扁平结构到 `features/` 模块化结构的迁移，当前建议聚焦于：
+
+1. 模块内进一步解耦（`service` 与 `provider` 之间补充接口层）
+2. 网络层配置中心化（`baseUrl`、WS 地址、超时、重试策略）
+3. 关键流程补齐异常兜底（断网、重连、文件覆盖策略、权限失败）
+
+目标结构如下（保留作为约束基线）：
+
+```
+lib/
+├── main.dart
+├── app.dart
+│
+├── core/                           # 核心层（不变）
+│   ├── config/
+│   │   └── constants.dart          # [新增] 全局常量（服务器地址等）
+│   ├── http/                       # (已有) Dio 网络层
+│   ├── models/                     # (已有) 全局数据模型
+│   ├── router/
+│   │   └── router_provider.dart    # [修改] 添加新路由
+│   └── utils/
+│       └── encrypt_utils.dart      # (已有)
+│
+├── features/                       # [新增] 按功能模块划分
+│   ├── cloud/                      # 网盘文件管理
+│   │   ├── models/
+│   │   │   └── fs_entry.dart       # 文件条目模型
+│   │   ├── providers/
+│   │   │   └── cloud_provider.dart # 文件列表状态
+│   │   ├── services/
+│   │   │   └── file_service.dart   # 文件系统操作
+│   │   └── pages/
+│   │       └── cloud_page.dart     # 网盘主页面
+│   │
+│   ├── share/                      # 文件分享
+│   │   ├── models/
+│   │   │   └── share_record.dart   # 分享记录模型
+│   │   ├── providers/
+│   │   │   └── share_provider.dart
+│   │   ├── services/
+│   │   │   └── share_service.dart  # 分享 CRUD
+│   │   └── widgets/
+│   │       └── share_dialog.dart   # 分享对话框
+│   │
+│   ├── transfer/                   # WebRTC 文件传输
+│   │   ├── models/
+│   │   │   └── transfer_state.dart
+│   │   ├── providers/
+│   │   │   ├── send_provider.dart
+│   │   │   └── receive_provider.dart
+│   │   ├── services/
+│   │   │   ├── signaling_service.dart   # 信令服务
+│   │   │   └── peer_data_channel.dart   # WebRTC DataChannel
+│   │   └── pages/
+│   │       ├── send_page.dart
+│   │       └── receive_page.dart
+│   │
+│   ├── device/                     # 设备管理
+│   │   ├── models/
+│   │   │   └── device_config.dart
+│   │   ├── providers/
+│   │   │   └── device_provider.dart
+│   │   └── services/
+│   │       └── device_manager.dart # 设备注册、WebSocket 连接
+│   │
+│   └── settings/                   # 设置
+│       ├── providers/
+│       │   └── settings_provider.dart
+│       └── pages/
+│           └── settings_page.dart
+│
+├── providers/                      # (已有) 全局 providers
+│
+├── services/                       # (已有) 全局服务
+│   ├── local_storage_service.dart
+│   └── logger_service.dart
+│
+└── widgets/                        # (已有) 全局通用组件
+    ├── bottom_nav_bar.dart
+    └── ui/
+```
+
+---
+
+## 三、实施阶段（迁移后）
+
+> 状态说明：原“迁移步骤”中的 Flutter 目录重构与核心模块骨架已基本完成，以下阶段改为“补齐/联调/上线”导向。
+
+### 阶段一：基础设施与项目重构（1-2 天）
+
+#### 1.1 添加依赖
+
+在 `pubspec.yaml` 中添加：
+
+```yaml
+dependencies:
+  # WebRTC
+  flutter_webrtc: ^1.3.0
+  # WebSocket
+  web_socket_channel: ^3.0.3
+  # 文件选择器
+  file_picker: ^10.3.10
+  # 路径工具
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  # 桌面系统托盘 (可选，桌面端)
+  system_tray: ^2.0.3
+  # 开机自启 (可选，桌面端)
+  launch_at_startup: ^0.3.1
+  # UUID 生成
+  uuid: ^4.5.2
+```
+
+#### 1.2 创建目录结构
+
+按上述 `features/` 目录结构创建文件夹。
+
+#### 1.3 添加全局常量
+
+```dart
+// lib/core/config/constants.dart
+class AppConstants {
+  static const String signalingServerUrl = 'wss://fastsend.ing/api/connect';
+  static const String shareServerUrl = 'ws://localhost:3000/api/share';
+  static const String webBaseUrl = 'https://fastsend.kieng.cn';
+  static const String appName = 'FastSend';
+  static const String version = '1.0.0';
+}
+```
+
+#### 1.4 更新路由
+
+```dart
+// router_provider.dart 中添加路由
+Routes:
+  /cloud      → CloudPage      (网盘)
+  /send       → SendPage       (发送)
+  /receive    → ReceivePage     (接收)
+  /settings   → SettingsPage    (设置)
+```
+
+---
+
+### 阶段二：网盘文件管理（3-5 天）
+
+**对应 Electron 代码：**
+- `src/ipc/fs/handlers.ts` → `features/cloud/services/file_service.dart`
+- `src/routes/cloud.tsx` → `features/cloud/pages/cloud_page.dart`
+- `src/components/cloud/*` → `features/cloud/widgets/*`
+
+#### 2.1 文件条目模型
+
+```dart
+// features/cloud/models/fs_entry.dart
+@freezed
+class FsEntry with _$FsEntry {
+  const factory FsEntry({
+    required String path,
+    required String name,
+    required int size,
+    required int mtime,
+    required bool isDirectory,
+  }) = _FsEntry;
+  factory FsEntry.fromJson(Map<String, dynamic> json) => _$FsEntryFromJson(json);
+}
+```
+
+**Electron 对照：** `src/ipc/fs/handlers.ts` 中的 `FsEntry` interface
+
+#### 2.2 文件系统服务
+
+```dart
+// features/cloud/services/file_service.dart
+class FileService {
+  String _storageDir = '';
+
+  // 对应 Electron: getStorageDir / setStorageDir / selectStorageDir
+  String get storageDir => _storageDir;
+  Future<void> setStorageDir(String path);
+  Future<String?> selectStorageDir();  // 使用 file_picker
+
+  // 对应 Electron: listFiles (listEntries)
+  Future<List<FsEntry>> listFiles({String? dir, bool recursive = false});
+
+  // 对应 Electron: readFile / writeFile / deleteFile / createDir
+  Future<Uint8List> readFile(String path);
+  Future<void> writeFile(String path, Uint8List data);
+  Future<void> deleteFile(String path, {bool recursive = false});
+  Future<void> createDir(String path);
+}
+```
+
+**关键差异：**
+- Electron 通过 IPC 调用 Node.js `fs` 模块 → Flutter 直接用 `dart:io` 的 `File`/`Directory`
+- Electron 的 `resolveStoragePath()` 防路径穿越 → Flutter 同样需要实现
+
+#### 2.3 网盘页面
+
+对应 Electron `src/routes/cloud.tsx`，需实现：
+
+| Electron 组件 | Flutter Widget | 说明 |
+|---------------|---------------|------|
+| `<BreadcrumbNav>` | `BreadcrumbNav` | 面包屑导航 |
+| `<FileList>` | `FileListView` | 文件列表（ListView） |
+| `<ContextMenu>` | `PopupMenuButton` / `showMenu` | 右键菜单 |
+| `<NewFolderDialog>` | `showDialog` + `AlertDialog` | 新建文件夹 |
+| `<ShareDialog>` | `showDialog` + 自定义 Dialog | 分享对话框 |
+| 拖拽上传 | `DropTarget` (desktop_drop) | 桌面端拖拽 |
+
+---
+
+### 阶段三：文件分享功能（2-3 天）
+
+**对应 Electron 代码：**
+- `src/ipc/share/handlers.ts` → `features/share/services/share_service.dart`
+- `src/components/cloud/share-dialog.tsx` → `features/share/widgets/share_dialog.dart`
+
+#### 3.1 分享记录模型
+
+```dart
+// features/share/models/share_record.dart
+@freezed
+class ShareRecord with _$ShareRecord {
+  const factory ShareRecord({
+    required String code,
+    required String path,
+    required String fileName,
+    required int size,
+    String? passwordHash,
+    required int createdAt,
+    int? expiresAt,
+  }) = _ShareRecord;
+  factory ShareRecord.fromJson(Map<String, dynamic> json) => _$ShareRecordFromJson(json);
+}
+```
+
+#### 3.2 分享服务
+
+```dart
+// features/share/services/share_service.dart
+class ShareService {
+  // 对应 Electron: shares.json 持久化
+  // Flutter 使用 dart:io File 读写 JSON
+
+  Future<ShareRecord> createShare(String path, {String? password, int? expiresIn});
+  Future<ShareRecord?> getShare(String code, {String? password});
+  Future<bool> deleteShare(String code);
+  Future<List<ShareRecord>> listShares();
+  String getShareUrl(String shareCode, String deviceId);
+
+  // 内部方法
+  String _generateCode();        // 对应 Electron: crypto.randomBytes(4).toString('hex')
+  String _hashPassword(String p); // 对应 Electron: crypto.createHash('sha256')
+}
+```
+
+**关键对照：**
+- Electron 用 `crypto.randomBytes(4).toString('hex').toUpperCase()` → Dart 用 `uuid` 或 `Random.secure()` 生成
+- Electron 用 `crypto.createHash('sha256')` → Dart 用 `crypto` 包的 `sha256`
+- Electron 存储在 `app.getPath('userData')/shares.json` → Flutter 用 `path_provider` 的 `getApplicationSupportDirectory()`
+
+---
+
+### 阶段四：设备管理（2-3 天）
+
+**对应 Electron 代码：**
+- `src/main/device-manager.ts` → `features/device/services/device_manager.dart`
+
+#### 4.1 设备配置模型
+
+```dart
+// features/device/models/device_config.dart
+@freezed
+class DeviceConfig with _$DeviceConfig {
+  const factory DeviceConfig({
+    required String deviceId,
+    required String deviceName,
+    required int createdAt,
+  }) = _DeviceConfig;
+  factory DeviceConfig.fromJson(Map<String, dynamic> json) => _$DeviceConfigFromJson(json);
+}
+```
+
+#### 4.2 设备管理服务
+
+```dart
+// features/device/services/device_manager.dart
+class DeviceManager {
+  DeviceConfig? _config;
+  WebSocketChannel? _ws;
+  bool _isConnected = false;
+  Timer? _reconnectTimer;
+
+  // 对应 Electron: loadDeviceConfig()
+  Future<DeviceConfig> loadConfig();
+
+  // 对应 Electron: connectToServer()
+  Future<void> connectToServer();
+
+  // 对应 Electron: disconnectFromServer()
+  void disconnect();
+
+  // 对应 Electron: handleServerMessage()
+  void _handleMessage(dynamic data);
+
+  // 对应 Electron: scheduleReconnect()
+  void _scheduleReconnect();
+
+  // 对应 Electron: getConnectionStatus()
+  ({bool connected, String? deviceId}) get connectionStatus;
+
+  // 对应 Electron: getShareUrl()
+  String getShareUrl(String shareCode);
+}
+```
+
+**关键对照：**
+- Electron 用 `crypto.randomUUID()` → Dart 用 `Uuid().v4()`
+- Electron 用 `os.hostname()` → Dart 用 `Platform.localHostname`
+- Electron 用 `ws` (Node.js WebSocket) → Dart 用 `web_socket_channel`
+- Electron 存储在 `app.getPath('userData')/device-config.json` → Flutter 用 `getApplicationSupportDirectory()`
+
+---
+
+### 阶段五：WebRTC 文件传输（5-7 天）
+
+**对应 Electron 代码：**
+- `src/utils/PeerDataChannel.ts` → `features/transfer/services/peer_data_channel.dart`
+- `src/utils/SignalingService.ts` → `features/transfer/services/signaling_service.dart`
+- `src/routes/send.tsx` → `features/transfer/pages/send_page.dart`
+- `src/routes/download.tsx` → `features/transfer/pages/receive_page.dart`
+
+#### 5.1 PeerDataChannel 迁移
+
+这是核心模块，需要从 TypeScript 的 `RTCPeerConnection` API 迁移到 `flutter_webrtc`。
+
+```dart
+// features/transfer/services/peer_data_channel.dart
+class PeerDataChannel {
+  static const int defaultBlockSize = 32768;
+
+  late RTCPeerConnection _pc;
+  RTCDataChannel? _dc;
+  final int _blockSize;
+
+  // 回调 — 对应 Electron 的 public 属性
+  Function(RTCSessionDescription sdp)? onSDP;
+  Function(RTCIceCandidate candidate)? onICECandidate;
+  Function(dynamic data, {required int size, required int duration})? onReceive;
+  Function(Error e)? onError;
+  VoidCallback? onConnected;
+  VoidCallback? onDispose;
+  VoidCallback? onOpen;
+
+  // 对应 Electron: constructor + setupPeerConnection + initializeDataChannel
+  PeerDataChannel({List<Map<String, dynamic>>? iceServers, bool initializeDataChannel = false});
+
+  // 对应 Electron: sendData (分块发送逻辑)
+  Future<void> sendData(dynamic data);
+
+  // 对应 Electron: setRemoteSDP
+  Future<void> setRemoteSDP(RTCSessionDescription sdp);
+
+  // 对应 Electron: addICECandidate
+  Future<void> addICECandidate(RTCIceCandidate candidate);
+
+  // 对应 Electron: dispose
+  void dispose();
+}
+```
+
+**API 对照表：**
+
+| Electron (browser WebRTC) | flutter_webrtc |
+|--------------------------|----------------|
+| `new RTCPeerConnection(config)` | `createPeerConnection(config)` |
+| `pc.createDataChannel('dc')` | `pc.createDataChannel('dc', RTCDataChannelInit())` |
+| `pc.ondatachannel` | `pc.onDataChannel` |
+| `pc.onicecandidate` | `pc.onIceCandidate` |
+| `pc.onconnectionstatechange` | `pc.onConnectionState` |
+| `pc.onnegotiationneeded` | `pc.onRenegotiationNeeded` |
+| `dc.send(data)` | `dc.send(RTCDataChannelMessage(data))` |
+| `dc.onmessage` | `dc.onMessage` |
+| `dc.bufferedAmountLowThreshold` | `dc.bufferedAmountLowThreshold` (需检查支持) |
+
+#### 5.2 SignalingService 迁移
+
+```dart
+// features/transfer/services/signaling_service.dart
+class SignalingService {
+  WebSocketChannel? _ws;
+  PeerDataChannel? _pdc;
+  final String _serverUrl;
+  final SignalingCallbacks _callbacks;
+
+  // 对应 Electron: connectAsSender()
+  Future<String> connectAsSender();
+
+  // 对应 Electron: connectAsReceiver(code)
+  Future<void> connectAsReceiver(String code);
+
+  // 对应 Electron: handleMessage (switch case)
+  void _handleMessage(Map<String, dynamic> data);
+
+  // 对应 Electron: initPDC
+  void _initPDC(bool initializeDataChannel);
+
+  // 对应 Electron: dispose
+  void dispose();
+}
+```
+
+#### 5.3 发送页面
+
+对应 Electron `src/routes/send.tsx` 的状态机：
+
+```
+idle → connecting → waiting (显示取件码) → confirming (确认发送) → transferring → done/error
+```
+
+#### 5.4 接收页面
+
+对应 Electron `src/routes/download.tsx` 的状态机：
+
+```
+idle (输入取件码) → connecting → waiting → receiving (进度条) → done/error
+```
+
+**文件保存差异：**
+- Electron 用 `URL.createObjectURL(blob)` + `<a>` 标签下载
+- Flutter 桌面端直接用 `File.writeAsBytes()` 保存到本地
+- Flutter 移动端可用 `file_picker` 的 `saveFile` 或 `path_provider` 获取下载目录
+
+---
+
+### 阶段六：设置页面（1-2 天）
+
+**对应 Electron 代码：**
+- `src/routes/settings.tsx` → `features/settings/pages/settings_page.dart`
+- `src/main/app-preferences.ts` → `features/settings/providers/settings_provider.dart`
+
+需实现的设置项：
+
+| 设置项 | Electron 实现 | Flutter 实现 |
+|--------|-------------|-------------|
+| 主题切换 | `document.documentElement.classList` | `ThemeMode` + Riverpod |
+| 语言切换 | i18next | `flutter_localizations` |
+| 下载路径 | `dialog.showOpenDialog` | `file_picker` |
+| 开机自启 | `app.setLoginItemSettings` | `launch_at_startup` |
+| 最小化到托盘 | Electron Tray API | `system_tray` |
+
+---
+
+### 阶段七：桌面端系统集成（1-2 天，仅桌面平台）
+
+**对应 Electron 代码：**
+- `src/main/app-preferences.ts` 中的 `ensureTray()` / `applyAutoStartSetting()`
+
+```dart
+// 系统托盘 (仅桌面端)
+if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+  final systemTray = SystemTray();
+  await systemTray.initSystemTray(
+    title: 'FastSend',
+    iconPath: 'assets/icon.png',
+  );
+  systemTray.setContextMenu(Menu()
+    ..buildFrom([
+      MenuItemLabel(label: '打开 FastSend', onClicked: (_) => appWindow.show()),
+      MenuItemLabel(label: '退出', onClicked: (_) => appWindow.close()),
+    ]));
+}
+
+// 开机自启 (仅桌面端)
+final launchAtStartup = LaunchAtStartup.instance;
+launchAtStartup.setup(appName: 'FastSend', appPath: Platform.resolvedExecutable);
+await launchAtStartup.enable(); // 或 disable()
+```
+
+---
+
+## 四、Electron → Flutter 核心代码迁移对照
+
+### 4.1 文件系统操作
+
+```
+Electron (Node.js fs)                    Flutter (dart:io)
+─────────────────────                    ─────────────────
+fs.readdir(dir, {withFileTypes})    →    Directory(dir).listSync()
+fs.stat(path)                       →    File(path).statSync() / FileStat.stat(path)
+fs.readFile(path)                   →    File(path).readAsBytes()
+fs.writeFile(path, data)            →    File(path).writeAsBytes(data)
+fs.rm(path, {recursive})            →    File(path).deleteSync() / Directory(path).deleteSync(recursive: true)
+fs.mkdir(path, {recursive})         →    Directory(path).createSync(recursive: true)
+fs.access(path)                     →    File(path).existsSync()
+path.join(a, b)                     →    p.join(a, b)  (import 'package:path/path.dart' as p)
+path.relative(from, to)             →    p.relative(to, from: from)
+path.basename(p)                    →    p.basename(p)
+path.dirname(p)                     →    p.dirname(p)
+```
+
+### 4.2 WebSocket
+
+```
+Electron (ws npm)                        Flutter (web_socket_channel)
+─────────────────                        ───────────────────────────
+new WebSocket(url)                  →    WebSocketChannel.connect(Uri.parse(url))
+ws.on('open', cb)                   →    // 连接即打开，或监听 stream
+ws.on('message', cb)                →    channel.stream.listen((data) {...})
+ws.send(JSON.stringify(msg))        →    channel.sink.add(jsonEncode(msg))
+ws.on('close', cb)                  →    channel.stream.listen(..., onDone: cb)
+ws.on('error', cb)                  →    channel.stream.listen(..., onError: cb)
+ws.close()                          →    channel.sink.close()
+```
+
+### 4.3 WebRTC
+
+```
+Electron (Browser WebRTC API)            Flutter (flutter_webrtc)
+─────────────────────────────            ───────────────────────
+new RTCPeerConnection(cfg)          →    await createPeerConnection(cfg)
+pc.createDataChannel('dc')         →    await pc.createDataChannel('dc', RTCDataChannelInit())
+pc.createOffer()                    →    await pc.createOffer()
+pc.createAnswer()                   →    await pc.createAnswer()
+pc.setLocalDescription(sdp)         →    await pc.setLocalDescription(sdp)
+pc.setRemoteDescription(sdp)        →    await pc.setRemoteDescription(sdp)
+pc.addIceCandidate(candidate)       →    await pc.addCandidate(candidate)
+dc.send(data)                       →    dc.send(RTCDataChannelMessage(data))
+                                         dc.send(RTCDataChannelMessage.fromBinary(bytes))
+```
+
+### 4.4 加密
+
+```
+Electron (CryptoJS / Node crypto)        Flutter (crypto / dart:convert)
+─────────────────────────────────        ───────────────────────────────
+CryptoJS.algo.MD5.create()          →    md5 (from crypto package)
+crypto.createHash('sha256')         →    sha256.convert(utf8.encode(str))
+crypto.randomUUID()                 →    Uuid().v4()
+crypto.randomBytes(4).toString('hex') →  Random.secure() + hex encode
+```
+
+---
+
+## 五、需要注意的差异与风险
+
+### 5.1 WebRTC DataChannel 分块发送
+
+Electron 版本的 `PeerDataChannel.sendData()` 使用了 `bufferedAmountLowThreshold` 和 `onbufferedamountlow` 事件来控制发送速率。`flutter_webrtc` 对此的支持需要验证：
+
+- **风险**：`flutter_webrtc` 的 `RTCDataChannel` 可能不完全支持 `bufferedAmountLowThreshold`
+- **应对**：可改用定时器 + `bufferedAmount` 轮询来控制发送速率
+
+### 5.2 平台差异
+
+| 功能 | 桌面端 (Windows/macOS/Linux) | 移动端 (Android/iOS) |
+|------|---------------------------|---------------------|
+| 文件系统直接访问 | ✅ | ⚠️ 需要权限 + SAF |
+| 系统托盘 | ✅ | ❌ 不适用 |
+| 开机自启 | ✅ | ❌ 不适用 |
+| WebRTC | ✅ | ✅ |
+| 后台运行 | ✅ 原生支持 | ⚠️ 需要前台服务 |
+
+### 5.3 存储路径
+
+```dart
+// 获取应用数据目录（对应 Electron 的 app.getPath('userData')）
+final appDir = await getApplicationSupportDirectory();
+final configPath = p.join(appDir.path, 'device-config.json');
+final sharesPath = p.join(appDir.path, 'shares.json');
+
+// 获取默认存储目录
+final storageDir = Platform.isAndroid
+    ? (await getExternalStorageDirectory())?.path ?? appDir.path
+    : p.join(appDir.path, 'storage');
+```
+
+---
+
+## 六、迁移时间估算
+
+| 阶段 | 内容 | 预估时间 |
+|------|------|---------|
+| 阶段一 | 基础设施与项目重构 | 1-2 天 |
+| 阶段二 | 网盘文件管理 | 3-5 天 |
+| 阶段三 | 文件分享功能 | 2-3 天 |
+| 阶段四 | 设备管理 | 2-3 天 |
+| 阶段五 | WebRTC 文件传输 | 5-7 天 |
+| 阶段六 | 设置页面 | 1-2 天 |
+| 阶段七 | 桌面端系统集成 | 1-2 天 |
+| **合计** | | **15-24 天** |
+
+---
+
+## 七、Flutter 相比 Electron 的优势
+
+| 维度 | Electron | Flutter |
+|------|----------|---------|
+| **内存占用** | ~200-400MB（Chromium 内核） | ~30-80MB |
+| **启动速度** | 2-5 秒 | <1 秒 |
+| **包体积** | ~150MB+ | ~20-50MB |
+| **跨平台** | 仅桌面 | 桌面 + 移动端 |
+| **原生体验** | 一般（Web 渲染） | 优秀（Skia/Impeller 渲染） |
+| **进程模型** | 主进程 + 渲染进程（IPC 开销） | 单进程（直接调用） |
+
+---
+
+## 八、NestJS 信令服务器（心理服务器）项目规划
+
+### 8.1 总体目标
+
+`fast_send_server` 负责三件事：
+
+1. **设备在线管理**：设备注册、心跳、状态维护
+2. **信令转发**：发送端/接收端配对，SDP/ICE 中继
+3. **分享能力服务化**：分享记录从本地 JSON 逐步迁移到服务端 API
+
+### 8.2 推荐模块划分（NestJS）
+
+```text
+src/
+├── main.ts
+├── app.module.ts
+├── common/
+│   ├── filters/
+│   ├── guards/
+│   ├── interceptors/
+│   └── pipes/
+├── config/
+│   ├── configuration.ts
+│   └── validation.ts
+├── modules/
+│   ├── health/            # /health
+│   ├── auth/              # JWT（可选，建议尽早接入）
+│   ├── device/            # 设备注册/状态
+│   ├── share/             # 分享 CRUD
+│   ├── signaling/         # WebSocket Gateway + 匹配逻辑
+│   └── transfer/          # 传输会话状态（可先并入 signaling）
+└── infra/
+    ├── persistence/       # Prisma/TypeORM
+    └── cache/             # Redis（可选）
+```
+
+### 8.3 协议对齐建议（与 Flutter 现状兼容）
+
+#### WebSocket（信令）
+
+- 客户端 -> 服务端：
+  - `device-online`
+  - `heartbeat`
+  - `send`
+  - `receive`
+  - `sdp`
+  - `candidate`
+- 服务端 -> 客户端：
+  - `device-online-ack`
+  - `code`
+  - `status`
+  - `peer-connect`
+  - `sdp`
+  - `candidate`
+  - `err`
+  - `ping`
+
+> 第一阶段先保持 Flutter 现有消息格式，减少改动面；第二阶段再做协议版本化（`v1`, `v2`）。
+
+#### REST API（分享）
+
+- `POST /api/share`：创建分享
+- `GET /api/share/:code`：获取分享详情
+- `GET /api/share`：列表（按设备）
+- `DELETE /api/share/:code`：删除分享
+
+### 8.4 数据层建议
+
+按上线节奏分两步：
+
+1. **MVP**：SQLite（或 PostgreSQL）+ 单体部署
+2. **稳定期**：PostgreSQL + Redis（在线设备映射、短码 TTL、会话态）
+
+核心数据模型：
+
+- `devices`：`device_id`, `device_name`, `last_seen_at`, `status`
+- `shares`：`code`, `device_id`, `path`, `file_name`, `size`, `password_hash`, `expires_at`
+- `sessions`：`code`, `sender_device_id`, `receiver_client_id`, `state`, `created_at`
+
+### 8.5 与 Flutter 联调改造清单
+
+1. `AppConstants` 中的 WS/HTTP 地址改为环境配置（dev/staging/prod）
+2. Dio `baseUrl` 由占位值改为真实服务地址
+3. `share_service.dart` 由本地 JSON 持久化切换为优先调用服务端（本地可作离线兜底）
+4. `device_manager.dart` 连接地址与消息协议统一到 NestJS Gateway
+5. 登录态打通后，WS 握手加入 token/device 签名
+
+### 8.6 交付节奏建议（2~3 周）
+
+**第 1 周：服务端骨架 + 信令最小闭环**
+- 建立 `signaling` + `device` 模块
+- 完成 `send/receive/code/sdp/candidate` 转发
+- Flutter 端跑通发送/接收最小链路
+
+**第 2 周：分享 API + 权限体系**
+- 建立 `share` 模块与数据库落库
+- 接入 JWT（至少接口层）
+- Flutter 分享从本地记录切换到服务端
+
+**第 3 周：稳定性与上线准备（可并行）**
+- 心跳、超时、重连、幂等、异常码
+- E2E 与压测（并发配对、断线恢复）
+- Docker 化 + 环境变量 + 监控告警
+
+### 8.7 风险与优先级
+
+- **高优先级**：信令协议一致性、重连与会话状态机
+- **中优先级**：分享数据一致性、过期清理任务
+- **高风险**：NAT 场景下 WebRTC 连接成功率（需 TURN 兜底）
+- **建议**：在 NestJS 方案落地时同步纳入 TURN 配置策略文档
