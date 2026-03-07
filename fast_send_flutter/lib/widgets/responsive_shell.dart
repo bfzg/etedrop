@@ -33,17 +33,22 @@ class ResponsiveShell extends StatelessWidget {
       builder: (context, constraints) {
         if (_isDesktopPlatform || constraints.maxWidth >= 640) {
           return Scaffold(
-            body: DragToMoveArea(
-              child: Row(
-                children: [
-                  _Sidebar(
-                    items: items,
-                    currentIndex: navigationShell.currentIndex,
-                    onSelect: (index) => _onTap(context, index),
+            body: Column(
+              children: [
+                const _DraggableTopBar(),
+                Expanded(
+                  child: Row(
+                    children: [
+                      _Sidebar(
+                        items: items,
+                        currentIndex: navigationShell.currentIndex,
+                        onSelect: (index) => _onTap(context, index),
+                      ),
+                      Expanded(child: navigationShell),
+                    ],
                   ),
-                  Expanded(child: navigationShell),
-                ],
-              ),
+                ),
+              ],
             ),
           );
         }
@@ -69,6 +74,40 @@ class ResponsiveShell extends StatelessWidget {
   }
 }
 
+/// 仅顶部可拖动区域（含侧边栏上方一条），用于移动窗口；内容区不可拖动，侧边栏 item 双击不会触发全屏。
+class _DraggableTopBar extends StatelessWidget {
+  const _DraggableTopBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final topInset = MediaQuery.paddingOf(context).top;
+    final isMacOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
+    final height = isMacOS ? topInset + 34 : 32.0;
+    final sidebarBg = isDark ? _kSidebarDarkBg : _kSidebarLightBg;
+
+    return DragToMoveArea(
+      child: SizedBox(
+        height: height,
+        child: Row(
+          children: [
+            ColoredBox(
+              color: sidebarBg,
+              child: SizedBox(width: _kSidebarWidth, height: height),
+            ),
+            Expanded(
+              child: ColoredBox(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                child: const SizedBox.expand(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _Sidebar extends StatelessWidget {
   final List<NavItemConfig> items;
   final int currentIndex;
@@ -83,40 +122,43 @@ class _Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topInset = MediaQuery.paddingOf(context).top;
-    final isMacOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
-
     final sidebarBg = isDark ? _kSidebarDarkBg : _kSidebarLightBg;
 
     return SizedBox(
       width: _kSidebarWidth,
       child: ColoredBox(
         color: sidebarBg,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
+          fit: StackFit.expand,
           children: [
-            if (isMacOS) SizedBox(height: topInset + 34),
-            // 导航项列表
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: items.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final item = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 1),
-                      child: _SidebarItem(
-                        item: item,
-                        selected: index == currentIndex,
-                        isDark: isDark,
-                        onTap: () => onSelect(index),
-                      ),
-                    );
-                  }).toList(),
+            // 侧边栏空白区域可拖拽移动窗口；导航按钮位于上层保持可点击。
+            const DragToMoveArea(child: SizedBox.expand()),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // 顶部留白已由 _DraggableTopBar 占据，侧边栏仅保留导航项，避免 item 处于可拖动区导致双击全屏
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: items.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final item = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 1),
+                          child: _SidebarItem(
+                            item: item,
+                            selected: index == currentIndex,
+                            isDark: isDark,
+                            onTap: () => onSelect(index),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
