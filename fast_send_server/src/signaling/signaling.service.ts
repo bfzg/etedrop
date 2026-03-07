@@ -44,6 +44,11 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
   private readonly devices = new Map<string, DeviceState>();
   private readonly socketDeviceId = new Map<WebSocket, string>();
 
+  /** 浏览器连接 → 要连接的设备 ID（用于转发 offer/answer/ice） */
+  private readonly browserToDevice = new Map<WebSocket, string>();
+  /** 设备 ID → 当前配对的浏览器连接（一对一，新浏览器会顶掉旧的） */
+  private readonly deviceToBrowser = new Map<string, WebSocket>();
+
   private heartbeatTimer?: NodeJS.Timeout;
 
   constructor(
@@ -93,6 +98,8 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
     this.socketSessions.clear();
     this.devices.clear();
     this.socketDeviceId.clear();
+    this.browserToDevice.clear();
+    this.deviceToBrowser.clear();
   }
 
   getRuntimeStats(): RuntimeStats {
@@ -118,7 +125,11 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
     ws.on('message', (raw) => {
       const message = parseWsMessage(raw);
       if (!message) {
-        this.sendSafe(ws, { type: 'err', msg: '消息格式错误' });
+        this.sendSafe(ws, {
+          type: 'err',
+          code: 'BAD_FORMAT',
+          msg: '消息格式错误',
+        });
         return;
       }
 
@@ -159,6 +170,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       default:
         this.sendSafe(ws, {
           type: 'err',
+          code: 'UNKNOWN_TYPE',
           msg: `不支持的消息类型: ${message.type}`,
         });
     }
@@ -190,7 +202,11 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
     }
 
     if (session.receiver && session.receiver !== ws) {
-      this.sendSafe(ws, { type: 'err', msg: '该取件码已被使用' });
+      this.sendSafe(ws, {
+        type: 'err',
+        code: 'CODE_IN_USE',
+        msg: '该取件码已被使用',
+      });
       return;
     }
 
@@ -204,20 +220,32 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
   private forwardSignalingPayload(source: WebSocket, message: WsMessage): void {
     const state = this.socketSessions.get(source);
     if (!state) {
-      this.sendSafe(source, { type: 'err', msg: '会话未初始化' });
+      this.sendSafe(source, {
+        type: 'err',
+        code: 'SESSION_INVALID',
+        msg: '会话未初始化',
+      });
       return;
     }
 
     const session = this.sessions.get(state.code);
     if (!session) {
-      this.sendSafe(source, { type: 'err', msg: '会话不存在' });
+      this.sendSafe(source, {
+        type: 'err',
+        code: 'SESSION_NOT_FOUND',
+        msg: '会话不存在',
+      });
       return;
     }
 
     const target = state.role === 'sender' ? session.receiver : session.sender;
 
     if (!target) {
-      this.sendSafe(source, { type: 'err', msg: '对端未连接' });
+      this.sendSafe(source, {
+        type: 'err',
+        code: 'PEER_NOT_READY',
+        msg: '对端未连接',
+      });
       return;
     }
 
@@ -244,6 +272,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       session.sender = undefined;
       this.sendSafe(session.receiver, {
         type: 'err',
+        code: 'PEER_DISCONNECTED',
         msg: '发送方已断开连接',
       });
     }
@@ -252,6 +281,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       session.receiver = undefined;
       this.sendSafe(session.sender, {
         type: 'err',
+        code: 'PEER_DISCONNECTED',
         msg: '接收方已断开连接',
       });
     }
@@ -265,7 +295,11 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
     ws.on('message', (raw) => {
       const message = parseWsMessage(raw);
       if (!message) {
-        this.sendSafe(ws, { type: 'err', msg: '消息格式错误' });
+        this.sendSafe(ws, {
+          type: 'err',
+          code: 'BAD_FORMAT',
+          msg: '消息格式错误',
+        });
         return;
       }
 
@@ -286,9 +320,17 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       case 'device-online':
         this.registerDevice(ws, message);
         break;
+      case 'connect':
+        this.registerBrowser(ws, message);
+        break;
       case 'heartbeat':
       case 'ping':
-        this.updateDeviceHeartbeat(ws);
+        this.handleSharePingOrHeartbeat(ws);
+        break;
+      case 'offer':
+      case 'answer':
+      case 'ice-candidate':
+        this.forwardShareSignaling(ws, message);
         break;
       case 'peer-connect':
         this.forwardPeerConnect(message);
@@ -296,9 +338,118 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       default:
         this.sendSafe(ws, {
           type: 'err',
+          code: 'UNKNOWN_TYPE',
           msg: `不支持的消息类型: ${message.type}`,
         });
     }
+  }
+
+  /**
+   * 浏览器首条消息 connect + deviceId：查设备是否在线，回复 device-online 或 err(OFFLINE)，并建立浏览器↔设备配对
+   */
+  private registerBrowser(ws: WebSocket, message: WsMessage): void {
+    const deviceId =
+      typeof message.deviceId === 'string' ? message.deviceId.trim() : '';
+    if (!deviceId) {
+      this.sendSafe(ws, {
+        type: 'err',
+        code: 'INVALID',
+        msg: 'deviceId 不能为空',
+      });
+      return;
+    }
+
+    const device = this.devices.get(deviceId);
+    if (!device) {
+      this.sendSafe(ws, {
+        type: 'err',
+        code: 'OFFLINE',
+        msg: '分享者设备离线',
+      });
+      return;
+    }
+
+    const prevBrowser = this.deviceToBrowser.get(deviceId);
+    if (prevBrowser && prevBrowser !== ws) {
+      this.browserToDevice.delete(prevBrowser);
+      this.sendSafe(prevBrowser, {
+        type: 'err',
+        code: 'REPLACED',
+        msg: '已被其他页面替代连接',
+      });
+    }
+
+    this.browserToDevice.set(ws, deviceId);
+    this.deviceToBrowser.set(deviceId, ws);
+
+    this.sendSafe(ws, { type: 'device-online', deviceId });
+    this.logger.log(`Browser connected to device ${deviceId}`);
+  }
+
+  /** 心跳/ ping：仅设备更新 lastSeen；浏览器回 ping；未识别连接提示先发 device-online 或 connect */
+  private handleSharePingOrHeartbeat(ws: WebSocket): void {
+    if (this.socketDeviceId.has(ws)) {
+      this.updateDeviceHeartbeat(ws);
+      return;
+    }
+    if (this.browserToDevice.has(ws)) {
+      this.sendSafe(ws, { type: 'ping' });
+      return;
+    }
+    this.sendSafe(ws, {
+      type: 'err',
+      code: 'AUTH_REQUIRED',
+      msg: '请先发送 device-online 或 connect',
+    });
+  }
+
+  /**
+   * 在「浏览器 ↔ 设备」之间双向转发 offer / answer / ice-candidate（与现有 peer-connect 兼容）
+   */
+  private forwardShareSignaling(source: WebSocket, message: WsMessage): void {
+    const deviceIdFromSocket = this.socketDeviceId.get(source);
+    const deviceIdFromBrowser = this.browserToDevice.get(source);
+
+    if (deviceIdFromBrowser !== undefined) {
+      const device = this.devices.get(deviceIdFromBrowser);
+      if (!device) {
+        this.logger.warn(`Forward failed: device ${deviceIdFromBrowser} gone`);
+        this.sendSafe(source, {
+          type: 'err',
+          code: 'OFFLINE',
+          msg: '分享者设备已离线',
+        });
+        return;
+      }
+      this.sendSafe(device.ws, {
+        type: message.type,
+        data: message.data,
+      });
+      return;
+    }
+
+    if (deviceIdFromSocket !== undefined) {
+      const browserWs = this.deviceToBrowser.get(deviceIdFromSocket);
+      if (!browserWs) {
+        this.sendSafe(source, {
+          type: 'err',
+          code: 'PEER_NOT_READY',
+          msg: '对端浏览器未连接',
+        });
+        return;
+      }
+      this.sendSafe(browserWs, {
+        type: message.type,
+        data: message.data,
+      });
+      return;
+    }
+
+    this.sendSafe(source, {
+      type: 'err',
+      code: 'AUTH_REQUIRED',
+      msg: '请先发送 device-online 或 connect',
+    });
   }
 
   private registerDevice(ws: WebSocket, message: WsMessage): void {
@@ -308,7 +459,11 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       typeof message.deviceName === 'string' ? message.deviceName.trim() : '';
 
     if (!deviceId) {
-      this.sendSafe(ws, { type: 'err', msg: 'deviceId 不能为空' });
+      this.sendSafe(ws, {
+        type: 'err',
+        code: 'INVALID',
+        msg: 'deviceId 不能为空',
+      });
       return;
     }
 
@@ -331,12 +486,19 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       deviceId,
       serverTime: Date.now(),
     });
+    this.logger.log(
+      `Device online: ${deviceId} (${deviceName || 'unknown-device'})`,
+    );
   }
 
   private updateDeviceHeartbeat(ws: WebSocket): void {
     const deviceId = this.socketDeviceId.get(ws);
     if (!deviceId) {
-      this.sendSafe(ws, { type: 'err', msg: '设备尚未注册' });
+      this.sendSafe(ws, {
+        type: 'err',
+        code: 'NOT_REGISTERED',
+        msg: '设备尚未注册',
+      });
       return;
     }
 
@@ -367,16 +529,34 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
   }
 
   private cleanupShareSocket(ws: WebSocket): void {
-    const deviceId = this.socketDeviceId.get(ws);
-    if (!deviceId) {
+    const deviceIdAsDevice = this.socketDeviceId.get(ws);
+    if (deviceIdAsDevice !== undefined) {
+      this.socketDeviceId.delete(ws);
+      const state = this.devices.get(deviceIdAsDevice);
+      if (state && state.ws === ws) {
+        this.devices.delete(deviceIdAsDevice);
+        this.logger.log(`Device offline: ${deviceIdAsDevice}`);
+        const browserWs = this.deviceToBrowser.get(deviceIdAsDevice);
+        if (browserWs) {
+          this.browserToDevice.delete(browserWs);
+          this.deviceToBrowser.delete(deviceIdAsDevice);
+          this.sendSafe(browserWs, {
+            type: 'err',
+            code: 'OFFLINE',
+            msg: '分享者设备已断开',
+          });
+        }
+      }
       return;
     }
 
-    this.socketDeviceId.delete(ws);
-    const state = this.devices.get(deviceId);
-
-    if (state && state.ws === ws) {
-      this.devices.delete(deviceId);
+    const deviceIdAsBrowser = this.browserToDevice.get(ws);
+    if (deviceIdAsBrowser !== undefined) {
+      this.browserToDevice.delete(ws);
+      this.deviceToBrowser.delete(deviceIdAsBrowser);
+      this.logger.debug(
+        `Browser disconnected from device ${deviceIdAsBrowser}`,
+      );
     }
   }
 
@@ -391,6 +571,17 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
 
     for (const [deviceId, state] of this.devices.entries()) {
       if (now - state.lastSeenAt > DEVICE_INACTIVE_TIMEOUT_MS) {
+        this.logger.log(`Device timeout: ${deviceId}`);
+        const browserWs = this.deviceToBrowser.get(deviceId);
+        if (browserWs) {
+          this.browserToDevice.delete(browserWs);
+          this.deviceToBrowser.delete(deviceId);
+          this.sendSafe(browserWs, {
+            type: 'err',
+            code: 'OFFLINE',
+            msg: '分享者设备已离线',
+          });
+        }
         this.devices.delete(deviceId);
         this.socketDeviceId.delete(state.ws);
         state.ws.close();
@@ -403,8 +594,16 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
 
     for (const [code, session] of this.sessions.entries()) {
       if (now - session.createdAt > SESSION_TIMEOUT_MS) {
-        this.sendSafe(session.sender, { type: 'err', msg: '会话已超时' });
-        this.sendSafe(session.receiver, { type: 'err', msg: '会话已超时' });
+        this.sendSafe(session.sender, {
+          type: 'err',
+          code: 'SESSION_TIMEOUT',
+          msg: '会话已超时',
+        });
+        this.sendSafe(session.receiver, {
+          type: 'err',
+          code: 'SESSION_TIMEOUT',
+          msg: '会话已超时',
+        });
 
         session.sender?.close();
         session.receiver?.close();
