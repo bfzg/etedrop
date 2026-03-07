@@ -55,25 +55,65 @@ class FileService {
     String rootDir,
   ) async {
     final directory = Directory(currentDir);
-    final entries = await directory.list(followLinks: false).toList();
+    if (!await directory.exists()) {
+      throw FileSystemException('目录不存在', currentDir);
+    }
+
+    List<FileSystemEntity> entries;
+    try {
+      entries = await directory.list(followLinks: false).toList();
+    } on PathAccessException catch (e) {
+      throw FileSystemException(
+        '无权限访问该目录，请检查权限或更换存储目录。',
+        e.path,
+        e.osError,
+      );
+    } on FileSystemException catch (e) {
+      if (e.osError?.errorCode == 1) {
+        throw FileSystemException(
+          '无权限访问该目录，请检查权限或更换存储目录。',
+          e.path,
+          e.osError,
+        );
+      }
+      rethrow;
+    }
+
     final results = <FsEntry>[];
 
     for (final entity in entries) {
-      final stat = await entity.stat();
-      final relPath = p.relative(entity.path, from: rootDir);
-      final isDir = entity is Directory;
+      try {
+        final stat = await entity.stat();
+        final relPath = p.relative(entity.path, from: rootDir);
+        final isDir = entity is Directory;
 
-      results.add(FsEntry(
-        path: relPath,
-        name: p.basename(entity.path),
-        size: isDir ? 0 : stat.size,
-        mtime: stat.modified.millisecondsSinceEpoch,
-        isDirectory: isDir,
-      ));
+        results.add(FsEntry(
+          path: relPath,
+          name: p.basename(entity.path),
+          size: isDir ? 0 : stat.size,
+          mtime: stat.modified.millisecondsSinceEpoch,
+          isDirectory: isDir,
+        ));
 
-      if (isDir && recursive) {
-        final nested = await _listEntries(entity.path, recursive, rootDir);
-        results.addAll(nested);
+        if (isDir && recursive) {
+          final nested = await _listEntries(entity.path, recursive, rootDir);
+          results.addAll(nested);
+        }
+      } on PathAccessException catch (e) {
+        throw FileSystemException(
+          '无权限访问该目录，请检查权限或更换存储目录。',
+          e.path,
+          e.osError,
+        );
+      } on FileSystemException catch (e) {
+        if (e.osError?.errorCode == 1) {
+          throw FileSystemException(
+            '无权限访问该目录，请检查权限或更换存储目录。',
+            e.path,
+            e.osError,
+          );
+        }
+        rethrow;
       }
     }
 

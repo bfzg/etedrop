@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -10,7 +12,7 @@ import '../widgets/empty_storage_view.dart';
 import '../widgets/file_list_view.dart';
 import '../widgets/new_folder_dialog.dart';
 import '../../share/widgets/share_dialog.dart';
-
+import '../../../core/utils/access_utils.dart';
 import '../widgets/file_table_view.dart';
 
 /// 网盘文件管理页面
@@ -105,27 +107,66 @@ class CloudPage extends ConsumerWidget {
                     ),
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (err, _) => Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 48,
-                            color: Theme.of(context).colorScheme.error,
+                    error: (err, _) {
+                      final message =
+                          err is FileSystemException && err.message.isNotEmpty
+                          ? err.message
+                          : err.toString();
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: Theme.of(context).colorScheme.error,
+                              ),
+                              Gap.md,
+                              Text(
+                                '加载失败',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                message,
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Gap.md,
+                              FilledButton(
+                                onPressed: () => ref
+                                    .read(cloudFileListProvider.notifier)
+                                    .refresh(),
+                                child: const Text('重试'),
+                              ),
+                              if (Platform.isMacOS) ...[
+                                const SizedBox(height: 8),
+                                TextButton.icon(
+                                  onPressed: () async {
+                                    await openMacOsFullDiskAccessSettings();
+                                  },
+                                  icon: const Icon(Icons.settings, size: 18),
+                                  label: const Text('打开系统设置授权'),
+                                ),
+                              ],
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: () => ref
+                                    .read(fileServiceProvider.notifier)
+                                    .selectStorageDir(),
+                                child: const Text('更换存储目录'),
+                              ),
+                            ],
                           ),
-                          Gap.md,
-                          Text('加载失败: $err'),
-                          Gap.md,
-                          FilledButton(
-                            onPressed: () => ref
-                                .read(cloudFileListProvider.notifier)
-                                .refresh(),
-                            child: const Text('重试'),
-                          ),
-                        ],
-                      ),
-                    ),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],
