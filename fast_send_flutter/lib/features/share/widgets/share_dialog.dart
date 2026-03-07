@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../device/providers/device_provider.dart';
 import '../models/share_record.dart';
 import '../providers/share_provider.dart';
 
@@ -88,59 +89,103 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     final theme = Theme.of(context);
 
     if (_result != null) {
+      final deviceId = ref.read(deviceIdProvider);
+      final shareService = ref.read(shareServiceProvider);
+      final shareLink = deviceId != null && deviceId.isNotEmpty
+          ? shareService.getShareUrl(_result!.code, deviceId)
+          : null;
+
       return AlertDialog(
         title: const Text('分享已创建'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('文件: ${widget.fileName}', style: theme.textTheme.bodyMedium),
-            const SizedBox(height: 16),
-            Text('分享码', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SelectableText(
-                      _result!.code,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('文件: ${widget.fileName}', style: theme.textTheme.bodyMedium),
+              const SizedBox(height: 16),
+              Text('分享码', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: SelectableText(
+                        _result!.code,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                        ),
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy),
-                    tooltip: '复制分享码',
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: _result!.code));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已复制分享码'), duration: Duration(seconds: 1)),
-                      );
-                    },
-                  ),
-                ],
+                    IconButton(
+                      icon: const Icon(Icons.copy),
+                      tooltip: '复制分享码',
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: _result!.code));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('已复制分享码'), duration: Duration(seconds: 1)),
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-            if (_result!.hasPassword) ...[
-              const SizedBox(height: 8),
-              Text('密码: ${_passwordController.text}',
-                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
+              const SizedBox(height: 16),
+              Text('分享链接', style: theme.textTheme.labelMedium),
+              const SizedBox(height: 4),
+              if (shareLink != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SelectableText(
+                          shareLink,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        tooltip: '复制分享链接',
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: shareLink));
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('已复制分享链接'), duration: Duration(seconds: 1)),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Text(
+                  '请先连接设备（连接服务端）后，在「我的分享」中可查看分享链接。',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+                ),
+              if (_result!.hasPassword) ...[
+                const SizedBox(height: 8),
+                Text('密码: ${_passwordController.text}',
+                    style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
+              ],
+              if (_result!.expiresAt != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '过期时间: ${DateTime.fromMillisecondsSinceEpoch(_result!.expiresAt!).toString().substring(0, 16)}',
+                  style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
+                ),
+              ],
             ],
-            if (_result!.expiresAt != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                '过期时间: ${DateTime.fromMillisecondsSinceEpoch(_result!.expiresAt!).toString().substring(0, 16)}',
-                style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13),
-              ),
-            ],
-          ],
+          ),
         ),
         actions: [
           FilledButton(
@@ -180,7 +225,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
           Text('过期时间', style: theme.textTheme.labelMedium),
           const SizedBox(height: 8),
           DropdownButtonFormField<int?>(
-            initialValue: _expiresIn,
+            value: _expiresIn,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               isDense: true,

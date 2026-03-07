@@ -181,6 +181,6 @@ class DeviceManager {
   /// 对应 Electron: getShareUrl()
   String getShareUrl(String shareCode) {
     if (_config == null) return '';
-    return '${AppConstants.webBaseUrl}/share/${_config!.deviceId}/$shareCode';
+    return '${AppConstants.shareLinkBaseUrl}/share/${_config!.deviceId}/$shareCode';
   }
 }

@@ -168,9 +168,9 @@ class ShareService {
     return result;
   }
 
-  /// 生成分享链接
+  /// 生成分享链接（格式：{shareLinkBaseUrl}/share/{deviceId}/{shareCode}）
   /// 对应 Electron: getShareUrl / getShareLink
   String getShareUrl(String shareCode, String deviceId) {
-    return '${AppConstants.webBaseUrl}/share/$deviceId/$shareCode';
+    return '${AppConstants.shareLinkBaseUrl}/share/$deviceId/$shareCode';
   }
 }
