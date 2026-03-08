@@ -29,21 +29,16 @@ class CloudPage extends ConsumerWidget {
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
 
     return Scaffold(
-      appBar: isDesktopLayout
-          ? null
-          : AppBar(
-              title: const Text('网盘'),
-              leading: currentPath.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: () =>
-                          ref.read(currentPathProvider.notifier).navigateUp(),
-                    )
-                  : null,
-              actions: [
-                if (hasStorage) ..._buildActions(context, ref, storagePath),
-              ],
-            ),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            const Expanded(child: BreadcrumbNav()),
+
+            if (isDesktopLayout && currentPath.isNotEmpty)
+              ..._buildActions(context, ref, storagePath),
+          ],
+        ),
+      ),
       body: !hasStorage
           ? EmptyStorageView(
               onSelectDir: () =>
@@ -51,30 +46,6 @@ class CloudPage extends ConsumerWidget {
             )
           : Column(
               children: [
-                if (isDesktopLayout)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-                    child: Row(
-                      children: [
-                        if (currentPath.isNotEmpty)
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back),
-                            tooltip: '返回上一级',
-                            onPressed: () => ref
-                                .read(currentPathProvider.notifier)
-                                .navigateUp(),
-                          ),
-                        const Spacer(),
-                        ..._buildActions(context, ref, storagePath),
-                      ],
-                    ),
-                  ),
-                // 面包屑导航
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: const BreadcrumbNav(),
-                ),
-                const Divider(height: 1),
                 // 文件列表
                 Expanded(
                   child: fileListAsync.when(
@@ -233,23 +204,40 @@ class CloudPage extends ConsumerWidget {
     WidgetRef ref,
     String storagePath,
   ) {
+    const barBtnStyle = ButtonStyle(
+      minimumSize: WidgetStatePropertyAll(Size(36, 36)),
+      padding: WidgetStatePropertyAll(EdgeInsets.zero),
+      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
     return [
       IconButton(
+        style: barBtnStyle,
+        iconSize: 20,
         icon: const Icon(Icons.create_new_folder_outlined),
         tooltip: '新建文件夹',
         onPressed: () => _showNewFolderDialog(context, ref),
       ),
       IconButton(
+        style: barBtnStyle,
+        iconSize: 20,
         icon: const Icon(Icons.upload_file),
         tooltip: '上传文件',
         onPressed: () => ref.read(cloudFileListProvider.notifier).uploadFiles(),
       ),
       IconButton(
+        style: barBtnStyle,
+        iconSize: 20,
         icon: const Icon(Icons.refresh),
         tooltip: '刷新',
         onPressed: () => ref.read(cloudFileListProvider.notifier).refresh(),
       ),
       PopupMenuButton<String>(
+        iconSize: 20,
+        icon: Icon(
+          Icons.more_vert,
+          size: 20,
+          color: Theme.of(context).colorScheme.onSurface,
+        ),
         onSelected: (value) {
           if (value == 'change_dir') {
             ref.read(fileServiceProvider.notifier).selectStorageDir();

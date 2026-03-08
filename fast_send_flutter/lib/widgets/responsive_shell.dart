@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_app/core/utils/is_utils.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';
 
@@ -10,12 +11,6 @@ const double _kSidebarWidth = 78;
 // macOS 浅色侧边栏颜色（参考 macOS Sequoia sidebar）
 const _kSidebarLightBg = Color(0xFFECECEC);
 const _kSidebarDarkBg = Color(0xFF1E1E1E);
-
-final bool _isDesktopPlatform =
-    !kIsWeb &&
-    (defaultTargetPlatform == TargetPlatform.macOS ||
-        defaultTargetPlatform == TargetPlatform.windows ||
-        defaultTargetPlatform == TargetPlatform.linux);
 
 class ResponsiveShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -31,23 +26,16 @@ class ResponsiveShell extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (_isDesktopPlatform || constraints.maxWidth >= 640) {
+        if (isDesktopPlatform() || constraints.maxWidth >= 640) {
           return Scaffold(
-            body: Column(
+            body: Row(
               children: [
-                const _DraggableTopBar(),
-                Expanded(
-                  child: Row(
-                    children: [
-                      _Sidebar(
-                        items: items,
-                        currentIndex: navigationShell.currentIndex,
-                        onSelect: (index) => _onTap(context, index),
-                      ),
-                      Expanded(child: navigationShell),
-                    ],
-                  ),
+                _Sidebar(
+                  items: items,
+                  currentIndex: navigationShell.currentIndex,
+                  onSelect: (index) => _onTap(context, index),
                 ),
+                Expanded(child: navigationShell),
               ],
             ),
           );
@@ -74,40 +62,7 @@ class ResponsiveShell extends StatelessWidget {
   }
 }
 
-/// 仅顶部可拖动区域（含侧边栏上方一条），用于移动窗口；内容区不可拖动，侧边栏 item 双击不会触发全屏。
-class _DraggableTopBar extends StatelessWidget {
-  const _DraggableTopBar();
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final topInset = MediaQuery.paddingOf(context).top;
-    final isMacOS = !kIsWeb && defaultTargetPlatform == TargetPlatform.macOS;
-    final height = isMacOS ? topInset + 34 : 32.0;
-    final sidebarBg = isDark ? _kSidebarDarkBg : _kSidebarLightBg;
-
-    return DragToMoveArea(
-      child: SizedBox(
-        height: height,
-        child: Row(
-          children: [
-            ColoredBox(
-              color: sidebarBg,
-              child: SizedBox(width: _kSidebarWidth, height: height),
-            ),
-            Expanded(
-              child: ColoredBox(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: const SizedBox.expand(),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
+/// 桌面端通过侧边栏的 DragToMoveArea 拖动窗口；无单独顶部栏，避免与页面 AppBar 叠成双栏。
 class _Sidebar extends StatelessWidget {
   final List<NavItemConfig> items;
   final int currentIndex;
@@ -123,6 +78,9 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sidebarBg = isDark ? _kSidebarDarkBg : _kSidebarLightBg;
+    // macOS 下预留顶部安全距离，避免导航项与红黄绿按钮重叠
+    final topInset = isMacOSPlatform() ? 20.0 : 0.0;
+    final padding = EdgeInsets.fromLTRB(8.0, 8.0 + topInset, 8.0, 0.0);
 
     return SizedBox(
       width: _kSidebarWidth,
@@ -136,10 +94,10 @@ class _Sidebar extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // 顶部留白已由 _DraggableTopBar 占据，侧边栏仅保留导航项，避免 item 处于可拖动区导致双击全屏
+                // 侧边栏空白区域可拖动移动窗口，导航项在上层保持可点击
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                    padding: padding,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: items.asMap().entries.map((entry) {

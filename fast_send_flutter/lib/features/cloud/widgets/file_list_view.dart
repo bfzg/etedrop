@@ -6,7 +6,8 @@ import '../models/fs_entry.dart';
 String formatFileSize(int bytes) {
   if (bytes < 1024) return '$bytes B';
   if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  if (bytes < 1024 * 1024 * 1024) return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+  if (bytes < 1024 * 1024 * 1024)
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
 }
 
@@ -151,9 +152,19 @@ class FileListView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.folder_open, size: 64, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4)),
+            Icon(
+              Icons.folder_open,
+              size: 64,
+              color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
+            ),
             const SizedBox(height: 16),
-            Text('空文件夹', style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 16)),
+            Text(
+              '空文件夹',
+              style: TextStyle(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontSize: 16,
+              ),
+            ),
           ],
         ),
       );
@@ -161,7 +172,8 @@ class FileListView extends StatelessWidget {
 
     return ListView.separated(
       itemCount: entries.length,
-      separatorBuilder: (_, _) => Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.3)),
+      separatorBuilder: (_, _) =>
+          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.3)),
       itemBuilder: (context, index) {
         final entry = entries[index];
         return _FileListTile(
@@ -225,20 +237,26 @@ class _FileListTile extends StatelessWidget {
         },
         itemBuilder: (context) => [
           if (!entry.isDirectory)
-            const PopupMenuItem(value: 'share', child: Row(
+            const PopupMenuItem(
+              value: 'share',
+              child: Row(
+                children: [
+                  Icon(Icons.share, size: 18),
+                  SizedBox(width: 8),
+                  Text('分享'),
+                ],
+              ),
+            ),
+          PopupMenuItem(
+            value: 'delete',
+            child: Row(
               children: [
-                Icon(Icons.share, size: 18),
-                SizedBox(width: 8),
-                Text('分享'),
+                Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
+                const SizedBox(width: 8),
+                Text('删除', style: TextStyle(color: colorScheme.error)),
               ],
-            )),
-          PopupMenuItem(value: 'delete', child: Row(
-            children: [
-              Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
-              const SizedBox(width: 8),
-              Text('删除', style: TextStyle(color: colorScheme.error)),
-            ],
-          )),
+            ),
+          ),
         ],
       ),
       onTap: () => onTap?.call(entry),

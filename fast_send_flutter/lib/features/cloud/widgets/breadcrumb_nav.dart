@@ -14,7 +14,7 @@ class BreadcrumbNav extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: 40,
+      height: 36,
       child: Row(
         children: [
           InkWell(
