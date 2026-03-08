@@ -9,6 +9,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../core/config/constants.dart';
 import '../models/device_config.dart';
+import 'share_p2p_handler.dart';
 
 enum DeviceConnectionState {
   disconnected,
@@ -26,6 +27,7 @@ class DeviceManager {
   Timer? _heartbeatTimer;
   StreamSubscription? _wsSubscription;
   bool _disposed = false;
+  ShareP2PHandler? _p2pHandler;
 
   final _stateController = StreamController<void>.broadcast();
 
@@ -157,7 +159,27 @@ class DeviceManager {
       case 'ping':
         _ws?.sink.add(jsonEncode({'type': 'heartbeat'}));
         break;
+      case 'offer':
+        final offerData = data['data'];
+        if (offerData is Map<String, dynamic>) {
+          _onOffer(offerData);
+        }
+        break;
+      case 'ice-candidate':
+        final iceData = data['data'];
+        if (iceData is Map<String, dynamic>) {
+          _p2pHandler?.handleIceCandidate(iceData);
+        }
+        break;
     }
+  }
+
+  Future<void> _onOffer(Map<String, dynamic> offerData) async {
+    await _p2pHandler?.dispose();
+    _p2pHandler = ShareP2PHandler(
+      sendSignaling: (msg) => _ws?.sink.add(jsonEncode(msg)),
+    );
+    await _p2pHandler!.handleOffer(offerData);
   }
 
   void _scheduleReconnect() {
@@ -177,6 +199,8 @@ class DeviceManager {
     _heartbeatTimer = null;
     _wsSubscription?.cancel();
     _wsSubscription = null;
+    _p2pHandler?.dispose();
+    _p2pHandler = null;
     _ws?.sink.close().catchError((_) {});
     _ws = null;
     _setState(DeviceConnectionState.disconnected, error: error);

@@ -17,6 +17,7 @@ class ShareService {
 
   /// 初始化，加载本地分享记录
   Future<void> init() async {
+    if (_sharesFilePath != null) return;
     final appDir = await getApplicationSupportDirectory();
     _sharesFilePath = p.join(appDir.path, AppConstants.sharesFileName);
     await _loadShares();
@@ -124,6 +125,37 @@ class ShareService {
       createdAt: record.createdAt,
       expiresAt: record.expiresAt,
     );
+  }
+
+  /// 获取分享元信息（不检查密码，用于 P2P 返回基本信息给浏览器）
+  ShareInfo? getShareMeta(String code) {
+    final record = _shares[code];
+    if (record == null) return null;
+
+    if (record.expiresAt != null &&
+        DateTime.now().millisecondsSinceEpoch > record.expiresAt!) {
+      _shares.remove(code);
+      _saveShares();
+      return null;
+    }
+
+    return ShareInfo(
+      code: record.code,
+      path: record.path,
+      fileName: record.fileName,
+      size: record.size,
+      hasPassword: record.passwordHash != null,
+      createdAt: record.createdAt,
+      expiresAt: record.expiresAt,
+    );
+  }
+
+  /// 验证分享密码
+  bool verifySharePassword(String code, String password) {
+    final record = _shares[code];
+    if (record == null) return false;
+    if (record.passwordHash == null) return true;
+    return _hashPassword(password) == record.passwordHash;
   }
 
   /// 删除分享
