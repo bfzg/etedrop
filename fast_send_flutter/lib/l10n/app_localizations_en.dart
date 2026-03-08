@@ -117,6 +117,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get waitingForReceiver => 'Waiting for receiver...';
 
   @override
+  String get waitingForSender => 'Waiting for sender...';
+
+  @override
   String get pickupCode => 'Pickup Code';
 
   @override

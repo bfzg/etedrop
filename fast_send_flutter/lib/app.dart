@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'l10n/app_localizations.dart';
-import '../../core/router/router_provider.dart';
+import 'core/router/router_provider.dart';
+import 'features/device/providers/device_auto_connect.dart';
 import 'features/settings/providers/theme_provider.dart';
 import 'features/settings/providers/locale_provider.dart';
 
@@ -11,6 +12,9 @@ class App extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // 启动时自动连接信令服务器，设备立即注册上线
+    ref.read(deviceAutoConnectProvider);
+
     final themeMode = ref.watch(themeProvider);
     final locale = ref.watch(localeProvider);
 

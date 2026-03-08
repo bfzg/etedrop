@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../core/config/constants.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
@@ -22,6 +23,8 @@ class SettingsPage extends ConsumerWidget {
 
     final storagePath = ref.watch(storageDirPathProvider);
     final connected = ref.watch(deviceConnectedProvider);
+    final connecting = ref.watch(deviceConnectingProvider);
+    final lastError = ref.watch(deviceLastConnectionErrorProvider);
     final devName = ref.watch(deviceNameProvider);
     final devId = ref.watch(deviceIdProvider);
 
@@ -59,24 +62,53 @@ class SettingsPage extends ConsumerWidget {
                 children: [
                   ListTile(
                     leading: Icon(
-                      connected ? Icons.cloud_done : Icons.cloud_off,
+                      connected
+                          ? Icons.cloud_done
+                          : (connecting ? Icons.cloud_sync : Icons.cloud_off),
                       color: connected
                           ? Colors.green
-                          : theme.colorScheme.onSurfaceVariant,
+                          : (connecting
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant),
                     ),
                     title: Text(devName),
                     subtitle: Text(
-                      connected ? l10n.connected : l10n.disconnected,
+                      connected
+                          ? l10n.connected
+                          : (connecting ? l10n.connecting : l10n.disconnected),
                     ),
                     trailing: connected
                         ? null
-                        : FilledButton.tonal(
-                            onPressed: () => ref
-                                .read(deviceManagerProvider.notifier)
-                                .connectToServer(),
-                            child: Text(l10n.connect),
-                          ),
+                        : (connecting
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: theme.colorScheme.primary,
+                                ),
+                              )
+                            : FilledButton.tonal(
+                                onPressed: () => ref
+                                    .read(deviceManagerProvider)
+                                    .connectToServer(),
+                                child: Text(l10n.connect),
+                              )),
                   ),
+                  if (lastError != null && lastError.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      child: Text(
+                        lastError,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: theme.colorScheme.error,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                   const Divider(height: 1, indent: 56),
                   if (devId != null) ...[
                     ListTile(
@@ -228,8 +260,8 @@ class SettingsPage extends ConsumerWidget {
               ),
               child: const ListTile(
                 leading: Icon(Icons.info_outline),
-                title: Text('FastSend'),
-                subtitle: Text('v1.0.0'),
+                title: Text(AppConstants.appName),
+                subtitle: Text('v${AppConstants.version}'),
               ),
             ),
             const SizedBox(height: 32),
@@ -272,7 +304,7 @@ class SettingsPage extends ConsumerWidget {
     );
     controller.dispose();
     if (result != null && result.isNotEmpty && result != currentName) {
-      await ref.read(deviceManagerProvider.notifier).setDeviceName(result);
+      await ref.read(deviceManagerProvider).setDeviceName(result);
     }
   }
 

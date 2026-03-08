@@ -1,22 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/utils/format_utils.dart';
 import '../models/fs_entry.dart';
-
-/// 格式化文件大小
-String formatFileSize(int bytes) {
-  if (bytes < 1024) return '$bytes B';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-  if (bytes < 1024 * 1024 * 1024)
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
-  return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-}
-
-/// 格式化时间
-String formatTime(int milliseconds) {
-  final dt = DateTime.fromMillisecondsSinceEpoch(milliseconds);
-  return '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')} '
-      '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-}
 
 /// 获取文件图标
 IconData getFileIcon(FsEntry entry) {
@@ -219,8 +204,8 @@ class _FileListTile extends StatelessWidget {
       ),
       subtitle: Text(
         entry.isDirectory
-            ? formatTime(entry.mtime)
-            : '${formatFileSize(entry.size)}  ·  ${formatTime(entry.mtime)}',
+            ? FormatUtils.dateTime(entry.mtime)
+            : '${FormatUtils.fileSize(entry.size)}  ·  ${FormatUtils.dateTime(entry.mtime)}',
         style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
       ),
       trailing: PopupMenuButton<String>(

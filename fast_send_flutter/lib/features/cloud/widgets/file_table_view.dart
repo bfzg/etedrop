@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
-import '../models/fs_entry.dart';
 import '../../../core/utils/format_utils.dart';
+import '../models/fs_entry.dart';
+import 'file_list_view.dart' show getFileIcon;
 
 class FileTableView extends StatelessWidget {
   final List<FsEntry> entries;
@@ -64,7 +64,7 @@ class FileTableView extends StatelessWidget {
                         Icon(
                           entry.isDirectory
                               ? Icons.folder
-                              : _getFileIcon(entry.name),
+                              : getFileIcon(entry),
                           color: entry.isDirectory
                               ? Colors.amber
                               : theme.colorScheme.primary,
@@ -80,7 +80,7 @@ class FileTableView extends StatelessWidget {
                       ],
                     ),
                   ),
-                  DataCell(Text(_formatTime(entry.mtime))),
+                  DataCell(Text(FormatUtils.dateTime(entry.mtime))),
                   DataCell(Text(entry.isDirectory ? '-' : FormatUtils.fileSize(entry.size))),
                   DataCell(
                     Row(
@@ -109,39 +109,4 @@ class FileTableView extends StatelessWidget {
     });
   }
 
-  IconData _getFileIcon(String name) {
-    final ext = name.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'jpg':
-      case 'jpeg':
-      case 'png':
-      case 'gif':
-      case 'webp':
-        return Icons.image;
-      case 'mp4':
-      case 'mov':
-      case 'avi':
-        return Icons.movie;
-      case 'mp3':
-      case 'wav':
-        return Icons.audiotrack;
-      case 'pdf':
-        return Icons.picture_as_pdf;
-      case 'doc':
-      case 'docx':
-        return Icons.description;
-      case 'zip':
-      case 'rar':
-      case '7z':
-        return Icons.folder_zip;
-      default:
-        return Icons.insert_drive_file;
-    }
-  }
-
-
-  String _formatTime(int mtime) {
-    final date = DateTime.fromMillisecondsSinceEpoch(mtime);
-    return DateFormat('yyyy-MM-dd HH:mm').format(date);
-  }
 }

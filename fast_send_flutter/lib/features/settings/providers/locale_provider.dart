@@ -1,6 +1,6 @@
 import 'dart:ui';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import '../../../services/local_storeage_service.dart';
+import '../../../services/local_storage_service.dart';
 
 part 'locale_provider.g.dart';
 

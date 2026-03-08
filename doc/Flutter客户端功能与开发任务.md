@@ -27,10 +27,12 @@
 | | 删除 | 删除文件或文件夹 | 已有 |
 | | 创建分享 | 对文件创建分享（密码、过期可选），展示分享码 + 分享链接 | 已补全（分享码+链接、链接可配置） |
 | | 我的分享 | 列出本机已创建分享，支持复制链接、删除 | 待开发（见下） |
-| **设备** | 设备上线 | 启动后连接服务端，发送 device-online、心跳 | 已有 |
-| | 设备信息 | 展示 deviceId、设备名、连接状态 | 已有（设置页等） |
-| **设置** | 基础设置 | 设备 ID、设备名、存储目录等展示或入口 | 已有 |
-| **配置** | 分享链接基地址 | 分享链接使用 shareLinkBaseUrl（默认 localhost:63421），可配置 | 已做（constants，后续可改为配置文件） |
+| **设备** | 设备上线 | 启动后自动连接服务端，发送 device-online、心跳 | ✅ 已有（含自动连接） |
+| | 设备信息 | 展示 deviceId、设备名、连接状态 | ✅ 已有（设置页三态展示） |
+| | 连接状态展示 | 连接中/已连接/连接失败+错误原因 | ✅ 已实现 |
+| **设置** | 基础设置 | 设备 ID、设备名、存储目录等展示或入口 | ✅ 已有 |
+| **配置** | 分享链接基地址 | 分享链接使用 shareLinkBaseUrl（默认 localhost:3000），可配置 | ✅ 已做（constants，后续可改为配置文件） |
+| **布局** | 响应式布局 | 桌面/移动端自适应布局（AdaptiveLayout + breakpoints） | ✅ 已实现 |
 
 ---
 
@@ -54,13 +56,19 @@
 
 ## 四、开发任务列表
 
-### 4.1 已完成（本次或之前）
+### 4.1 已完成
 
 - [x] 分享创建后展示**分享码**与**分享链接**（分享链接依赖设备已连接，否则提示先连接）。
-- [x] **分享链接基地址**可配置：`AppConstants.shareLinkBaseUrl`，默认 `http://localhost:63421`，便于本地联调与后续改为配置文件。
+- [x] **分享链接基地址**可配置：`AppConstants.shareLinkBaseUrl`，默认 `http://localhost:3000`（与服务端同地址），便于本地联调与后续改为配置文件。
 - [x] 网盘：存储目录、列表、上传、新建文件夹、删除、创建分享入口。
 - [x] 传文件：发送/接收页与取件码流程。
 - [x] 设备：连接服务端、device-online、心跳、设备信息展示。
+- [x] **设备自动连接**：应用启动时自动连接信令服务器（`deviceAutoConnectProvider`）。
+- [x] **连接状态三态展示**：设置页展示连接中（蓝色 + 转圈）、已连接（绿色）、连接失败（灰色 + 红色错误文案 + 重连按钮）。
+- [x] **分享自动复制链接**：创建分享后自动复制分享链接到剪贴板并提示。
+- [x] **响应式布局**：`AdaptiveLayout` + `breakpoints.dart`，桌面/移动端自适应。
+- [x] **紧凑 AppBar**：AppBar 高度缩减至 36px，面包屑左侧 + 操作按钮右侧。
+- [x] **移除全局 DraggableTopBar**：桌面端通过侧边栏拖拽窗口，macOS 侧边栏顶部安全距离。
 
 ### 4.2 建议优先（与分享/联调相关）
 
@@ -83,7 +91,7 @@
 |--------|----------|------|----------|
 | 信令地址 | `AppConstants.signalingServerUrl` | 取件码传文件 WS | `wss://...` 或 `ws://localhost:3000/api/connect` |
 | 设备/分享 WS | `AppConstants.shareServerUrl` | 设备上线、分享通道 | `ws://localhost:3000/api/share` |
-| 分享链接基地址 | `AppConstants.shareLinkBaseUrl` | 生成分享链接前缀 | `http://localhost:63421` |
+| 分享链接基地址 | `AppConstants.shareLinkBaseUrl` | 生成分享链接前缀 | `http://localhost:3000` |
 | 心跳间隔 | `AppConstants.heartbeatInterval` | 设备心跳（毫秒） | 30000 |
 | 重连间隔 | `AppConstants.reconnectInterval` | WS 重连（毫秒） | 5000 |
 

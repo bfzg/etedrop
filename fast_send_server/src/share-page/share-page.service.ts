@@ -1,7 +1,10 @@
+import { Injectable } from '@nestjs/common';
+
 /**
  * 分享页 HTML 模板（最小可用：连接设备并显示在线/离线）
  * WS 使用当前页面的 host，便于同源部署
  */
+@Injectable()
 export class SharePageService {
   renderSharePage(deviceId: string, shareCode: string): string {
     const escapedDeviceId = this.escapeHtml(deviceId);

@@ -45,7 +45,7 @@ final class FileServiceNotifierProvider
 }
 
 String _$fileServiceNotifierHash() =>
-    r'cc831252bccf0e5b62ad0933f281342257858736';
+    r'656d52531395cd1b14364d3d3f2c5ca0c638dc90';
 
 /// 文件服务单例 Provider
 

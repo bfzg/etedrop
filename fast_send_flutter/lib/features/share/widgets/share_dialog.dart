@@ -77,6 +77,18 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
             expiresIn: _expiresIn,
           );
       setState(() => _result = info);
+      // 有设备 ID 时自动复制分享链接
+      final deviceId = ref.read(deviceIdProvider);
+      if (deviceId != null && deviceId.isNotEmpty && mounted) {
+        final shareService = ref.read(shareServiceProvider);
+        final link = shareService.getShareUrl(info.code, deviceId);
+        await Clipboard.setData(ClipboardData(text: link));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('已复制分享链接'), duration: Duration(seconds: 1)),
+          );
+        }
+      }
     } catch (e) {
       setState(() => _error = '创建分享失败: $e');
     } finally {
@@ -174,7 +186,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                 ),
               if (_result!.hasPassword) ...[
                 const SizedBox(height: 8),
-                Text('密码: ${_passwordController.text}',
+                Text('已设置访问密码',
                     style: TextStyle(color: theme.colorScheme.onSurfaceVariant, fontSize: 13)),
               ],
               if (_result!.expiresAt != null) ...[

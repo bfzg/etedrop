@@ -25,7 +25,7 @@ Flutter 客户端需对接 FastSend 服务端的 **WebSocket 信令**（取件�
 |------|------------|------|
 | signalingServerUrl | `wss://fastsend.ing/api/connect` | 取件码传文件用 WebSocket |
 | shareServerUrl | `ws://localhost:3000/api/share` | 设备注册/分享通道 WebSocket |
-| webBaseUrl | `https://fastsend.kieng.cn` | 分享链接前缀（如 /share/:deviceId/:shareCode） |
+| shareLinkBaseUrl | `http://localhost:3000` | 分享链接前缀（如 /share/:deviceId/:shareCode），本地联调与服务端同地址 |
 | heartbeatInterval | 30000 | 心跳间隔（毫秒） |
 | reconnectInterval | 5000 | 重连间隔（毫秒） |
 
@@ -77,7 +77,7 @@ Flutter 客户端需对接 FastSend 服务端的 **WebSocket 信令**（取件�
 
 ### 5.3 分享链接
 
-- 生成格式：`${webBaseUrl}/share/${deviceId}/${shareCode}`，与《WebRTC网盘与分享方案》§8.9 一致。
+- 生成格式：`${shareLinkBaseUrl}/share/${deviceId}/${shareCode}`，与《WebRTC网盘与分享方案》§8.9 一致。
 - 若分享页尚未部署，链接可先用于复制；打开后需服务端提供对应页面或 SPA 路由。
 
 ---

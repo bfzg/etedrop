@@ -170,7 +170,7 @@ class _SidebarItem extends StatelessWidget {
                 size: 20,
                 color: selected ? selectedColor : normalColor,
               ),
-              const SizedBox(width: 9),
+              const SizedBox(height: 4),
               Text(
                 item.label,
                 style: TextStyle(

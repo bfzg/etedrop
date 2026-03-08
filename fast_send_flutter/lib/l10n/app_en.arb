@@ -35,6 +35,7 @@
   "startSend": "Start Send",
   "connecting": "Connecting...",
   "waitingForReceiver": "Waiting for receiver...",
+  "waitingForSender": "Waiting for sender...",
   "pickupCode": "Pickup Code",
   "copied": "Copied",
   "sending": "Sending...",

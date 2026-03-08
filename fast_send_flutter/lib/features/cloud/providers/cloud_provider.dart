@@ -4,7 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../services/local_storeage_service.dart';
+import '../../../services/local_storage_service.dart';
 import '../models/fs_entry.dart';
 import '../services/file_service.dart';
 

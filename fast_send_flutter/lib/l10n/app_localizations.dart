@@ -314,6 +314,12 @@ abstract class AppLocalizations {
   /// **'Waiting for receiver...'**
   String get waitingForReceiver;
 
+  /// No description provided for @waitingForSender.
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for sender...'**
+  String get waitingForSender;
+
   /// No description provided for @pickupCode.
   ///
   /// In en, this message translates to:

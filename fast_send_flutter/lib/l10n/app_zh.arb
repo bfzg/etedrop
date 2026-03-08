@@ -35,6 +35,7 @@
   "startSend": "开始发送",
   "connecting": "正在连接...",
   "waitingForReceiver": "等待接收方...",
+  "waitingForSender": "等待发送方...",
   "pickupCode": "取件码",
   "copied": "已复制",
   "sending": "正在发送...",

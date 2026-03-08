@@ -1,60 +1,56 @@
-import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../models/device_config.dart';
 import '../services/device_manager.dart';
 
-part 'device_provider.g.dart';
+export 'package:hooks_riverpod/hooks_riverpod.dart' show Ref;
 
-/// DeviceManager 单例 Provider
-@riverpod
-class DeviceManagerNotifier extends _$DeviceManagerNotifier {
-  final DeviceManager _manager = DeviceManager();
+/// DeviceManager 全局实例（应用生命周期内不销毁）
+final _globalManager = DeviceManager();
 
-  @override
-  DeviceManager build() {
-    ref.onDispose(() {
-      _manager.disconnect();
-    });
-    return _manager;
-  }
+/// DeviceManager Provider —— 用 StreamProvider 监听状态变化
+/// 每次 DeviceManager.notifyListeners() 都会触发 stream 更新
+final deviceManagerProvider = Provider<DeviceManager>((ref) {
+  return _globalManager;
+});
 
-  Future<DeviceConfig> loadConfig() async {
-    return _manager.loadConfig();
-  }
-
-  Future<void> connectToServer() async {
-    await _manager.connectToServer();
-    ref.invalidateSelf();
-  }
-
-  void disconnect() {
-    _manager.disconnect();
-    ref.invalidateSelf();
-  }
-
-  Future<void> setDeviceName(String name) async {
-    await _manager.setDeviceName(name);
-    ref.invalidateSelf();
-  }
-}
-
-/// 设备连接状态
-@riverpod
-bool deviceConnected(Ref ref) {
+/// 监听 DeviceManager 状态变化的 stream，UI rebuild 依赖它
+final _deviceStateStreamProvider = StreamProvider<void>((ref) {
   final manager = ref.watch(deviceManagerProvider);
-  return manager.isConnected;
-}
+  return manager.stateStream;
+});
+
+/// 设备是否已连接
+final deviceConnectedProvider = Provider<bool>((ref) {
+  ref.watch(_deviceStateStreamProvider);
+  return ref.read(deviceManagerProvider).isConnected;
+});
+
+/// 设备是否正在连接
+final deviceConnectingProvider = Provider<bool>((ref) {
+  ref.watch(_deviceStateStreamProvider);
+  return ref.read(deviceManagerProvider).isConnecting;
+});
+
+/// 最近一次连接错误（null = 无错误）
+final deviceLastConnectionErrorProvider = Provider<String?>((ref) {
+  ref.watch(_deviceStateStreamProvider);
+  return ref.read(deviceManagerProvider).lastError;
+});
 
 /// 设备 ID
-@riverpod
-String? deviceId(Ref ref) {
-  final manager = ref.watch(deviceManagerProvider);
-  return manager.config?.deviceId;
-}
+final deviceIdProvider = Provider<String?>((ref) {
+  ref.watch(_deviceStateStreamProvider);
+  return ref.read(deviceManagerProvider).config?.deviceId;
+});
 
 /// 设备名称
-@riverpod
-String deviceName(Ref ref) {
-  final manager = ref.watch(deviceManagerProvider);
-  return manager.config?.deviceName ?? '未知设备';
-}
+final deviceNameProvider = Provider<String>((ref) {
+  ref.watch(_deviceStateStreamProvider);
+  return ref.read(deviceManagerProvider).config?.deviceName ?? '未知设备';
+});
+
+/// 连接状态枚举
+final deviceConnectionStateProvider = Provider<DeviceConnectionState>((ref) {
+  ref.watch(_deviceStateStreamProvider);
+  return ref.read(deviceManagerProvider).state;
+});

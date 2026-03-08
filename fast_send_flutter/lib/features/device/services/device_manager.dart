@@ -10,21 +10,42 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../core/config/constants.dart';
 import '../models/device_config.dart';
 
+enum DeviceConnectionState {
+  disconnected,
+  connecting,
+  connected,
+}
+
 /// 设备管理服务
-/// 对应 Electron: src/main/device-manager.ts
 class DeviceManager {
   DeviceConfig? _config;
   WebSocketChannel? _ws;
-  bool _isConnected = false;
+  DeviceConnectionState _state = DeviceConnectionState.disconnected;
+  String? _lastError;
   Timer? _reconnectTimer;
   Timer? _heartbeatTimer;
   StreamSubscription? _wsSubscription;
+  bool _disposed = false;
+
+  final _stateController = StreamController<void>.broadcast();
+
+  /// UI 通过此 stream 监听状态变化
+  Stream<void> get stateStream => _stateController.stream;
 
   DeviceConfig? get config => _config;
-  bool get isConnected => _isConnected;
+  DeviceConnectionState get state => _state;
+  bool get isConnected => _state == DeviceConnectionState.connected;
+  bool get isConnecting => _state == DeviceConnectionState.connecting;
+  String? get lastError => _lastError;
 
-  /// 加载设备配置（首次启动时自动生成）
-  /// 对应 Electron: loadDeviceConfig()
+  void _setState(DeviceConnectionState s, {String? error}) {
+    _state = s;
+    _lastError = error;
+    if (!_disposed && !_stateController.isClosed) {
+      _stateController.add(null);
+    }
+  }
+
   Future<DeviceConfig> loadConfig() async {
     if (_config != null) return _config!;
 
@@ -38,11 +59,8 @@ class DeviceManager {
         _config = DeviceConfig.fromJson(jsonDecode(data));
         return _config!;
       }
-    } catch (_) {
-      // 配置损坏，重新生成
-    }
+    } catch (_) {}
 
-    // 首次启动，生成新配置
     _config = DeviceConfig(
       deviceId: const Uuid().v4(),
       deviceName: Platform.localHostname,
@@ -59,19 +77,22 @@ class DeviceManager {
     await File(configPath).writeAsString(jsonEncode(_config!.toJson()));
   }
 
-  /// 设置设备名称
-  /// 对应 Electron: setDeviceName()
   Future<bool> setDeviceName(String name) async {
     if (_config == null) await loadConfig();
     _config = _config!.copyWith(deviceName: name);
     await _saveConfig();
+    _setState(_state);
     return true;
   }
 
   /// 连接到信令服务器
-  /// 对应 Electron: connectToServer()
   Future<void> connectToServer() async {
-    if (_isConnected) return;
+    if (_state == DeviceConnectionState.connected ||
+        _state == DeviceConnectionState.connecting) return;
+
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _setState(DeviceConnectionState.connecting);
 
     final config = await loadConfig();
 
@@ -80,62 +101,58 @@ class DeviceManager {
         Uri.parse(AppConstants.shareServerUrl),
       );
 
-      // 发送设备上线消息
+      // WebSocketChannel.connect 不会抛同步异常，需要等 ready
+      await _ws!.ready;
+
+      if (_disposed) return;
+
       _ws!.sink.add(jsonEncode({
         'type': 'device-online',
         'deviceId': config.deviceId,
         'deviceName': config.deviceName,
       }));
 
-      _isConnected = true;
+      _setState(DeviceConnectionState.connected);
 
-      // 启动心跳
       _heartbeatTimer?.cancel();
       _heartbeatTimer = Timer.periodic(
         const Duration(milliseconds: AppConstants.heartbeatInterval),
         (_) {
-          if (_isConnected) {
+          if (isConnected) {
             _ws?.sink.add(jsonEncode({'type': 'heartbeat'}));
           }
         },
       );
 
-      // 监听消息
+      _wsSubscription?.cancel();
       _wsSubscription = _ws!.stream.listen(
         (data) {
           try {
-            final message = jsonDecode(data as String);
-            _handleMessage(message as Map<String, dynamic>);
-          } catch (e) {
-            // 解析失败，忽略
-          }
+            final msg = jsonDecode(data as String) as Map<String, dynamic>;
+            _handleMessage(msg);
+          } catch (_) {}
         },
         onError: (error) {
-          _isConnected = false;
+          _cleanup(error: _friendlyError(error));
           _scheduleReconnect();
         },
         onDone: () {
-          _isConnected = false;
-          _ws = null;
+          _cleanup(error: '连接已断开，正在重连...');
           _scheduleReconnect();
         },
       );
     } catch (e) {
-      _isConnected = false;
+      if (_disposed) return;
+      _cleanup(error: _friendlyError(e));
       _scheduleReconnect();
     }
   }
 
-  /// 处理服务端消息
-  /// 对应 Electron: handleServerMessage()
   void _handleMessage(Map<String, dynamic> data) {
     switch (data['type']) {
       case 'device-online-ack':
-        // 设备上线确认
         break;
       case 'peer-connect':
-        // 有浏览器想连接
-        // TODO: 处理 WebRTC 信令转发
         break;
       case 'ping':
         _ws?.sink.add(jsonEncode({'type': 'heartbeat'}));
@@ -143,44 +160,59 @@ class DeviceManager {
     }
   }
 
-  /// 定时重连
-  /// 对应 Electron: scheduleReconnect()
   void _scheduleReconnect() {
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(
       const Duration(milliseconds: AppConstants.reconnectInterval),
       () {
         _reconnectTimer = null;
-        connectToServer();
+        if (!_disposed) connectToServer();
       },
     );
   }
 
-  /// 断开连接
-  /// 对应 Electron: disconnectFromServer()
-  void disconnect() {
-    _reconnectTimer?.cancel();
-    _reconnectTimer = null;
+  /// 清理连接资源（不清 config/reconnect timer）
+  void _cleanup({String? error}) {
     _heartbeatTimer?.cancel();
     _heartbeatTimer = null;
     _wsSubscription?.cancel();
     _wsSubscription = null;
-    _ws?.sink.close();
+    _ws?.sink.close().catchError((_) {});
     _ws = null;
-    _isConnected = false;
+    _setState(DeviceConnectionState.disconnected, error: error);
   }
 
-  /// 获取连接状态
-  /// 对应 Electron: getConnectionStatus()
+  void disconnect() {
+    _reconnectTimer?.cancel();
+    _reconnectTimer = null;
+    _cleanup();
+  }
+
+  void dispose() {
+    _disposed = true;
+    disconnect();
+    _stateController.close();
+  }
+
   ({bool connected, String? deviceId}) get connectionStatus => (
-        connected: _isConnected,
+        connected: isConnected,
         deviceId: _config?.deviceId,
       );
 
-  /// 生成分享链接
-  /// 对应 Electron: getShareUrl()
   String getShareUrl(String shareCode) {
     if (_config == null) return '';
     return '${AppConstants.shareLinkBaseUrl}/share/${_config!.deviceId}/$shareCode';
+  }
+
+  /// 把原始异常转为用户友好文案
+  static String _friendlyError(Object e) {
+    final s = e.toString();
+    if (s.contains('Connection refused')) {
+      return '无法连接服务器 (${AppConstants.shareServerUrl})';
+    }
+    if (s.contains('SocketException')) {
+      return '网络错误: $s';
+    }
+    return s;
   }
 }

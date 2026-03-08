@@ -245,7 +245,7 @@ class _ReceivePageState extends State<ReceivePage> {
                 if (_status == ReceiveStatus.waiting) ...[
                   const CircularProgressIndicator(),
                   Gap.md,
-                  Text(l10n.waitingForReceiver),
+                  Text(l10n.waitingForSender),
                   Gap.md,
                   TextButton(onPressed: _reset, child: Text(l10n.cancel)),
                 ],

@@ -117,6 +117,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get waitingForReceiver => '等待接收方...';
 
   @override
+  String get waitingForSender => '等待发送方...';
+
+  @override
   String get pickupCode => '取件码';
 
   @override
