@@ -47,7 +47,9 @@ class ShareList extends _$ShareList {
     String? password,
     int? expiresIn,
   }) async {
+    final notifier = ref.read(shareServiceProvider.notifier);
     final service = ref.read(shareServiceProvider);
+    await notifier.ensureInit();
     final info = await service.createShare(
       relativePath,
       fileName: fileName,
@@ -55,13 +57,22 @@ class ShareList extends _$ShareList {
       password: password,
       expiresIn: expiresIn,
     );
-    ref.invalidateSelf();
+    if (ref.mounted) {
+      ref.invalidateSelf();
+    }
     return info;
   }
 
   Future<void> deleteShare(String code) async {
+    final notifier = ref.read(shareServiceProvider.notifier);
     final service = ref.read(shareServiceProvider);
+    await notifier.ensureInit();
+    if (!ref.mounted) {
+      return;
+    }
     await service.deleteShare(code);
-    ref.invalidateSelf();
+    if (ref.mounted) {
+      ref.invalidateSelf();
+    }
   }
 }

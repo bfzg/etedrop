@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../core/config/constants.dart';
 import '../models/share_record.dart';
+import '../../../services/logger_service.dart';
 
 /// 文件分享服务
 /// 对应 Electron: src/ipc/share/handlers.ts
@@ -52,7 +53,10 @@ class ShareService {
   String _generateCode() {
     final random = Random.secure();
     final bytes = List<int>.generate(4, (_) => random.nextInt(256));
-    return bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join().toUpperCase();
+    return bytes
+        .map((b) => b.toRadixString(16).padLeft(2, '0'))
+        .join()
+        .toUpperCase();
   }
 
   /// SHA256 哈希密码
@@ -70,6 +74,9 @@ class ShareService {
     String? password,
     int? expiresIn,
   }) async {
+    if (_sharesFilePath == null) {
+      await init();
+    }
     final code = _generateCode();
     final record = ShareRecord(
       code: code,
@@ -100,6 +107,7 @@ class ShareService {
   /// 获取分享信息
   /// 对应 Electron: getShare handler
   ShareInfo? getShare(String code, {String? password}) {
+    logger.d('getShare: $code, $password,$_shares');
     final record = _shares[code];
     if (record == null) return null;
 
@@ -129,6 +137,7 @@ class ShareService {
 
   /// 获取分享元信息（不检查密码，用于 P2P 返回基本信息给浏览器）
   ShareInfo? getShareMeta(String code) {
+    logger.d('getShareMeta: $code, $_shares');
     final record = _shares[code];
     if (record == null) return null;
 
@@ -179,15 +188,17 @@ class ShareService {
         expired.add(record.code);
         continue;
       }
-      result.add(ShareInfo(
-        code: record.code,
-        path: record.path,
-        fileName: record.fileName,
-        size: record.size,
-        hasPassword: record.passwordHash != null,
-        createdAt: record.createdAt,
-        expiresAt: record.expiresAt,
-      ));
+      result.add(
+        ShareInfo(
+          code: record.code,
+          path: record.path,
+          fileName: record.fileName,
+          size: record.size,
+          hasPassword: record.passwordHash != null,
+          createdAt: record.createdAt,
+          expiresAt: record.expiresAt,
+        ),
+      );
     }
 
     if (expired.isNotEmpty) {
