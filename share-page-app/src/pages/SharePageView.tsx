@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useSharePage } from '../hooks/useSharePage'
-import { formatBytes, fileIcon } from '../utils/format'
+import { formatBytes } from '../utils/format'
+import { FileIconSvg } from '../components/fileIconSvgComponent'
 
 const STATUS_CLASSES = {
   pending: {
@@ -77,7 +78,7 @@ export function SharePageView() {
 
         {fileInfo && (
           <div className="bg-slate-50 rounded-xl p-5 mb-4">
-            <div className="text-4xl mb-3">{fileIcon(fileInfo.fileName)}</div>
+            <FileIconSvg fileName={fileInfo.fileName} className="w-12 h-12 mb-3" alt="" />
             <div className="text-base font-semibold text-slate-800 break-all mb-1">
               {fileInfo.fileName}
             </div>

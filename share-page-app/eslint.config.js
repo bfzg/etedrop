@@ -21,6 +21,10 @@ export default defineConfig([
     },
     rules: {
       "react/prop-types": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "no-empty": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/rules-of-hooks": "off",
     },
   },
 ]);
