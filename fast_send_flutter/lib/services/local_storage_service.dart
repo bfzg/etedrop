@@ -1,3 +1,5 @@
+// 本地存储服务
+
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'logger_service.dart';

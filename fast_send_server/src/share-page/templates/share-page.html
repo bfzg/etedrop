@@ -1,0 +1,491 @@
+<!doctype html>
+<html lang="zh-CN">
+  <!-- ========== head：页面元信息与样式 ========== -->
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FastSend 分享</title>
+    <link rel="stylesheet" href="/output.css" />
+  </head>
+  <body class="min-h-screen flex items-center justify-center p-5">
+    <!-- ========== 主容器：注入 deviceId / shareCode，供脚本与后端替换 ========== -->
+    <div
+      id="app"
+      class="max-w-[440px] w-full"
+      data-device-id="{{DEVICE_ID}}"
+      data-share-code="{{SHARE_CODE}}"
+    >
+      <!-- 标题与分享码展示 -->
+      <div class="text-2xl font-bold text-gray-800 mb-1">FastSend</div>
+      <p class="text-[13px] text-gray-500 mb-6">分享码: {{SHARE_CODE}}</p>
+
+      <!-- ========== 状态条 #status：连接中 / 在线 / 错误，含圆点与文案 ========== -->
+      <div
+        id="status"
+        class="flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-amber-50 text-amber-800"
+      >
+        <span
+          id="dot"
+          class="w-2 h-2 rounded-full shrink-0 bg-amber-500 animate-pulse"
+        ></span>
+        <span id="stxt">正在连接设备…</span>
+      </div>
+
+      <!-- ========== 文件信息卡片 #fcard：文件名、大小、图标（P2P 获取后显示） ========== -->
+      <div id="fcard" class="hidden bg-slate-50 rounded-xl p-5 mb-4">
+        <div id="ficon" class="text-4xl mb-3"></div>
+        <div
+          id="fname"
+          class="text-base font-semibold text-slate-800 break-all mb-1"
+        ></div>
+        <div id="fsize" class="text-[13px] text-slate-500"></div>
+      </div>
+
+      <!-- ========== 密码验证区 #pwds：有密码时显示，验证后隐藏 ========== -->
+      <div id="pwds" class="hidden mb-4">
+        <label class="block text-[13px] text-slate-600 mb-1.5 font-medium"
+          >此文件需要访问密码</label
+        >
+        <div class="flex gap-2">
+          <input
+            type="password"
+            id="pwdi"
+            placeholder="请输入密码"
+            class="flex-1 py-2.5 px-3.5 bg-gray-100 rounded-lg text-sm outline-none"
+          />
+          <button
+            type="button"
+            class="inline-flex items-center justify-center gap-1.5 py-2.5 px-5 rounded-lg text-sm font-medium bg-indigo-600 text-white cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            id="vbtn"
+          >
+            验证
+          </button>
+        </div>
+        <div id="perr" class="hidden text-xs text-red-500 mt-1"></div>
+      </div>
+
+      <!-- ========== 下载按钮 #dbtn：无密码或验证通过后显示 ========== -->
+      <button
+        type="button"
+        id="dbtn"
+        class="hidden items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        下载文件
+      </button>
+
+      <!-- ========== 下载进度 #prog：下载过程中显示 ========== -->
+      <div id="prog" class="hidden mt-4">
+        <div id="ptxt" class="text-xs text-slate-500 text-center">
+          准备下载…
+        </div>
+      </div>
+
+      <!-- ========== 下载完成 #done：文件接收完毕后显示 ========== -->
+      <div id="done" class="hidden text-center py-5">
+        <div class="text-4xl mb-2">✅</div>
+        <p class="text-green-600 font-medium">下载完成</p>
+      </div>
+
+      <!-- ========== 重新连接按钮 #rbtn：错误或断开时显示 ========== -->
+      <button
+        type="button"
+        id="rbtn"
+        class="hidden inline-flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium w-full mt-3 bg-slate-100 text-slate-600 cursor-pointer hover:bg-slate-200"
+      >
+        重新连接
+      </button>
+    </div>
+
+    <!-- ========== 脚本：WebSocket 信令 + WebRTC P2P + DataChannel 下载 ========== -->
+    <script>
+      (function () {
+        // --- DOM 与参数 ---
+        var a = document.getElementById('app');
+        var did = a.dataset.deviceId,
+          sc = a.dataset.shareCode;
+        var $ = function (id) {
+          return document.getElementById(id);
+        };
+        var sEl = $('status'),
+          stxt = $('stxt'),
+          dotEl = $('dot'),
+          fcard = $('fcard'),
+          ficon = $('ficon'),
+          fname = $('fname'),
+          fsize = $('fsize');
+        var pwds = $('pwds'),
+          pwdi = $('pwdi'),
+          vbtn = $('vbtn'),
+          perr = $('perr');
+        var dbtn = $('dbtn'),
+          prog = $('prog'),
+          pfill = $('pfill'),
+          ptxt = $('ptxt'),
+          done = $('done'),
+          rbtn = $('rbtn');
+        var ws,
+          pc,
+          dc,
+          fi = null,
+          chunks = [],
+          rcvd = 0,
+          total = 0;
+
+        // --- 状态条样式（pending / online / error）---
+        var statusClasses = {
+          pending: {
+            el: 'flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-amber-50 text-amber-800',
+            dot: 'w-2 h-2 rounded-full shrink-0 bg-amber-500 animate-pulse',
+          },
+          online: {
+            el: 'flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-green-50 text-green-700',
+            dot: 'w-2 h-2 rounded-full shrink-0 bg-green-500',
+          },
+          error: {
+            el: 'flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-red-50 text-red-600',
+            dot: 'w-2 h-2 rounded-full shrink-0 bg-red-500',
+          },
+        };
+        function ss(c, t) {
+          var s = statusClasses[c] || statusClasses.error;
+          sEl.className = s.el;
+          if (dotEl) dotEl.className = s.dot;
+          stxt.textContent = t;
+          sEl.classList.remove('hidden');
+        }
+        function show(el) {
+          el.classList.remove('hidden');
+        }
+        function hide(el) {
+          el.classList.add('hidden');
+        }
+
+        // --- 工具：文件大小 / 文件类型图标 ---
+        function fmt(b) {
+          if (b < 1024) return b + ' B';
+          if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+          if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+          return (b / 1073741824).toFixed(2) + ' GB';
+        }
+        function icon(n) {
+          var e = (n.split('.').pop() || '').toLowerCase();
+          var m = {
+            pdf: '\ud83d\udcd5',
+            doc: '\ud83d\udcd8',
+            docx: '\ud83d\udcd8',
+            xls: '\ud83d\udcd7',
+            xlsx: '\ud83d\udcd7',
+            ppt: '\ud83d\udcd9',
+            pptx: '\ud83d\udcd9',
+            zip: '\ud83d\uddc4',
+            rar: '\ud83d\uddc4',
+            jpg: '\ud83d\uddbc',
+            jpeg: '\ud83d\uddbc',
+            png: '\ud83d\uddbc',
+            gif: '\ud83d\uddbc',
+            svg: '\ud83d\uddbc',
+            webp: '\ud83d\uddbc',
+            mp4: '\ud83c\udfac',
+            mov: '\ud83c\udfac',
+            mp3: '\ud83c\udfb5',
+            wav: '\ud83c\udfb5',
+            txt: '\ud83d\udcdd',
+            md: '\ud83d\udcdd',
+            json: '\ud83d\udcdd',
+            js: '\ud83d\udcbb',
+            ts: '\ud83d\udcbb',
+            py: '\ud83d\udcbb',
+            dart: '\ud83d\udcbb',
+          };
+          return m[e] || '\ud83d\udcc4';
+        }
+
+        // --- 重置 UI 与下载状态 ---
+        function reset() {
+          hide(fcard);
+          hide(pwds);
+          hide(dbtn);
+          hide(prog);
+          hide(done);
+          hide(rbtn);
+          fi = null;
+          chunks = [];
+          rcvd = 0;
+          total = 0;
+        }
+
+        // --- WebSocket：连接 /api/share，发送 connect + deviceId ---
+        function connect() {
+          reset();
+          ss('pending', '正在连接设备…');
+          var proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          ws = new WebSocket(proto + '//' + location.host + '/api/share');
+          ws.onopen = function () {
+            ws.send(JSON.stringify({ type: 'connect', deviceId: did }));
+          };
+          ws.onmessage = function (ev) {
+            try {
+              onWs(JSON.parse(ev.data));
+            } catch (e) {
+              ss('error', '消息解析失败');
+              show(rbtn);
+            }
+          };
+          ws.onerror = function () {
+            ss('error', '网络连接失败');
+            show(rbtn);
+          };
+          ws.onclose = function () {
+            if (sEl.classList.contains('bg-amber-50')) {
+              ss('error', '连接已关闭');
+              show(rbtn);
+            }
+          };
+        }
+
+        // --- WebSocket 消息：device-online → 建 P2P；answer / ice-candidate 转发 ---
+        function onWs(m) {
+          switch (m.type) {
+            case 'device-online':
+              ss('online', '设备在线，正在建立 P2P 连接…');
+              startRTC();
+              break;
+            case 'answer':
+              if (pc && m.data)
+                pc.setRemoteDescription(new RTCSessionDescription(m.data));
+              break;
+            case 'ice-candidate':
+              if (pc && m.data)
+                pc.addIceCandidate(new RTCIceCandidate(m.data)).catch(
+                  function () {},
+                );
+              break;
+            case 'err':
+              ss(
+                'error',
+                m.code === 'OFFLINE'
+                  ? '分享者设备离线，请稍后再试'
+                  : m.msg || '连接异常',
+              );
+              show(rbtn);
+              break;
+          }
+        }
+
+        // --- WebRTC：创建 PC、DataChannel，发 offer，收 answer/ice ---
+        function startRTC() {
+          if (dc) {
+            try {
+              dc.close();
+            } catch (e) {}
+            dc = null;
+          }
+          if (pc) {
+            try {
+              pc.close();
+            } catch (e) {}
+            pc = null;
+          }
+          pc = new RTCPeerConnection({
+            iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+          });
+          dc = pc.createDataChannel('share', { ordered: true });
+          dc.binaryType = 'arraybuffer';
+          dc.onopen = function () {
+            ss('online', 'P2P 已连接，获取文件信息…');
+            dc.send(JSON.stringify({ type: 'share-request', shareCode: sc }));
+          };
+          dc.onmessage = function (ev) {
+            if (typeof ev.data === 'string') {
+              try {
+                onDc(JSON.parse(ev.data));
+              } catch (e) {}
+            } else {
+              onChunk(ev.data);
+            }
+          };
+          dc.onclose = function () {
+            if (done.classList.contains('hidden')) {
+              ss('error', 'P2P 连接已断开');
+              show(rbtn);
+            }
+          };
+          pc.onicecandidate = function (ev) {
+            if (ev.candidate && ws && ws.readyState === 1)
+              ws.send(
+                JSON.stringify({
+                  type: 'ice-candidate',
+                  data: {
+                    candidate: ev.candidate.candidate,
+                    sdpMid: ev.candidate.sdpMid,
+                    sdpMLineIndex: ev.candidate.sdpMLineIndex,
+                  },
+                }),
+              );
+          };
+          pc.oniceconnectionstatechange = function () {
+            if (pc.iceConnectionState === 'failed') {
+              ss('error', 'P2P 连接失败，请重试');
+              show(rbtn);
+            }
+          };
+          pc.createOffer()
+            .then(function (o) {
+              return pc.setLocalDescription(o);
+            })
+            .then(function () {
+              ws.send(
+                JSON.stringify({
+                  type: 'offer',
+                  data: {
+                    sdp: pc.localDescription.sdp,
+                    type: pc.localDescription.type,
+                  },
+                }),
+              );
+            })
+            .catch(function () {
+              ss('error', '创建连接失败');
+              show(rbtn);
+            });
+        }
+
+        // --- DataChannel 消息：share-info / verify-result / file-meta / file-done / error ---
+        function onDc(m) {
+          switch (m.type) {
+            case 'share-info':
+              fi = m;
+              showFile(m);
+              break;
+            case 'error':
+              ss('error', m.message || '未知错误');
+              show(rbtn);
+              break;
+            case 'verify-result':
+              onVerify(m);
+              break;
+            case 'file-meta':
+              startRecv(m);
+              break;
+            case 'file-done':
+              finishDl();
+              break;
+          }
+        }
+
+        // --- 展示文件信息 / 密码验证结果 / 下载进度与完成 ---
+        function showFile(i) {
+          ficon.textContent = icon(i.fileName);
+          fname.textContent = i.fileName;
+          fsize.textContent = fmt(i.fileSize);
+          show(fcard);
+          hide(sEl);
+          if (i.hasPassword) {
+            show(pwds);
+            hide(dbtn);
+          } else {
+            hide(pwds);
+            show(dbtn);
+          }
+        }
+
+        function onVerify(m) {
+          if (m.success) {
+            hide(pwds);
+            hide(perr);
+            show(dbtn);
+          } else {
+            pwdi.classList.add('bg-red-100');
+            pwdi.classList.remove('bg-gray-100');
+            perr.textContent = m.error || '密码错误';
+            show(perr);
+            vbtn.disabled = false;
+          }
+        }
+
+        function startRecv(m) {
+          chunks = [];
+          rcvd = 0;
+          total = m.fileSize;
+          hide(dbtn);
+          show(prog);
+          updProg();
+        }
+        function onChunk(d) {
+          chunks.push(d);
+          rcvd += d.byteLength;
+          updProg();
+        }
+        function updProg() {
+          var p = total > 0 ? Math.min(100, (rcvd / total) * 100) : 0;
+          pfill.style.width = p.toFixed(1) + '%';
+          ptxt.textContent =
+            fmt(rcvd) + ' / ' + fmt(total) + ' (' + p.toFixed(1) + '%)';
+        }
+
+        function finishDl() {
+          hide(prog);
+          show(done);
+          var blob = new Blob(chunks);
+          var url = URL.createObjectURL(blob);
+          var link = document.createElement('a');
+          link.href = url;
+          link.download = fi ? fi.fileName : 'download';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          setTimeout(function () {
+            URL.revokeObjectURL(url);
+          }, 5000);
+          chunks = [];
+        }
+
+        // --- 事件绑定：验证、下载、重新连接、密码框回车 ---
+        vbtn.onclick = function () {
+          var p = pwdi.value.trim();
+          if (!p) {
+            pwdi.classList.add('bg-red-100');
+            pwdi.classList.remove('bg-gray-100');
+            perr.textContent = '请输入密码';
+            show(perr);
+            return;
+          }
+          pwdi.classList.remove('bg-red-100');
+          pwdi.classList.add('bg-gray-100');
+          hide(perr);
+          vbtn.disabled = true;
+          dc.send(JSON.stringify({ type: 'share-verify', password: p }));
+        };
+        dbtn.onclick = function () {
+          dbtn.disabled = true;
+          dc.send(JSON.stringify({ type: 'download-start' }));
+        };
+        rbtn.onclick = function () {
+          if (dc) {
+            try {
+              dc.close();
+            } catch (e) {}
+            dc = null;
+          }
+          if (pc) {
+            try {
+              pc.close();
+            } catch (e) {}
+            pc = null;
+          }
+          if (ws) {
+            try {
+              ws.close();
+            } catch (e) {}
+            ws = null;
+          }
+          connect();
+        };
+        pwdi.onkeydown = function (ev) {
+          if (ev.key === 'Enter') vbtn.click();
+        };
+        connect();
+      })();
+    </script>
+  </body>
+</html>

@@ -1,3 +1,5 @@
+// 负责初始化窗口管理、系统托盘、开机自启等桌面端相关功能
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';

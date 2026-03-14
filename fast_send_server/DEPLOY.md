@@ -11,10 +11,12 @@ http://43.153.143.37:40321/
 ```bash
 cd fast_send_server
 npm ci
-npm run build
+npm run build              # Nest 后端
+npm run build:share        # 分享页 React 前端 → 输出到 public/share/
+npx tailwindcss -i ./public/input.css -o ./public/output.css  # 可选：分享页依赖的全局样式
 ```
 
-会生成 `dist/` 目录（编译后的 JS）。
+会生成 `dist/` 目录（后端）和 `public/share/`（分享页 SPA）。部署时需保留 `public/share/`、`public/output.css`。
 
 ### 2. 上传到服务器
 
@@ -24,8 +26,9 @@ npm run build
 
 ```bash
 cd /www/wwwroot/rtc.a4life.xyz   # 或你的项目目录
-npm ci --omit=dev                # 安装生产依赖，会生成 node_modules
+npm ci --omit=dev                # 安装生产依赖
 npm run build                    # 生成 dist/
+npm run build:share              # 生成 public/share/（分享页前端）
 ```
 
 ### 3. 在服务器上运行
