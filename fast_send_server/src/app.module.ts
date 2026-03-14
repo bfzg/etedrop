@@ -9,6 +9,7 @@ import { SignalingModule } from './signaling/signaling.module';
 
 @Module({
   imports: [
+    // 全局静态目录：output.css、share-page 的 index.html 与 assets 等
     ServeStaticModule.forRoot({
       rootPath: join(__dirname, '..', 'public'),
     }),
