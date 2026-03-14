@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../widgets/app_layout.dart';
 import '../../widgets/bottom_nav_bar.dart';
-import '../../widgets/responsive_shell.dart';
 import '../../features/cloud/pages/cloud_page.dart';
 import '../../features/transfer/pages/send_page.dart';
 import '../../features/transfer/pages/receive_page.dart';
@@ -53,7 +53,7 @@ final router = GoRouter(
     // 底部导航页面
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
-        return ResponsiveShell(
+        return AppLayout(
           navigationShell: navigationShell,
           items: navItems,
         );
