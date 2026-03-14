@@ -7,9 +7,11 @@ import type { NextFunction, Response } from 'express';
 const SHARE_INDEX_PATH = join(process.cwd(), 'public', 'share', 'index.html');
 
 /**
- * 分享页：/share/:deviceId/:shareCode 返回 SPA；/share/assets/* 放行给静态中间件，
- * 否则会被误匹配成 deviceId=assets 导致 JS/CSS 返回 HTML、MIME 错误。
+ * 分享页：/share/:deviceId/:shareCode 返回 SPA；/share/assets/*、/share/svg/* 放行给静态中间件，
+ * 否则会被误匹配导致返回 HTML（JS/CSS/SVG 需正确 MIME）。
  */
+const STATIC_SEGMENTS = new Set(['assets', 'svg']);
+
 @Controller('share')
 export class SharePageController {
   @Get(':deviceId/:shareCode')
@@ -19,7 +21,7 @@ export class SharePageController {
     @Res() res: Response,
     @Next() next: NextFunction,
   ): void {
-    if (deviceId === 'assets') {
+    if (STATIC_SEGMENTS.has(deviceId)) {
       next();
       return;
     }
