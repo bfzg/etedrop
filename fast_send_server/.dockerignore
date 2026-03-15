@@ -9,3 +9,5 @@ coverage
 .vscode
 *.log
 npm-debug.log*
+# 分享页在镜像内重新构建，不拷贝其 node_modules
+share-page-app/node_modules

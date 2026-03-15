@@ -1,0 +1,14 @@
+# 可选：用 Docker Compose 管理单容器，需先 docker load 镜像后再执行 compose。
+# 用法：把本文件拷到服务器，在同一目录执行：
+#   docker load -i /www/wwwroot/rtc.a4life.xyz/fast-send-server.tar
+#   docker compose up -d
+
+services:
+  app:
+    image: fast-send-server
+    container_name: fast-send
+    restart: unless-stopped
+    ports:
+      - "40321:3000"
+    environment:
+      - PORT=3000

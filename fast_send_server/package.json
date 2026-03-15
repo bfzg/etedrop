@@ -8,6 +8,8 @@
   "scripts": {
     "build": "nest build",
     "build:share": "cd share-page-app && npm run build",
+    "docker:build": "docker build -t fast-send-server .",
+    "docker:deploy-pack": "bash scripts/deploy-docker.sh",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
