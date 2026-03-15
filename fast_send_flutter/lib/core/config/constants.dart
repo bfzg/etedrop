@@ -21,7 +21,7 @@ class AppConstants {
   static const String shareLinkBaseUrl = 'http://localhost:3000';
 
   /// 应用名称
-  static const String appName = 'FastSend';
+  static const String appName = 'Eddy';
 
   /// 应用版本
   static const String version = '1.0.0';

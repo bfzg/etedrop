@@ -24,7 +24,7 @@
 ### 2.2 现有项目基础
 
 ```
-FastSend/
+Eddy/
 ├── utils/PeerDataChannel.ts   # WebRTC DataChannel 封装（可复用）
 ├── utils/publicStunList.ts    # 公共 STUN 列表（无 TURN）
 ├── server/                    # Nuxt 信令服务器
@@ -371,7 +371,7 @@ interface AccessControl {
 ### 阶段三：客户端（2-3 周）
 
 - [ ] **3.1 Web 客户端**
-  - 复用现有 FastSend 代码
+  - 复用现有 Eddy 代码
   - 添加文件浏览 UI
   - 添加上传/下载功能
 
@@ -430,7 +430,7 @@ interface AccessControl {
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FastSend 服务端                                 │
+│                              Eddy 服务端                                 │
 │  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐         │
 │  │   分享页面       │    │   分享记录存储   │    │   信令服务      │         │
 │  │  /share/{code}  │    │  (设备码+分享码) │    │   (WebSocket)   │         │
@@ -447,7 +447,7 @@ interface AccessControl {
 ```
 
 **核心设计原则：**
-1. **Desktop 端不提供 HTTP 服务** - 所有 HTTP 服务由 FastSend 服务端提供
+1. **Desktop 端不提供 HTTP 服务** - 所有 HTTP 服务由 Eddy 服务端提供
 2. **设备码（Device ID）** - 唯一标识每个 Desktop 客户端
 3. **分享码（Share Code）** - 用于查找对应设备上的文件
 4. **WebRTC P2P 传输** - 文件数据通过 WebRTC DataChannel 直接传输
@@ -500,7 +500,7 @@ interface DeviceConfig {
 #### 8.3.1 创建分享（Desktop 端）
 
 ```
-用户                    Desktop                   FastSend 服务端
+用户                    Desktop                   Eddy 服务端
  │                         │                            │
  │── 右键文件 → 分享 ──────►│                            │
  │                         │                            │
@@ -522,7 +522,7 @@ interface DeviceConfig {
 #### 8.3.2 访问分享（浏览器用户）
 
 ```
-浏览器用户              FastSend 服务端              Desktop
+浏览器用户              Eddy 服务端              Desktop
     │                         │                         │
     │── GET /share/{deviceId}/A1B2C3D4 ───────────────►│
     │                         │                         │
@@ -590,7 +590,7 @@ interface DeviceConfig {
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    📤 FastSend                          │
+│                    📤 Eddy                          │
 │                                                         │
 │  ┌─────────────────────────────────────────────────┐   │
 │  │  📄 document.pdf                                │   │
@@ -793,7 +793,7 @@ ws.onopen = () => {
 ### 8.8 文件位置
 
 ```
-FastSend/server/
+Eddy/server/
 ├── api/
 │   └── connect.ts           # WebSocket 信令（需扩展，处理设备和分享）
 ├── pages/
@@ -837,7 +837,7 @@ https://fastsend.com/share/{deviceId}/{shareCode}
 
 ### 8.10 实现步骤
 
-#### 阶段一：服务端扩展（FastSend）
+#### 阶段一：服务端扩展（Eddy）
 - [ ] 扩展 `connect.ts` WebSocket 信令，支持：
   - 设备上线/离线管理（deviceId → WebSocket 映射）
   - 分享请求转发（根据 URL 中的 deviceId 找到设备）

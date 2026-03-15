@@ -7,7 +7,7 @@ function DevFallback() {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <div className="max-w-md text-center space-y-4">
-        <h1 className="text-xl font-semibold text-slate-800">FastSend 分享页</h1>
+        <h1 className="text-xl font-semibold text-slate-800">Eddy 分享页</h1>
         <p className="text-sm text-slate-600">
           请使用完整分享链接：<code className="bg-slate-200 px-1 rounded">/share/:deviceId/:shareCode</code>
         </p>

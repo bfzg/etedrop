@@ -66,7 +66,7 @@ export function SharePageView() {
   return (
     <div className="min-h-screen flex items-center justify-center p-5">
       <div className="max-w-[440px] w-full">
-        <div className="text-2xl font-bold text-gray-800 mb-1">FastSend</div>
+        <div className="text-2xl font-bold text-gray-800 mb-1">Eddy</div>
         <p className="text-[13px] text-gray-500 mb-6">分享码: {shareCode}</p>
 
         {showStatusBar && (
