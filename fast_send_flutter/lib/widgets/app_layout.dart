@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app/core/utils/is_utils.dart';
+import 'package:eddy/core/utils/is_utils.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:go_router/go_router.dart';
 import 'package:window_manager/window_manager.dart';

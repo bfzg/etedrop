@@ -45,8 +45,6 @@ class FileTableView extends StatelessWidget {
           constraints: BoxConstraints(minWidth: constraints.maxWidth),
           child: DataTable(
             showCheckboxColumn: false,
-            headingRowColor: WidgetStateProperty.all(
-                theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)),
             columns: const [
               DataColumn(label: Text('名称')),
               DataColumn(label: Text('修改时间')),

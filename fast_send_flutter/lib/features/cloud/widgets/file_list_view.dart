@@ -158,7 +158,7 @@ class FileListView extends StatelessWidget {
     return ListView.separated(
       itemCount: entries.length,
       separatorBuilder: (_, _) =>
-          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.3)),
+          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.12)),
       itemBuilder: (context, index) {
         final entry = entries[index];
         return _FileListTile(
