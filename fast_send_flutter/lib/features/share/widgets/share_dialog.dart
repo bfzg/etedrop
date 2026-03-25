@@ -266,7 +266,8 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                 contentPadding: EdgeInsets.zero,
                 onChanged: (v) => setState(() => _usePassword = v),
               ),
-              if (_usePassword)
+              if (_usePassword) ...[
+                const SizedBox(height: 8),
                 TextField(
                   controller: _passwordController,
                   decoration: const InputDecoration(
@@ -275,9 +276,9 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                     isDense: true,
                   ),
                 ),
+              ],
               const SizedBox(height: 16),
               // 过期时间
-              Text('过期时间', style: theme.textTheme.labelMedium),
               const SizedBox(height: 8),
               DropdownButtonFormField<int?>(
                 initialValue: _expiresIn,
@@ -302,7 +303,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                   ),
                 ),
               ],
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
             ],
           ),
         ),

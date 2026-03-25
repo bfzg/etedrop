@@ -16,6 +16,7 @@ class AppearanceSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SettingsSectionHeader(title: l10n.appearance),
         SettingsCard(
@@ -25,7 +26,9 @@ class AppearanceSection extends ConsumerWidget {
             subtitle: Text(
               locale?.languageCode == 'zh'
                   ? '简体中文'
-                  : (locale?.languageCode == 'en' ? 'English' : l10n.followSystem),
+                  : (locale?.languageCode == 'en'
+                        ? 'English'
+                        : l10n.followSystem),
             ),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => showLanguageDialog(context, ref, locale, l10n),

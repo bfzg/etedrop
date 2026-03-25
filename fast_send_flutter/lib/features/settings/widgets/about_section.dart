@@ -13,6 +13,7 @@ class AboutSection extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SettingsSectionHeader(title: l10n.about),
         const SettingsCard(

@@ -29,6 +29,7 @@ class DeviceInfoSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SettingsSectionHeader(title: l10n.deviceInfo),
         SettingsCard(
@@ -42,8 +43,8 @@ class DeviceInfoSection extends ConsumerWidget {
                   color: connected
                       ? Colors.green
                       : (connecting
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant),
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant),
                 ),
                 title: Text(devName),
                 subtitle: Text(
@@ -54,20 +55,20 @@ class DeviceInfoSection extends ConsumerWidget {
                 trailing: connected
                     ? null
                     : (connecting
-                        ? SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: theme.colorScheme.primary,
-                            ),
-                          )
-                        : FilledButton.tonal(
-                            onPressed: () => ref
-                                .read(deviceManagerProvider)
-                                .connectToServer(),
-                            child: Text(l10n.connect),
-                          )),
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: theme.colorScheme.primary,
+                              ),
+                            )
+                          : FilledButton.tonal(
+                              onPressed: () => ref
+                                  .read(deviceManagerProvider)
+                                  .connectToServer(),
+                              child: Text(l10n.connect),
+                            )),
               ),
               if (lastError != null && lastError!.isNotEmpty)
                 Padding(
@@ -101,7 +102,8 @@ class DeviceInfoSection extends ConsumerWidget {
                 leading: const Icon(Icons.edit),
                 title: Text(l10n.editDeviceName),
                 trailing: const Icon(Icons.chevron_right),
-                onTap: () => showRenameDeviceDialog(context, ref, devName, l10n),
+                onTap: () =>
+                    showRenameDeviceDialog(context, ref, devName, l10n),
               ),
             ],
           ),

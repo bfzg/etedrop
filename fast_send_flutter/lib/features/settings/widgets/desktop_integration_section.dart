@@ -21,6 +21,7 @@ class DesktopIntegrationSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SettingsSectionHeader(title: l10n.desktopIntegration),
         SettingsCard(
@@ -30,9 +31,8 @@ class DesktopIntegrationSection extends ConsumerWidget {
                 secondary: const Icon(Icons.power_settings_new),
                 title: Text(l10n.launchAtStartup),
                 value: autoStart,
-                onChanged: (value) => ref
-                    .read(settingsProvider.notifier)
-                    .toggleAutoStart(value),
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).toggleAutoStart(value),
               ),
               const Divider(height: 1, indent: 56),
               SwitchListTile(

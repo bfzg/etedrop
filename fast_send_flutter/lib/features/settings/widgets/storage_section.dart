@@ -16,6 +16,7 @@ class StorageSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SettingsSectionHeader(title: l10n.storage),
         SettingsCard(
@@ -24,7 +25,8 @@ class StorageSection extends ConsumerWidget {
             title: Text(l10n.storagePath),
             subtitle: Text(storagePath.isEmpty ? l10n.notSet : storagePath),
             trailing: const Icon(Icons.chevron_right),
-            onTap: () => ref.read(fileServiceProvider.notifier).selectStorageDir(),
+            onTap: () =>
+                ref.read(fileServiceProvider.notifier).selectStorageDir(),
           ),
         ),
       ],
