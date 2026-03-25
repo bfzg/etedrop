@@ -21,14 +21,6 @@ class ThemeNotifier extends _$ThemeNotifier {
   }
 
   ThemeMode _parseThemeMode(String? mode) {
-    switch (mode) {
-      case 'ThemeMode.light':
-        return ThemeMode.light;
-      case 'ThemeMode.dark':
-        return ThemeMode.dark;
-      case 'ThemeMode.system':
-      default:
-        return ThemeMode.system;
-    }
+    return ThemeMode.light;
   }
 }

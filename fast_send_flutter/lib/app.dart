@@ -5,7 +5,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'l10n/app_localizations.dart';
 import 'core/router/router_provider.dart';
 import 'features/device/providers/device_auto_connect.dart';
-import 'features/settings/providers/theme_provider.dart';
 import 'features/settings/providers/locale_provider.dart';
 
 class App extends ConsumerWidget {
@@ -16,7 +15,6 @@ class App extends ConsumerWidget {
     // 启动时自动连接信令服务器，设备立即注册上线
     ref.read(deviceAutoConnectProvider);
 
-    final themeMode = ref.watch(themeProvider);
     final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
@@ -25,7 +23,7 @@ class App extends ConsumerWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2D6BE4),
+          seedColor: const Color(0xFF0052D9),
           brightness: Brightness.light,
           surface: const Color(0xFFF7F7F7),
           surfaceContainerHighest: const Color(0xFFEEEEEE),
@@ -42,27 +40,6 @@ class App extends ConsumerWidget {
           thickness: 1,
         ),
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2D6BE4),
-          brightness: Brightness.dark,
-          surface: const Color(0xFF1C1C1E),
-          surfaceContainerHighest: const Color(0xFF2C2C2E),
-        ),
-        scaffoldBackgroundColor: const Color(0xFF1C1C1E),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1C1C1E),
-          surfaceTintColor: Colors.transparent,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-        ),
-        dividerTheme: const DividerThemeData(
-          color: Color(0xFF3A3A3C),
-          thickness: 1,
-        ),
-      ),
-      themeMode: themeMode,
       locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
