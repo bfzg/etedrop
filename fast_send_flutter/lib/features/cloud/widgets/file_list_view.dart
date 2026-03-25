@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/utils/format_utils.dart';
-import '../../../core/utils/file_svg_icon.dart';
+import '../../../core/utils/file_type_icon.dart';
 import '../models/fs_entry.dart';
 
 /// 文件列表项回调
@@ -87,14 +86,11 @@ class _FileListTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return ListTile(
-      leading: SvgPicture.asset(
-        svgIconForEntry(entry),
+      leading: Image.asset(
+        fileTypePngForEntry(entry),
         width: 32,
         height: 32,
-        colorFilter: ColorFilter.mode(
-          colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
-          BlendMode.srcIn,
-        ),
+        filterQuality: FilterQuality.high,
       ),
       title: Text(
         entry.name,

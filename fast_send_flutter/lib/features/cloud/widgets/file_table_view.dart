@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/utils/format_utils.dart';
-import '../../../core/utils/file_svg_icon.dart';
+import '../../../core/utils/file_type_icon.dart';
 import '../models/fs_entry.dart';
 
 class FileTableView extends StatelessWidget {
@@ -60,14 +59,11 @@ class FileTableView extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        SvgPicture.asset(
-                          svgIconForEntry(entry),
+                        Image.asset(
+                          fileTypePngForEntry(entry),
                           width: 20,
                           height: 20,
-                          colorFilter: ColorFilter.mode(
-                            theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
-                            BlendMode.srcIn,
-                          ),
+                          filterQuality: FilterQuality.high,
                         ),
                         const SizedBox(width: 12),
                         Flexible(

@@ -83,7 +83,7 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedColor = isDark ? Colors.white : const Color(0xFF1C1C1E);
+    final selectedColor = isDark ? Colors.white : const Color(0xFF0052D9);
 
     final normalColor = isDark
         ? Colors.white.withValues(alpha: 0.5)
