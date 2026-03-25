@@ -64,6 +64,7 @@ dependencies:
   flutter_acrylic: ^1.1.4
   flutter_localizations:
     sdk: flutter
+  desktop_drop: ^0.7.0
 
 dev_dependencies:
   flutter_test:

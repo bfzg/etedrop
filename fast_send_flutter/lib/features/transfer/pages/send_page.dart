@@ -1,341 +1,311 @@
 import 'dart:io';
 
+import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../core/config/constants.dart';
-import '../../../core/utils/format_utils.dart';
 import '../../../styles/styles.dart';
-import '../services/signaling_service.dart';
-import '../../../l10n/app_localizations.dart';
+import '../../cloud/providers/cloud_provider.dart';
+import '../../device/providers/device_provider.dart';
+import '../../share/providers/share_provider.dart';
 
-/// 发送状态
-enum SendStatus {
-  idle,
-  selectingFile,
-  connecting,
-  waiting,
-  paired,
-  transferring,
-  done,
-  error,
-}
+import '../widgets/send_drop_area.dart';
+import '../widgets/send_error_view.dart';
+import '../widgets/send_shared_view.dart';
+import '../widgets/send_uploading_view.dart';
 
-/// 文件发送页面
-/// 对应 Electron: src/routes/send.tsx → SendPage
-class SendPage extends StatefulWidget {
+enum SendStatus { idle, uploading, shared, error }
+
+class SendPage extends ConsumerStatefulWidget {
   const SendPage({super.key});
 
   @override
-  State<SendPage> createState() => _SendPageState();
+  ConsumerState<SendPage> createState() => _SendPageState();
 }
 
-class _SendPageState extends State<SendPage> {
+class _SendPageState extends ConsumerState<SendPage> {
   SendStatus _status = SendStatus.idle;
-  String? _filePath;
   String? _fileName;
   int? _fileSize;
-  String? _code;
+  String? _shareLink;
+  String? _shareCode;
   String? _errorMsg;
-  double _progress = 0;
-  SignalingService? _signaling;
+  bool _isPageDragging = false;
+  double _uploadProgress = 0;
 
-  @override
-  void dispose() {
-    _signaling?.dispose();
-    super.dispose();
+  String _cleanDroppedPath(String raw) {
+    var s = raw.trim();
+    if (s.length >= 2) {
+      final first = s[0];
+      final last = s[s.length - 1];
+      final isPairedQuotes = (first == '\'' && last == '\'') || (first == '"' && last == '"');
+      if (isPairedQuotes) {
+        s = s.substring(1, s.length - 1).trim();
+      }
+    }
+
+    // 再额外处理“只出现在一侧”的引号情况（来自拖拽的字符串经常有这种包裹）
+    while (s.isNotEmpty && (s.startsWith('\'') || s.startsWith('"'))) {
+      s = s.substring(1).trimLeft();
+    }
+    while (s.isNotEmpty && (s.endsWith('\'') || s.endsWith('"'))) {
+      s = s.substring(0, s.length - 1).trimRight();
+    }
+    return s;
+  }
+
+  String _cleanFileName(String raw) {
+    var s = raw.trim();
+    if (s.isEmpty) return s;
+
+    if (s.length >= 2) {
+      final first = s[0];
+      final last = s[s.length - 1];
+      final isPairedQuotes = (first == '\'' && last == '\'') || (first == '"' && last == '"');
+      if (isPairedQuotes) {
+        s = s.substring(1, s.length - 1).trim();
+      }
+    }
+
+    while (s.isNotEmpty && (s.startsWith('\'') || s.startsWith('"'))) {
+      s = s.substring(1).trimLeft();
+    }
+    while (s.isNotEmpty && (s.endsWith('\'') || s.endsWith('"'))) {
+      s = s.substring(0, s.length - 1).trimRight();
+    }
+
+    return p.basename(s);
   }
 
   Future<void> _selectFile() async {
-    setState(() => _status = SendStatus.selectingFile);
-
     final result = await FilePicker.platform.pickFiles();
-    if (result == null || result.files.isEmpty) {
-      setState(() => _status = SendStatus.idle);
-      return;
-    }
+    if (result == null || result.files.isEmpty) return;
 
     final file = result.files.first;
-    if (file.path == null) {
-      setState(() => _status = SendStatus.idle);
+    if (file.path == null) return;
+
+    await _processFile(file.path!, file.name, file.size);
+  }
+
+  Future<void> _processFile(
+    String filePath,
+    String fileName,
+    int fileSize,
+  ) async {
+    final cleanedFilePath = _cleanDroppedPath(filePath);
+    final cleanedFileName = _cleanFileName(fileName);
+
+    if (cleanedFilePath.isEmpty || cleanedFileName.isEmpty) {
+      setState(() {
+        _status = SendStatus.error;
+        _errorMsg = '无效文件路径';
+      });
       return;
     }
 
     setState(() {
-      _filePath = file.path;
-      _fileName = file.name;
-      _fileSize = file.size;
-      _status = SendStatus.idle;
-    });
-  }
-
-  Future<void> _startSend() async {
-    if (_filePath == null) return;
-
-    setState(() {
-      _status = SendStatus.connecting;
+      _status = SendStatus.uploading;
+      _fileName = cleanedFileName;
+      _fileSize = fileSize;
       _errorMsg = null;
-      _progress = 0;
+      _uploadProgress = 0;
     });
 
-    _signaling = SignalingService(
-      AppConstants.signalingServerUrl,
-      callbacks: SignalingCallbacks(
-        onStatusChange: (status) {
-          if (!mounted) return;
-          switch (status) {
-            case SignalingStatus.waiting:
-              setState(() => _status = SendStatus.waiting);
-              break;
-            case SignalingStatus.paired:
-              setState(() => _status = SendStatus.paired);
-              break;
-            case SignalingStatus.error:
-              setState(() => _status = SendStatus.error);
-              break;
-            case SignalingStatus.closed:
-              if (_status != SendStatus.done && _status != SendStatus.error) {
-                setState(() => _status = SendStatus.idle);
-              }
-              break;
-            default:
-              break;
-          }
-        },
-        onCode: (code) {
-          if (!mounted) return;
-          setState(() => _code = code);
-        },
-        onError: (err) {
-          if (!mounted) return;
-          setState(() {
-            _errorMsg = err;
-            _status = SendStatus.error;
-          });
-        },
-        onDataChannelOpen: () {
-          if (!mounted) return;
-          _doTransfer();
-        },
-      ),
-    );
-
+    String storageDir = '';
     try {
-      await _signaling!.connectAsSender();
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMsg = e.toString();
-          _status = SendStatus.error;
-        });
+      final fileService = ref.read(fileServiceProvider);
+      storageDir = fileService.storageDir;
+      if (fileService.storageDir.isEmpty) {
+        throw Exception('请先在网盘中设置存储目录');
       }
-    }
-  }
 
-  Future<void> _doTransfer() async {
-    if (_filePath == null || _signaling == null) return;
+      final shareDir = '_shares';
 
-    setState(() => _status = SendStatus.transferring);
+      final targetPath = p.join(shareDir, cleanedFileName);
+      final sourceFile = File(cleanedFilePath);
+      final totalSize = await sourceFile.length();
+      final targetAbsPath = fileService.resolveStoragePath(targetPath);
+      // 直接确保目标文件父目录存在（避免 createDir 对某些权限/路径组合触发异常）
+      await Directory(p.dirname(targetAbsPath)).create(recursive: true);
+      final targetFile = File(targetAbsPath);
 
-    try {
-      // 发送文件元信息
-      final metaJson =
-          '{"type":"file-meta","name":"$_fileName","size":$_fileSize}';
-      await _signaling!.sendData(metaJson);
-
-      // 读取并分块发送
-      final file = File(_filePath!);
-      final totalSize = await file.length();
-      int sent = 0;
-
-      final stream = file.openRead();
-      await for (final chunk in stream) {
-        await _signaling!.sendData(Uint8List.fromList(chunk));
-        sent += chunk.length;
+      final sink = targetFile.openWrite();
+      int written = 0;
+      await for (final chunk in sourceFile.openRead()) {
+        sink.add(chunk);
+        written += chunk.length;
         if (mounted) {
-          setState(() => _progress = sent / totalSize);
+          setState(() => _uploadProgress = written / totalSize);
         }
       }
+      await sink.close();
 
-      // 发送完成标记
-      await _signaling!.sendData('{"type":"file-end"}');
+      if (!mounted) return;
+
+      final notifier = ref.read(shareServiceProvider.notifier);
+      await notifier.ensureInit();
+      final service = ref.read(shareServiceProvider);
+      final info = await service.createShare(
+        targetPath,
+        fileName: cleanedFileName,
+        fileSize: fileSize,
+      );
+
+      ref.invalidate(shareListProvider);
+
+      final deviceId = ref.read(deviceIdProvider);
+      String? link;
+      if (deviceId != null && deviceId.isNotEmpty) {
+        link = '${AppConstants.shareLinkBaseUrl}/share/$deviceId/${info.code}';
+      }
 
       if (mounted) {
         setState(() {
-          _progress = 1.0;
-          _status = SendStatus.done;
+          _status = SendStatus.shared;
+          _shareCode = info.code;
+          _shareLink = link;
         });
+
+        if (link != null) {
+          await Clipboard.setData(ClipboardData(text: link));
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('分享链接已复制到剪贴板'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMsg = '传输失败: $e';
+          if (e is PathAccessException) {
+            _errorMsg = '无法写入存储目录：$storageDir\n'
+                '建议更换为可写入的位置（例如下载目录）后重试。\n\n'
+                '$e';
+          } else {
+            _errorMsg = '$e';
+          }
           _status = SendStatus.error;
         });
       }
     }
+  }
+
+  Future<void> _cancelShare() async {
+    if (_shareCode != null) {
+      try {
+        final notifier = ref.read(shareServiceProvider.notifier);
+        await notifier.ensureInit();
+        final service = ref.read(shareServiceProvider);
+        await service.deleteShare(_shareCode!);
+        ref.invalidate(shareListProvider);
+      } catch (_) {}
+    }
+    _reset();
   }
 
   void _reset() {
-    _signaling?.dispose();
-    _signaling = null;
     setState(() {
       _status = SendStatus.idle;
-      _filePath = null;
       _fileName = null;
       _fileSize = null;
-      _code = null;
+      _shareLink = null;
+      _shareCode = null;
       _errorMsg = null;
-      _progress = 0;
+      _isPageDragging = false;
+      _uploadProgress = 0;
     });
+  }
+
+  void _copyLink() {
+    if (_shareLink == null) return;
+    Clipboard.setData(ClipboardData(text: _shareLink!));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('分享链接已复制'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
 
     return Scaffold(
-      appBar: isDesktopLayout ? null : AppBar(title: Text(l10n.sendFile)),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(Spacing.xxl),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // 文件选择区域
-                if (_status == SendStatus.idle ||
-                    _status == SendStatus.selectingFile) ...[
-                  Icon(
-                    Icons.upload_file_outlined,
-                    size: 82,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                  ),
-                  Gap.md,
-                  if (_fileName != null) ...[
-                    Text(_fileName!, style: AppTextStyles.fileName(context)),
-                    Text(
-                      FormatUtils.fileSize(_fileSize ?? 0),
-                      style: AppTextStyles.fileSize(context),
-                    ),
-                    Gap.md,
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        OutlinedButton(
-                          onPressed: _selectFile,
-                          child: Text(l10n.reselect),
-                        ),
-                        Gap.h(Spacing.buttonGap),
-                        FilledButton.icon(
-                          onPressed: _startSend,
-                          icon: const Icon(Icons.send),
-                          label: Text(l10n.startSend),
-                        ),
-                      ],
-                    ),
-                  ] else ...[
-                    Text(l10n.selectFileToSend, style: AppTextStyles.title(context)),
-                    Gap.xs,
-                    Text('点击上传或将文件拖拽到此处', style: AppTextStyles.hint(context)),
-                    Gap.md,
-                    FilledButton.icon(
-                      onPressed: _selectFile,
-                      icon: const Icon(Icons.file_open_outlined),
-                      label: Text(l10n.selectFile),
-                    ),
+      appBar: isDesktopLayout ? null : AppBar(title: const Text('分享文件')),
+      body: DropTarget(
+        onDragEntered: (_) {
+          if (_status != SendStatus.idle) return;
+          setState(() => _isPageDragging = true);
+        },
+        onDragExited: (_) {
+          if (_status != SendStatus.idle) return;
+          setState(() => _isPageDragging = false);
+        },
+        onDragDone: (details) async {
+          setState(() => _isPageDragging = false);
+          if (_status != SendStatus.idle) return;
+          if (details.files.isEmpty) return;
+
+          final file = details.files.first;
+          final filePath = file.path;
+          final cleanedFilePath = _cleanDroppedPath(filePath);
+          if (cleanedFilePath.isEmpty) return;
+
+          final size = await File(cleanedFilePath).length();
+          if (!mounted) return;
+          await _processFile(cleanedFilePath, p.basename(cleanedFilePath), size);
+        },
+        child: SizedBox.expand(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(Spacing.xxl),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_status == SendStatus.idle)
+                      SendDropArea(
+                        enableDropTarget: false,
+                        isDraggingOverride: _isPageDragging,
+                        onPickRequested: () {
+                          _selectFile();
+                        },
+                        onFileDropped: _processFile,
+                      ),
+                    if (_status == SendStatus.uploading)
+                      SendUploadingView(
+                        fileName: _fileName,
+                        fileSize: _fileSize,
+                        progress: _uploadProgress,
+                      ),
+                    if (_status == SendStatus.shared)
+                      SendSharedView(
+                        fileName: _fileName,
+                        fileSize: _fileSize,
+                        shareLink: _shareLink,
+                        onCopyLink: _copyLink,
+                        onCancelShare: () {
+                          _cancelShare();
+                        },
+                        onShareNew: _reset,
+                      ),
+                    if (_status == SendStatus.error)
+                      SendErrorView(
+                        errorMsg: _errorMsg ?? '未知错误',
+                        onRetry: _reset,
+                      ),
                   ],
-                ],
-
-                // 连接中
-                if (_status == SendStatus.connecting) ...[
-                  const CircularProgressIndicator(),
-                  Gap.md,
-                  Text(l10n.connecting),
-                ],
-
-                // 等待接收方
-                if (_status == SendStatus.waiting && _code != null) ...[
-                  Icon(
-                    Icons.qr_code,
-                    size: 48,
-                    color: theme.colorScheme.primary,
-                  ),
-                  Gap.md,
-                  Text(l10n.pickupCode),
-                  Gap.xs,
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: Spacing.xl,
-                      vertical: Spacing.md,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_code!, style: AppTextStyles.pickupCode(context)),
-                        Gap.h(Spacing.sm),
-                        IconButton(
-                          icon: const Icon(Icons.copy),
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: _code!));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(l10n.copied),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Gap.md,
-                  Text(
-                    l10n.waitingForReceiver,
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  Gap.xl,
-                  TextButton(onPressed: _reset, child: Text(l10n.cancel)),
-                ],
-
-                // 传输中
-                if (_status == SendStatus.transferring) ...[
-                  Text(_fileName ?? '', style: AppTextStyles.fileName(context)),
-                  Gap.md,
-                  LinearProgressIndicator(value: _progress),
-                  Gap.xs,
-                  Text('${(_progress * 100).toStringAsFixed(1)}%'),
-                ],
-
-                // 完成
-                if (_status == SendStatus.done) ...[
-                  const Icon(Icons.check_circle, size: 64, color: Colors.green),
-                  Gap.md,
-                  Text(l10n.sendComplete, style: AppTextStyles.completeTitle(context)),
-                  Gap.xl,
-                  FilledButton(
-                    onPressed: _reset,
-                    child: Text(l10n.sendNewFile),
-                  ),
-                ],
-
-                // 错误
-                if (_status == SendStatus.error) ...[
-                  Icon(Icons.error, size: 64, color: theme.colorScheme.error),
-                  Gap.md,
-                  Text(_errorMsg ?? l10n.unknownError, style: AppTextStyles.error(context)),
-                  Gap.md,
-                  FilledButton(onPressed: _reset, child: Text(l10n.retry)),
-                ],
-              ],
+                ),
+              ),
             ),
           ),
         ),

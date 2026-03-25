@@ -5,13 +5,11 @@ import '../../widgets/app_layout.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../features/cloud/pages/cloud_page.dart';
 import '../../features/transfer/pages/send_page.dart';
-import '../../features/transfer/pages/receive_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 
 class Routes {
   static const cloud = '/cloud';
   static const send = '/send';
-  static const receive = '/receive';
   static const settings = '/settings';
 }
 
@@ -24,16 +22,10 @@ final List<NavItemConfig> navItems = [
     path: Routes.cloud,
   ),
   NavItemConfig(
-    label: '发送',
-    outlinedIcon: Icons.send_outlined,
-    roundedIcon: Icons.send_rounded,
+    label: '分享',
+    outlinedIcon: Icons.share_outlined,
+    roundedIcon: Icons.share_rounded,
     path: Routes.send,
-  ),
-  NavItemConfig(
-    label: '接收',
-    outlinedIcon: Icons.download_outlined,
-    roundedIcon: Icons.download_rounded,
-    path: Routes.receive,
   ),
   NavItemConfig(
     label: '设置',
@@ -67,11 +59,6 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(path: Routes.send, builder: (context, state) => const SendPage()),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(path: Routes.receive, builder: (context, state) => const ReceivePage()),
           ],
         ),
         StatefulShellBranch(
