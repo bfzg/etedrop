@@ -1,113 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../core/utils/format_utils.dart';
+import '../../../core/utils/file_svg_icon.dart';
 import '../models/fs_entry.dart';
-
-/// 获取文件图标
-IconData getFileIcon(FsEntry entry) {
-  if (entry.isDirectory) return Icons.folder;
-  final ext = entry.name.split('.').last.toLowerCase();
-  switch (ext) {
-    case 'jpg':
-    case 'jpeg':
-    case 'png':
-    case 'gif':
-    case 'bmp':
-    case 'webp':
-    case 'svg':
-      return Icons.image;
-    case 'mp4':
-    case 'avi':
-    case 'mov':
-    case 'mkv':
-    case 'wmv':
-      return Icons.video_file;
-    case 'mp3':
-    case 'wav':
-    case 'flac':
-    case 'aac':
-    case 'ogg':
-      return Icons.audio_file;
-    case 'pdf':
-      return Icons.picture_as_pdf;
-    case 'doc':
-    case 'docx':
-      return Icons.description;
-    case 'xls':
-    case 'xlsx':
-      return Icons.table_chart;
-    case 'ppt':
-    case 'pptx':
-      return Icons.slideshow;
-    case 'zip':
-    case 'rar':
-    case '7z':
-    case 'tar':
-    case 'gz':
-      return Icons.archive;
-    case 'txt':
-    case 'md':
-    case 'log':
-      return Icons.text_snippet;
-    case 'dart':
-    case 'js':
-    case 'ts':
-    case 'py':
-    case 'java':
-    case 'go':
-    case 'rs':
-    case 'c':
-    case 'cpp':
-    case 'h':
-      return Icons.code;
-    case 'json':
-    case 'xml':
-    case 'yaml':
-    case 'yml':
-    case 'toml':
-      return Icons.data_object;
-    case 'apk':
-    case 'exe':
-    case 'dmg':
-    case 'msi':
-      return Icons.install_desktop;
-    default:
-      return Icons.insert_drive_file;
-  }
-}
-
-/// 获取文件图标颜色
-Color getFileIconColor(FsEntry entry, ColorScheme colorScheme) {
-  if (entry.isDirectory) return colorScheme.primary;
-  final ext = entry.name.split('.').last.toLowerCase();
-  switch (ext) {
-    case 'jpg':
-    case 'jpeg':
-    case 'png':
-    case 'gif':
-    case 'bmp':
-    case 'webp':
-    case 'svg':
-      return Colors.orange;
-    case 'mp4':
-    case 'avi':
-    case 'mov':
-    case 'mkv':
-      return Colors.red;
-    case 'mp3':
-    case 'wav':
-    case 'flac':
-      return Colors.purple;
-    case 'pdf':
-      return Colors.redAccent;
-    case 'zip':
-    case 'rar':
-    case '7z':
-      return Colors.amber;
-    default:
-      return colorScheme.onSurfaceVariant;
-  }
-}
 
 /// 文件列表项回调
 typedef FileEntryCallback = void Function(FsEntry entry);
@@ -191,10 +87,14 @@ class _FileListTile extends StatelessWidget {
     final colorScheme = theme.colorScheme;
 
     return ListTile(
-      leading: Icon(
-        getFileIcon(entry),
-        color: getFileIconColor(entry, colorScheme),
-        size: 32,
+      leading: SvgPicture.asset(
+        svgIconForEntry(entry),
+        width: 32,
+        height: 32,
+        colorFilter: ColorFilter.mode(
+          colorScheme.onSurfaceVariant.withValues(alpha: 0.9),
+          BlendMode.srcIn,
+        ),
       ),
       title: Text(
         entry.name,

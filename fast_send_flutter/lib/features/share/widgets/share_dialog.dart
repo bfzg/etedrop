@@ -237,7 +237,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
           Text('过期时间', style: theme.textTheme.labelMedium),
           const SizedBox(height: 8),
           DropdownButtonFormField<int?>(
-            value: _expiresIn,
+            initialValue: _expiresIn,
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               isDense: true,

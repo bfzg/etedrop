@@ -90,7 +90,9 @@ class DeviceManager {
   /// 连接到信令服务器
   Future<void> connectToServer() async {
     if (_state == DeviceConnectionState.connected ||
-        _state == DeviceConnectionState.connecting) return;
+        _state == DeviceConnectionState.connecting) {
+      return;
+    }
 
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
