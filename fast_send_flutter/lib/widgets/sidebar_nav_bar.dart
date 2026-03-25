@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'bottom_nav_bar.dart';
+import '../core/config/styles.dart';
 
 const double kSidebarWidth = 68;
 
@@ -47,7 +48,7 @@ class AppSidebarNavBar extends StatelessWidget {
                         final index = entry.key;
                         final item = entry.value;
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 1),
+                          padding: const EdgeInsets.only(bottom: 12),
                           child: _SidebarItem(
                             item: item,
                             selected: index == currentIndex,
@@ -83,7 +84,7 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final selectedColor = isDark ? Colors.white : const Color(0xFF0052D9);
+    final selectedColor = isDark ? Colors.white : AppStyles.primary;
 
     final normalColor = isDark
         ? Colors.white.withValues(alpha: 0.5)
@@ -130,4 +131,3 @@ class _SidebarItem extends StatelessWidget {
     );
   }
 }
-

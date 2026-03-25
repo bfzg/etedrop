@@ -1262,10 +1262,10 @@ packages:
     dependency: "direct main"
     description:
       name: tdesign_flutter
-      sha256: "6c95cd746d7ff3ee5e3c9c4dd0e202f69c8c6e04cf53f29ace4da16f5cfbc7e4"
+      sha256: "79c1ed3fc67836426a8a93e5e0dcd764befa1341eae13a904bcf9e7de996f05c"
       url: "https://pub.dev"
     source: hosted
-    version: "0.2.5"
+    version: "0.2.7"
   tdesign_flutter_adaptation:
     dependency: transitive
     description:

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../core/config/styles.dart';
+
 // 导航项配置模型
 class NavItemConfig {
   final String label;
@@ -43,8 +45,8 @@ class AppBottomNavBar extends StatelessWidget {
         // 保持文字大小一致
         selectedFontSize: 12,
         unselectedFontSize: 12,
-        selectedItemColor: Colors.black,
-        unselectedItemColor: Colors.black,
+        selectedItemColor: AppStyles.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
         showSelectedLabels: true,
         showUnselectedLabels: true,
         items: items.asMap().entries.map((entry) {
