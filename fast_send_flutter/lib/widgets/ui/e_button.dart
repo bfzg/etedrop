@@ -52,15 +52,31 @@ class EButton extends StatelessWidget {
       constraints: BoxConstraints(minHeight: height),
       child: FilledButton(
         onPressed: effectiveOnPressed,
-        style: FilledButton.styleFrom(
-          backgroundColor: bg,
-          foregroundColor: fg,
-          padding: padding,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radius),
-            side: BorderSide(color: border),
-          ),
-        ),
+        style:
+            FilledButton.styleFrom(
+              backgroundColor: bg,
+              foregroundColor: fg,
+              padding: padding,
+              elevation: 0,
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(radius),
+                side: BorderSide(color: border),
+              ),
+            ).copyWith(
+              elevation: const WidgetStatePropertyAll(0),
+              shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+              overlayColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                if (states.contains(WidgetState.pressed)) {
+                  return fg.withValues(alpha: 0.08);
+                }
+                if (states.contains(WidgetState.hovered)) {
+                  return fg.withValues(alpha: 0.06);
+                }
+                return null;
+              }),
+            ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
