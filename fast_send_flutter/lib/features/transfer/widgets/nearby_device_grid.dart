@@ -82,7 +82,7 @@ class NearbyDeviceGrid extends ConsumerWidget {
           )
         else
           Wrap(
-            spacing: 20,
+            spacing: 32,
             runSpacing: 16,
             children: devices.map((device) {
               final isSelf = device.deviceId == myDeviceId;
@@ -113,7 +113,7 @@ class _DeviceAvatar extends StatelessWidget {
     this.onTap,
   });
 
-  static const double _size = 78;
+  static const double _size = 84;
 
   String _osLabel(String os) {
     switch (os.toLowerCase()) {
@@ -161,10 +161,8 @@ class _DeviceAvatar extends StatelessWidget {
                         border: Border.all(
                           color: selected
                               ? AppStyles.primary
-                              : isSelf
-                              ? theme.colorScheme.outlineVariant
                               : theme.colorScheme.outlineVariant,
-                          width: selected ? 2.5 : 1.5,
+                          width: selected ? 3 : 2,
                         ),
                       ),
                       child: ClipOval(

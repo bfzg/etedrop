@@ -197,4 +197,29 @@ class LanManager extends _$LanManager {
       onProgress: (p) {},
     );
   }
+
+  Future<void> sendFileStream(
+    LanDevice target, {
+    required Stream<List<int>> fileStream,
+    required String fileName,
+    required int fileSize,
+  }) async {
+    final senderName = ref.read(deviceNameProvider);
+    final transfer = LanTransferService();
+
+    final isAlive = await transfer.ping(target.ip, target.port);
+    if (!isAlive) {
+      throw Exception('设备无响应');
+    }
+
+    await transfer.sendFileStream(
+      ip: target.ip,
+      port: target.port,
+      fileStream: fileStream,
+      fileName: fileName,
+      fileSize: fileSize,
+      senderName: senderName,
+      onProgress: (p) {},
+    );
+  }
 }

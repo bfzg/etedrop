@@ -73,11 +73,21 @@ class _SendPageState extends ConsumerState<SendPage> {
     await _sendToSelectedDevices(filePath);
   }
 
-  Future<void> _handleDrop(String rawPath) async {
-    final filePath = _cleanPath(rawPath);
-    if (filePath.isEmpty) return;
+  Future<void> _handleDropFile(DropDoneDetails details) async {
+    if (details.files.isEmpty) return;
 
-    await _sendToSelectedDevices(filePath);
+    final dropped = details.files.first;
+    final droppedPath = _cleanPath(dropped.path);
+    if (droppedPath.isEmpty) return;
+
+    final fileName = p.basename(droppedPath);
+    final fileSize = await dropped.length();
+
+    await _sendDroppedToSelectedDevices(
+      fileName: fileName,
+      fileSize: fileSize,
+      openRead: () => dropped.openRead(),
+    );
   }
 
   Future<void> _sendToSelectedDevices(String filePath) async {
@@ -110,6 +120,70 @@ class _SendPageState extends ConsumerState<SendPage> {
     for (final device in targets) {
       try {
         await ref.read(lanManagerProvider.notifier).sendFile(device, filePath);
+        completed++;
+        if (mounted) {
+          setState(() => _uploadProgress = completed / targets.length);
+        }
+      } catch (e) {
+        errors.add('${device.deviceName}: $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    if (errors.isNotEmpty && completed == 0) {
+      setState(() {
+        _status = SendStatus.error;
+        _errorMsg = errors.join('\n');
+      });
+    } else {
+      setState(() => _status = SendStatus.done);
+      final msg = completed == targets.length
+          ? '已发送至 $completed 台设备'
+          : '已发送至 $completed/${targets.length} 台设备';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
+      );
+      Future.delayed(const Duration(milliseconds: 800), _reset);
+    }
+  }
+
+  Future<void> _sendDroppedToSelectedDevices({
+    required String fileName,
+    required int fileSize,
+    required Stream<List<int>> Function() openRead,
+  }) async {
+    final devices = ref.read(lanManagerProvider);
+    final targets = devices
+        .where((d) => _selectedDeviceIds.contains(d.deviceId))
+        .toList();
+
+    if (targets.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('请先选择至少一个设备')));
+      return;
+    }
+
+    setState(() {
+      _status = SendStatus.uploading;
+      _uploadFileName = fileName;
+      _uploadFileSize = fileSize;
+      _uploadProgress = 0;
+      _errorMsg = null;
+    });
+
+    final errors = <String>[];
+    int completed = 0;
+
+    for (final device in targets) {
+      try {
+        await ref.read(lanManagerProvider.notifier).sendFileStream(
+              device,
+              fileStream: openRead(),
+              fileName: fileName,
+              fileSize: fileSize,
+            );
         completed++;
         if (mounted) {
           setState(() => _uploadProgress = completed / targets.length);
@@ -173,8 +247,7 @@ class _SendPageState extends ConsumerState<SendPage> {
         onDragDone: (details) async {
           setState(() => _isPageDragging = false);
           if (_status != SendStatus.idle) return;
-          if (details.files.isEmpty) return;
-          await _handleDrop(details.files.first.path);
+          await _handleDropFile(details);
         },
         child: _buildBody(context),
       ),

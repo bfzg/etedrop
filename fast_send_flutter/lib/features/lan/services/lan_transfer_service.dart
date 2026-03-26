@@ -35,18 +35,41 @@ class LanTransferService {
     final fileName = p.basename(filePath);
     final fileSize = await file.length();
 
+    await sendFileStream(
+      ip: ip,
+      port: port,
+      fileStream: file.openRead(),
+      fileName: fileName,
+      fileSize: fileSize,
+      senderName: senderName,
+      onProgress: onProgress,
+      cancelToken: cancelToken,
+    );
+  }
+
+  Future<void> sendFileStream({
+    required String ip,
+    required int port,
+    required Stream<List<int>> fileStream,
+    required String fileName,
+    required int fileSize,
+    required String senderName,
+    Function(double)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
     final url = 'http://$ip:$port/upload';
 
     try {
       await _dio.post(
         url,
-        data: file.openRead(),
+        data: fileStream,
         options: Options(
           headers: {
             'X-File-Name': Uri.encodeComponent(fileName),
             'X-Sender-Name': Uri.encodeComponent(senderName),
             'X-File-Size': fileSize.toString(),
             Headers.contentLengthHeader: fileSize,
+            Headers.contentTypeHeader: 'application/octet-stream',
           },
           // Disable timeouts for large files
           sendTimeout: null,
