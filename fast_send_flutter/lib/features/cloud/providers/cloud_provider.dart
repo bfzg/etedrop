@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../services/local_storage_service.dart';
@@ -11,6 +12,24 @@ import '../services/file_service.dart';
 part 'cloud_provider.g.dart';
 
 const _storageDirKey = 'cloud_storage_dir';
+const _downloadDirKey = 'download_dir';
+
+Future<String> _defaultDownloadDir() async {
+  if (Platform.isAndroid) {
+    final dir = await getExternalStorageDirectory();
+    if (dir != null) return dir.path;
+    return (await getApplicationDocumentsDirectory()).path;
+  }
+
+  if (Platform.isIOS) {
+    return (await getApplicationDocumentsDirectory()).path;
+  }
+
+  // macOS / Windows / Linux
+  final downloads = await getDownloadsDirectory();
+  if (downloads != null) return downloads.path;
+  return (await getApplicationDocumentsDirectory()).path;
+}
 
 /// 文件服务单例 Provider
 @riverpod
@@ -39,6 +58,35 @@ class FileServiceNotifier extends _$FileServiceNotifier {
     );
     if (result != null) {
       await setStorageDir(result);
+    }
+    return result;
+  }
+}
+
+/// 下载目录（用于接收文件保存位置）
+@riverpod
+class DownloadDir extends _$DownloadDir {
+  @override
+  FutureOr<String> build() async {
+    final saved = LocalStorageService.instance.get<String>(_downloadDirKey);
+    if (saved != null && saved.isNotEmpty) return saved;
+
+    final def = await _defaultDownloadDir();
+    await LocalStorageService.instance.set<String>(_downloadDirKey, def);
+    return def;
+  }
+
+  Future<void> setDownloadDir(String path) async {
+    state = AsyncData(path);
+    await LocalStorageService.instance.set<String>(_downloadDirKey, path);
+  }
+
+  Future<String?> selectDownloadDir() async {
+    final result = await FilePicker.platform.getDirectoryPath(
+      dialogTitle: '选择下载目录',
+    );
+    if (result != null) {
+      await setDownloadDir(result);
     }
     return result;
   }

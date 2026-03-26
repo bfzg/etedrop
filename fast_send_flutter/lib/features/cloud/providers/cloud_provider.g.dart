@@ -67,6 +67,56 @@ abstract class _$FileServiceNotifier extends $Notifier<FileService> {
   }
 }
 
+/// 下载目录（用于接收文件保存位置）
+
+@ProviderFor(DownloadDir)
+final downloadDirProvider = DownloadDirProvider._();
+
+/// 下载目录（用于接收文件保存位置）
+final class DownloadDirProvider
+    extends $AsyncNotifierProvider<DownloadDir, String> {
+  /// 下载目录（用于接收文件保存位置）
+  DownloadDirProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'downloadDirProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$downloadDirHash();
+
+  @$internal
+  @override
+  DownloadDir create() => DownloadDir();
+}
+
+String _$downloadDirHash() => r'09ad6849b7ae038f30577ded36435847a621e63d';
+
+/// 下载目录（用于接收文件保存位置）
+
+abstract class _$DownloadDir extends $AsyncNotifier<String> {
+  FutureOr<String> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final ref = this.ref as $Ref<AsyncValue<String>, String>;
+    final element =
+        ref.element
+            as $ClassProviderElement<
+              AnyNotifier<AsyncValue<String>, String>,
+              AsyncValue<String>,
+              Object?,
+              Object?
+            >;
+    element.handleCreate(ref, build);
+  }
+}
+
 /// 当前浏览路径状态
 
 @ProviderFor(CurrentPath)

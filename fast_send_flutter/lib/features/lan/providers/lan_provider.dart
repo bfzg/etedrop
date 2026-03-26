@@ -42,10 +42,13 @@ class LanManager extends _$LanManager {
     final deviceId = config.deviceId;
     final deviceName = config.deviceName;
     final deviceAvatar = config.avatar;
-    final storageDir = ref.read(fileServiceProvider).storageDir;
+    final cloudDir = ref.read(fileServiceProvider).storageDir;
+    final downloadDir = await ref.read(downloadDirProvider.future);
 
     _server = LanHttpServer(
-      saveDirectory: storageDir.isNotEmpty ? storageDir : Directory.systemTemp.path,
+      saveDirectory: downloadDir.isNotEmpty
+          ? downloadDir
+          : (cloudDir.isNotEmpty ? cloudDir : Directory.systemTemp.path),
       deviceId: deviceId,
       onReceiveRequest: _handleReceiveRequest,
       onProgress: (fileName, progress) {

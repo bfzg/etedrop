@@ -26,6 +26,7 @@ class SettingsPage extends ConsumerWidget {
     ref.watch(deviceConfigReadyProvider);
 
     final storagePath = ref.watch(storageDirPathProvider);
+    final downloadPath = ref.watch(downloadDirProvider).value ?? '';
     final connected = ref.watch(deviceConnectedProvider);
     final connecting = ref.watch(deviceConnectingProvider);
     final lastError = ref.watch(deviceLastConnectionErrorProvider);
@@ -58,7 +59,7 @@ class SettingsPage extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            StorageSection(storagePath: storagePath),
+            StorageSection(storagePath: storagePath, downloadPath: downloadPath),
 
             const SizedBox(height: 16),
 

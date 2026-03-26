@@ -40,9 +40,11 @@ class DeviceInfoSection extends ConsumerWidget {
             children: [
               // 头像 + 用户名 + 连接状态 一行
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                padding: const EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  bottom: 0,
                 ),
                 child: Row(
                   children: [
@@ -196,16 +198,17 @@ class DeviceInfoSection extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
               if (devId != null)
-                ListTile(
-                  leading: const Icon(Icons.fingerprint, size: 20),
-                  title: Text(l10n.deviceId),
-                  subtitle: Text(
-                    devId!,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'monospace',
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: ListTile(
+                    title: Text(l10n.deviceId),
+                    subtitle: Text(
+                      devId!,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'monospace',
+                      ),
                     ),
                   ),
                 ),
