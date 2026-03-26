@@ -11,7 +11,6 @@ import '../../lan/providers/lan_provider.dart';
 import '../widgets/file_drop_card.dart';
 import '../widgets/send_error_view.dart';
 import '../widgets/send_uploading_view.dart';
-import '../widgets/dashed_border_painter.dart';
 import '../widgets/nearby_device_grid.dart';
 
 enum SendStatus { idle, uploading, done, error }
@@ -198,8 +197,6 @@ class _SendPageState extends ConsumerState<SendPage> {
         child: SendErrorView(errorMsg: _errorMsg ?? '未知错误', onRetry: _reset),
       );
     }
-
-    final theme = Theme.of(context);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Spacing.xl),
