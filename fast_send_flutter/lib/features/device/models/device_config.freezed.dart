@@ -15,10 +15,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DeviceConfig {
 
-/// 设备唯一标识（UUID）
- String get deviceId;/// 设备名称（默认为主机名）
- String get deviceName;/// 创建时间戳（毫秒）
- int get createdAt;
+ String get deviceId; String get deviceName; int get createdAt;/// 头像编号（1 ~ 58，对应 memoji 图片）
+ int get avatar;
 /// Create a copy of DeviceConfig
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -31,16 +29,16 @@ $DeviceConfigCopyWith<DeviceConfig> get copyWith => _$DeviceConfigCopyWithImpl<D
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is DeviceConfig&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is DeviceConfig&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.avatar, avatar) || other.avatar == avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,deviceId,deviceName,createdAt);
+int get hashCode => Object.hash(runtimeType,deviceId,deviceName,createdAt,avatar);
 
 @override
 String toString() {
-  return 'DeviceConfig(deviceId: $deviceId, deviceName: $deviceName, createdAt: $createdAt)';
+  return 'DeviceConfig(deviceId: $deviceId, deviceName: $deviceName, createdAt: $createdAt, avatar: $avatar)';
 }
 
 
@@ -51,7 +49,7 @@ abstract mixin class $DeviceConfigCopyWith<$Res>  {
   factory $DeviceConfigCopyWith(DeviceConfig value, $Res Function(DeviceConfig) _then) = _$DeviceConfigCopyWithImpl;
 @useResult
 $Res call({
- String deviceId, String deviceName, int createdAt
+ String deviceId, String deviceName, int createdAt, int avatar
 });
 
 
@@ -68,11 +66,12 @@ class _$DeviceConfigCopyWithImpl<$Res>
 
 /// Create a copy of DeviceConfig
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? deviceId = null,Object? deviceName = null,Object? createdAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? deviceId = null,Object? deviceName = null,Object? createdAt = null,Object? avatar = null,}) {
   return _then(_self.copyWith(
 deviceId: null == deviceId ? _self.deviceId : deviceId // ignore: cast_nullable_to_non_nullable
 as String,deviceName: null == deviceName ? _self.deviceName : deviceName // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as int,avatar: null == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }
@@ -158,10 +157,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  int createdAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  int createdAt,  int avatar)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DeviceConfig() when $default != null:
-return $default(_that.deviceId,_that.deviceName,_that.createdAt);case _:
+return $default(_that.deviceId,_that.deviceName,_that.createdAt,_that.avatar);case _:
   return orElse();
 
 }
@@ -179,10 +178,10 @@ return $default(_that.deviceId,_that.deviceName,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  int createdAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  int createdAt,  int avatar)  $default,) {final _that = this;
 switch (_that) {
 case _DeviceConfig():
-return $default(_that.deviceId,_that.deviceName,_that.createdAt);case _:
+return $default(_that.deviceId,_that.deviceName,_that.createdAt,_that.avatar);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -199,10 +198,10 @@ return $default(_that.deviceId,_that.deviceName,_that.createdAt);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String deviceId,  String deviceName,  int createdAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String deviceId,  String deviceName,  int createdAt,  int avatar)?  $default,) {final _that = this;
 switch (_that) {
 case _DeviceConfig() when $default != null:
-return $default(_that.deviceId,_that.deviceName,_that.createdAt);case _:
+return $default(_that.deviceId,_that.deviceName,_that.createdAt,_that.avatar);case _:
   return null;
 
 }
@@ -214,15 +213,14 @@ return $default(_that.deviceId,_that.deviceName,_that.createdAt);case _:
 @JsonSerializable()
 
 class _DeviceConfig implements DeviceConfig {
-  const _DeviceConfig({required this.deviceId, required this.deviceName, required this.createdAt});
+  const _DeviceConfig({required this.deviceId, required this.deviceName, required this.createdAt, this.avatar = 1});
   factory _DeviceConfig.fromJson(Map<String, dynamic> json) => _$DeviceConfigFromJson(json);
 
-/// 设备唯一标识（UUID）
 @override final  String deviceId;
-/// 设备名称（默认为主机名）
 @override final  String deviceName;
-/// 创建时间戳（毫秒）
 @override final  int createdAt;
+/// 头像编号（1 ~ 58，对应 memoji 图片）
+@override@JsonKey() final  int avatar;
 
 /// Create a copy of DeviceConfig
 /// with the given fields replaced by the non-null parameter values.
@@ -237,16 +235,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DeviceConfig&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _DeviceConfig&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.avatar, avatar) || other.avatar == avatar));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,deviceId,deviceName,createdAt);
+int get hashCode => Object.hash(runtimeType,deviceId,deviceName,createdAt,avatar);
 
 @override
 String toString() {
-  return 'DeviceConfig(deviceId: $deviceId, deviceName: $deviceName, createdAt: $createdAt)';
+  return 'DeviceConfig(deviceId: $deviceId, deviceName: $deviceName, createdAt: $createdAt, avatar: $avatar)';
 }
 
 
@@ -257,7 +255,7 @@ abstract mixin class _$DeviceConfigCopyWith<$Res> implements $DeviceConfigCopyWi
   factory _$DeviceConfigCopyWith(_DeviceConfig value, $Res Function(_DeviceConfig) _then) = __$DeviceConfigCopyWithImpl;
 @override @useResult
 $Res call({
- String deviceId, String deviceName, int createdAt
+ String deviceId, String deviceName, int createdAt, int avatar
 });
 
 
@@ -274,11 +272,12 @@ class __$DeviceConfigCopyWithImpl<$Res>
 
 /// Create a copy of DeviceConfig
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? deviceId = null,Object? deviceName = null,Object? createdAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? deviceId = null,Object? deviceName = null,Object? createdAt = null,Object? avatar = null,}) {
   return _then(_DeviceConfig(
 deviceId: null == deviceId ? _self.deviceId : deviceId // ignore: cast_nullable_to_non_nullable
 as String,deviceName: null == deviceName ? _self.deviceName : deviceName // ignore: cast_nullable_to_non_nullable
 as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as int,avatar: null == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as int,
   ));
 }

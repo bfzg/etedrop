@@ -15,6 +15,7 @@ class LanDiscoveryService {
   final String deviceName;
   final int httpPort;
   final String os;
+  final int avatar;
 
   final _deviceController = StreamController<LanDevice>.broadcast();
   Stream<LanDevice> get onDeviceFound => _deviceController.stream;
@@ -24,6 +25,7 @@ class LanDiscoveryService {
     required this.deviceName,
     required this.httpPort,
     required this.os,
+    this.avatar = 1,
   });
 
   Future<void> start() async {
@@ -62,6 +64,7 @@ class LanDiscoveryService {
       'deviceName': deviceName,
       'port': httpPort,
       'os': os,
+      'avatar': avatar,
     });
 
     final bytes = utf8.encode(payload);
@@ -91,6 +94,7 @@ class LanDiscoveryService {
         port: map['port'] as int? ?? 53318,
         os: map['os'] as String? ?? 'unknown',
         lastSeen: DateTime.now().millisecondsSinceEpoch,
+        avatar: map['avatar'] as int? ?? 1,
       );
 
       _deviceController.add(device);

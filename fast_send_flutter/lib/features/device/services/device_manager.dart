@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -67,6 +68,7 @@ class DeviceManager {
       deviceId: const Uuid().v4(),
       deviceName: Platform.localHostname,
       createdAt: DateTime.now().millisecondsSinceEpoch,
+      avatar: Random().nextInt(kMemojiCount) + 1,
     );
     await _saveConfig();
     return _config!;
@@ -85,6 +87,13 @@ class DeviceManager {
     await _saveConfig();
     _setState(_state);
     return true;
+  }
+
+  Future<void> setAvatar(int avatar) async {
+    if (_config == null) await loadConfig();
+    _config = _config!.copyWith(avatar: avatar);
+    await _saveConfig();
+    _setState(_state);
   }
 
   /// 连接到信令服务器

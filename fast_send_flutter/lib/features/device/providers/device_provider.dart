@@ -49,6 +49,12 @@ final deviceNameProvider = Provider<String>((ref) {
   return ref.read(deviceManagerProvider).config?.deviceName ?? '未知设备';
 });
 
+/// 头像编号
+final deviceAvatarProvider = Provider<int>((ref) {
+  ref.watch(_deviceStateStreamProvider);
+  return ref.read(deviceManagerProvider).config?.avatar ?? 1;
+});
+
 /// 连接状态枚举
 final deviceConnectionStateProvider = Provider<DeviceConnectionState>((ref) {
   ref.watch(_deviceStateStreamProvider);

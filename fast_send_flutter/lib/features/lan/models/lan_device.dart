@@ -12,6 +12,7 @@ abstract class LanDevice with _$LanDevice {
     required int port,
     required String os,
     @Default(0) int lastSeen,
+    @Default(1) int avatar,
   }) = _LanDevice;
 
   factory LanDevice.fromJson(Map<String, dynamic> json) => _$LanDeviceFromJson(json);

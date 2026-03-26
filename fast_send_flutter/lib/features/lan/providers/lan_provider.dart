@@ -35,6 +35,7 @@ class LanManager extends _$LanManager {
   Future<void> _init() async {
     final deviceId = ref.read(deviceIdProvider) ?? 'unknown_id';
     final deviceName = ref.read(deviceNameProvider);
+    final deviceAvatar = ref.read(deviceAvatarProvider);
     final storageDir = ref.read(fileServiceProvider).storageDir;
 
     _server = LanHttpServer(
@@ -86,6 +87,7 @@ class LanManager extends _$LanManager {
       deviceName: deviceName,
       httpPort: port,
       os: Platform.operatingSystem,
+      avatar: deviceAvatar,
     );
 
     _sub = _discovery!.onDeviceFound.listen((device) {

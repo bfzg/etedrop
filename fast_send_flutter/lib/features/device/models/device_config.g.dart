@@ -11,6 +11,7 @@ _DeviceConfig _$DeviceConfigFromJson(Map<String, dynamic> json) =>
       deviceId: json['deviceId'] as String,
       deviceName: json['deviceName'] as String,
       createdAt: (json['createdAt'] as num).toInt(),
+      avatar: (json['avatar'] as num?)?.toInt() ?? 1,
     );
 
 Map<String, dynamic> _$DeviceConfigToJson(_DeviceConfig instance) =>
@@ -18,4 +19,5 @@ Map<String, dynamic> _$DeviceConfigToJson(_DeviceConfig instance) =>
       'deviceId': instance.deviceId,
       'deviceName': instance.deviceName,
       'createdAt': instance.createdAt,
+      'avatar': instance.avatar,
     };
