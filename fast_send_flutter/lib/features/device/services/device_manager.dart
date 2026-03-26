@@ -12,11 +12,7 @@ import '../../../core/config/constants.dart';
 import '../models/device_config.dart';
 import 'share_p2p_handler.dart';
 
-enum DeviceConnectionState {
-  disconnected,
-  connecting,
-  connected,
-}
+enum DeviceConnectionState { disconnected, connecting, connected }
 
 /// 设备管理服务
 class DeviceManager {
@@ -30,10 +26,11 @@ class DeviceManager {
   bool _disposed = false;
   ShareP2PHandler? _p2pHandler;
 
-  final _stateController = StreamController<void>.broadcast();
+  final _stateController = StreamController<int>.broadcast();
+  int _stateTick = 0;
 
   /// UI 通过此 stream 监听状态变化
-  Stream<void> get stateStream => _stateController.stream;
+  Stream<int> get stateStream => _stateController.stream;
 
   DeviceConfig? get config => _config;
   DeviceConnectionState get state => _state;
@@ -45,7 +42,8 @@ class DeviceManager {
     _state = s;
     _lastError = error;
     if (!_disposed && !_stateController.isClosed) {
-      _stateController.add(null);
+      _stateTick += 1;
+      _stateController.add(_stateTick);
     }
   }
 
@@ -60,6 +58,7 @@ class DeviceManager {
       if (await file.exists()) {
         final data = await file.readAsString();
         _config = DeviceConfig.fromJson(jsonDecode(data));
+        _setState(_state);
         return _config!;
       }
     } catch (_) {}
@@ -71,6 +70,7 @@ class DeviceManager {
       avatar: Random().nextInt(kMemojiCount) + 1,
     );
     await _saveConfig();
+    _setState(_state);
     return _config!;
   }
 
@@ -110,20 +110,20 @@ class DeviceManager {
     final config = await loadConfig();
 
     try {
-      _ws = WebSocketChannel.connect(
-        Uri.parse(AppConstants.shareServerUrl),
-      );
+      _ws = WebSocketChannel.connect(Uri.parse(AppConstants.shareServerUrl));
 
       // WebSocketChannel.connect 不会抛同步异常，需要等 ready
       await _ws!.ready;
 
       if (_disposed) return;
 
-      _ws!.sink.add(jsonEncode({
-        'type': 'device-online',
-        'deviceId': config.deviceId,
-        'deviceName': config.deviceName,
-      }));
+      _ws!.sink.add(
+        jsonEncode({
+          'type': 'device-online',
+          'deviceId': config.deviceId,
+          'deviceName': config.deviceName,
+        }),
+      );
 
       _setState(DeviceConnectionState.connected);
 
@@ -229,14 +229,12 @@ class DeviceManager {
     _stateController.close();
   }
 
-  ({bool connected, String? deviceId}) get connectionStatus => (
-        connected: isConnected,
-        deviceId: _config?.deviceId,
-      );
+  ({bool connected, String? deviceId}) get connectionStatus =>
+      (connected: isConnected, deviceId: _config?.deviceId);
 
   String getShareUrl(String shareCode) {
     if (_config == null) return '';
-    return '${AppConstants.shareLinkBaseUrl}/share/${_config!.deviceId}/$shareCode';
+    return '${AppConstants.apiBaseUrl}/share/${_config!.deviceId}/$shareCode';
   }
 
   /// 把原始异常转为用户友好文案

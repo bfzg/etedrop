@@ -207,21 +207,12 @@ class _SendPageState extends ConsumerState<SendPage> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 设备卡片 — 虚线边框
-          CustomPaint(
-            painter: DashedBorderPainter(
-              color: theme.colorScheme.outlineVariant,
-              strokeWidth: 1.5,
-              dashWidth: 6,
-              dashGap: 4,
-              radius: 14,
-            ),
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 120),
-              padding: const EdgeInsets.all(Spacing.md),
-              child: NearbyDeviceGrid(
-                selectedIds: _selectedDeviceIds,
-                onToggle: _toggleDevice,
-              ),
+          Container(
+            constraints: const BoxConstraints(minHeight: 120),
+            padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+            child: NearbyDeviceGrid(
+              selectedIds: _selectedDeviceIds,
+              onToggle: _toggleDevice,
             ),
           ),
           const SizedBox(height: Spacing.md),

@@ -22,6 +22,9 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
 
+    // 进入设置页即加载设备配置，保证名称/头像显示和修改立即生效
+    ref.watch(deviceConfigReadyProvider);
+
     final storagePath = ref.watch(storageDirPathProvider);
     final connected = ref.watch(deviceConnectedProvider);
     final connecting = ref.watch(deviceConnectingProvider);

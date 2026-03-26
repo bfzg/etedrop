@@ -13,8 +13,13 @@ final deviceManagerProvider = Provider<DeviceManager>((ref) {
   return _globalManager;
 });
 
+/// 确保设备配置已加载（用于设置页首帧展示正确名称/头像）
+final deviceConfigReadyProvider = FutureProvider<void>((ref) async {
+  await ref.read(deviceManagerProvider).loadConfig();
+});
+
 /// 监听 DeviceManager 状态变化的 stream，UI rebuild 依赖它
-final _deviceStateStreamProvider = StreamProvider<void>((ref) {
+final _deviceStateStreamProvider = StreamProvider<int>((ref) {
   final manager = ref.watch(deviceManagerProvider);
   return manager.stateStream;
 });

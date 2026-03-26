@@ -40,7 +40,10 @@ class DeviceInfoSection extends ConsumerWidget {
             children: [
               // 头像 + 用户名 + 连接状态 一行
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 child: Row(
                   children: [
                     // 可点击的头像
@@ -49,8 +52,8 @@ class DeviceInfoSection extends ConsumerWidget {
                       child: Stack(
                         children: [
                           Container(
-                            width: 52,
-                            height: 52,
+                            width: 56,
+                            height: 56,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               border: Border.all(
@@ -112,9 +115,8 @@ class DeviceInfoSection extends ConsumerWidget {
                                 Flexible(
                                   child: Text(
                                     devName,
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.w600),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -133,8 +135,8 @@ class DeviceInfoSection extends ConsumerWidget {
                           Row(
                             children: [
                               Container(
-                                width: 7,
-                                height: 7,
+                                width: 9,
+                                height: 9,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: connected
@@ -154,6 +156,7 @@ class DeviceInfoSection extends ConsumerWidget {
                                           : l10n.disconnected),
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
+                                  fontSize: 12,
                                 ),
                               ),
                             ],

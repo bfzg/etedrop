@@ -33,6 +33,7 @@ class NearbyDeviceGrid extends ConsumerWidget {
               '附近的设备',
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             if (selectedIds.isNotEmpty) ...[
