@@ -1,12 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import '../../../core/router/router_provider.dart';
 import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
+import '../../message/models/transfer_message.dart';
+import '../../message/providers/message_provider.dart';
 import '../models/lan_device.dart';
 import '../services/lan_discovery_service.dart';
 import '../services/lan_http_server.dart';
@@ -21,6 +22,9 @@ class LanManager extends _$LanManager {
   StreamSubscription? _sub;
   Timer? _cleanupTimer;
 
+  /// 等待用户在消息页面对某条消息做出 接收/拒绝 决策的 completer
+  final Map<String, Completer<bool>> _pendingDecisions = {};
+
   @override
   List<LanDevice> build() {
     _init();
@@ -33,26 +37,50 @@ class LanManager extends _$LanManager {
     final deviceName = ref.read(deviceNameProvider);
     final storageDir = ref.read(fileServiceProvider).storageDir;
 
-    // Start HTTP Server
     _server = LanHttpServer(
       saveDirectory: storageDir.isNotEmpty ? storageDir : Directory.systemTemp.path,
       deviceId: deviceId,
       onReceiveRequest: _handleReceiveRequest,
       onProgress: (fileName, progress) {
-        // TODO: show progress in UI
+        // 更新对应消息的进度（通过 fileName 查找）
+        final messages = ref.read(messageListProvider);
+        final msg = messages.cast<TransferMessage?>().firstWhere(
+              (m) => m!.fileName == fileName && m.status == TransferMessageStatus.receiving,
+              orElse: () => null,
+            );
+        if (msg != null) {
+          ref.read(messageListProvider.notifier).updateProgress(msg.id, progress);
+        }
       },
       onComplete: (fileName) {
-        // Refresh cloud list if needed
+        final messages = ref.read(messageListProvider);
+        final msg = messages.cast<TransferMessage?>().firstWhere(
+              (m) =>
+                  m!.fileName == fileName &&
+                  (m.status == TransferMessageStatus.receiving ||
+                      m.status == TransferMessageStatus.accepted),
+              orElse: () => null,
+            );
+        if (msg != null) {
+          ref.read(messageListProvider.notifier).markCompleted(msg.id);
+        }
         ref.read(cloudFileListProvider.notifier).refresh();
       },
       onError: (fileName, error) {
         debugPrint('Receive error: $error');
+        final messages = ref.read(messageListProvider);
+        final msg = messages.cast<TransferMessage?>().firstWhere(
+              (m) => m!.fileName == fileName && m.status == TransferMessageStatus.receiving,
+              orElse: () => null,
+            );
+        if (msg != null) {
+          ref.read(messageListProvider.notifier).markFailed(msg.id, error);
+        }
       },
     );
 
     final port = await _server!.start();
 
-    // Start Discovery
     _discovery = LanDiscoveryService(
       deviceId: deviceId,
       deviceName: deviceName,
@@ -73,13 +101,17 @@ class LanManager extends _$LanManager {
 
     await _discovery!.start();
 
-    // Cleanup stale devices
     _cleanupTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       final now = DateTime.now().millisecondsSinceEpoch;
       final filtered = state.where((d) => now - d.lastSeen < 10000).toList();
       if (filtered.length != state.length) {
         state = filtered;
       }
+    });
+
+    // 监听消息状态变化以响应用户在消息页面的操作
+    ref.listen(messageListProvider, (prev, next) {
+      _checkPendingDecisions(next);
     });
   }
 
@@ -88,38 +120,54 @@ class LanManager extends _$LanManager {
     _cleanupTimer?.cancel();
     _discovery?.stop();
     _server?.stop();
+    for (final c in _pendingDecisions.values) {
+      if (!c.isCompleted) c.complete(false);
+    }
+    _pendingDecisions.clear();
   }
 
   Future<bool> _handleReceiveRequest(String fileName, String senderName) async {
-    final context = rootNavigatorKey.currentContext;
-    if (context == null) return false;
-
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('接收文件'),
-        content: Text('来自 [$senderName] 的文件:\n$fileName\n\n是否接收？'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('拒绝'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('接收'),
-          ),
-        ],
-      ),
+    final msgNotifier = ref.read(messageListProvider.notifier);
+    final msg = msgNotifier.addIncoming(
+      fileName: fileName,
+      fileSize: 0,
+      senderName: senderName,
+      senderDeviceId: '',
     );
 
-    return result == true;
+    final completer = Completer<bool>();
+    _pendingDecisions[msg.id] = completer;
+
+    final accepted = await completer.future;
+    _pendingDecisions.remove(msg.id);
+
+    if (accepted) {
+      ref.read(messageListProvider.notifier).updateStatus(
+            msg.id,
+            TransferMessageStatus.receiving,
+          );
+    }
+
+    return accepted;
+  }
+
+  void _checkPendingDecisions(List<TransferMessage> messages) {
+    for (final msg in messages) {
+      final completer = _pendingDecisions[msg.id];
+      if (completer == null || completer.isCompleted) continue;
+
+      if (msg.status == TransferMessageStatus.accepted) {
+        completer.complete(true);
+      } else if (msg.status == TransferMessageStatus.rejected) {
+        completer.complete(false);
+      }
+    }
   }
 
   Future<void> sendFile(LanDevice target, String filePath) async {
     final senderName = ref.read(deviceNameProvider);
     final transfer = LanTransferService();
-    
-    // Check if alive
+
     final isAlive = await transfer.ping(target.ip, target.port);
     if (!isAlive) {
       throw Exception('设备无响应');
@@ -130,9 +178,7 @@ class LanManager extends _$LanManager {
       port: target.port,
       filePath: filePath,
       senderName: senderName,
-      onProgress: (p) {
-        // TODO: show progress
-      },
+      onProgress: (p) {},
     );
   }
 }

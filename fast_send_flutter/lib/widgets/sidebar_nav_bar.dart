@@ -1,14 +1,16 @@
 import 'package:eddy/core/utils/is_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 
 import 'bottom_nav_bar.dart';
 import '../core/config/styles.dart';
+import '../features/message/providers/message_provider.dart';
 
 const double kSidebarWidth = 68;
 
 /// 桌面端侧边栏导航（支持 DragToMoveArea 拖动窗口）。
-class AppSidebarNavBar extends StatelessWidget {
+class AppSidebarNavBar extends ConsumerWidget {
   final List<NavItemConfig> items;
   final int currentIndex;
   final ValueChanged<int> onSelect;
@@ -21,8 +23,9 @@ class AppSidebarNavBar extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final pendingCount = ref.watch(pendingMessageCountProvider);
     // macOS 下预留顶部安全距离，避免导航项与红黄绿按钮重叠（预留高度略收窄）
     final topInset = isMacOSPlatform() ? 38.0 : 10.0;
     final padding = EdgeInsets.fromLTRB(5.0, 5.0 + topInset, 5.0, 0.0);
@@ -34,7 +37,6 @@ class AppSidebarNavBar extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // 侧边栏空白区域可拖拽移动窗口；导航按钮位于上层保持可点击。
             const DragToMoveArea(child: SizedBox.expand()),
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -47,12 +49,16 @@ class AppSidebarNavBar extends StatelessWidget {
                       children: items.asMap().entries.map((entry) {
                         final index = entry.key;
                         final item = entry.value;
+                        final badge = (item.path == '/messages' && pendingCount > 0)
+                            ? pendingCount
+                            : 0;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),
                           child: _SidebarItem(
                             item: item,
                             selected: index == currentIndex,
                             isDark: isDark,
+                            badgeCount: badge,
                             onTap: () => onSelect(index),
                           ),
                         );
@@ -73,12 +79,14 @@ class _SidebarItem extends StatelessWidget {
   final NavItemConfig item;
   final bool selected;
   final bool isDark;
+  final int badgeCount;
   final VoidCallback onTap;
 
   const _SidebarItem({
     required this.item,
     required this.selected,
     required this.isDark,
+    this.badgeCount = 0,
     required this.onTap,
   });
 
@@ -110,10 +118,17 @@ class _SidebarItem extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                selected ? item.roundedIcon : item.outlinedIcon,
-                size: 20,
-                color: selected ? selectedColor : normalColor,
+              Badge(
+                isLabelVisible: badgeCount > 0,
+                label: Text(
+                  '$badgeCount',
+                  style: const TextStyle(fontSize: 10),
+                ),
+                child: Icon(
+                  selected ? item.roundedIcon : item.outlinedIcon,
+                  size: 20,
+                  color: selected ? selectedColor : normalColor,
+                ),
               ),
               const SizedBox(height: 3),
               Text(

@@ -263,11 +263,3 @@ lib/
 │
 └── services/                 # 第三方/系统服务封装
 ```
-
-# 资源
-```
-flutter_background_service 前台服务
-```
-
-# 命名规范
-

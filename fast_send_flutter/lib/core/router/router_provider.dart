@@ -5,11 +5,13 @@ import '../../widgets/app_layout.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../features/cloud/pages/cloud_page.dart';
 import '../../features/transfer/pages/send_page.dart';
+import '../../features/message/pages/message_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 
 class Routes {
   static const cloud = '/cloud';
   static const send = '/send';
+  static const messages = '/messages';
   static const settings = '/settings';
 }
 
@@ -26,6 +28,12 @@ final List<NavItemConfig> navItems = [
     outlinedIcon: Icons.share_outlined,
     roundedIcon: Icons.share_rounded,
     path: Routes.send,
+  ),
+  NavItemConfig(
+    label: '消息',
+    outlinedIcon: Icons.chat_bubble_outline,
+    roundedIcon: Icons.chat_bubble,
+    path: Routes.messages,
   ),
   NavItemConfig(
     label: '设置',
@@ -59,6 +67,11 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(path: Routes.send, builder: (context, state) => const SendPage()),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(path: Routes.messages, builder: (context, state) => const MessagePage()),
           ],
         ),
         StatefulShellBranch(
