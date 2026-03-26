@@ -186,23 +186,23 @@ class _DeviceAvatar extends StatelessWidget {
                   // 右上角 You 标记
                   if (isSelf)
                     Positioned(
-                      right: 0,
-                      top: -2,
+                      right: -4,
+                      top: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 5,
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.secondaryContainer,
+                          color: AppStyles.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           'You',
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSecondaryContainer,
+                            color: Colors.white,
                           ),
                         ),
                       ),
@@ -235,8 +235,8 @@ class _DeviceAvatar extends StatelessWidget {
             Text(
               device.deviceName,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                fontSize: 13,
+                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
                 color: selected
                     ? AppStyles.primary
                     : theme.colorScheme.onSurface,

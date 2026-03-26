@@ -12,10 +12,10 @@ class LanDiscoveryService {
   Timer? _broadcastTimer;
   
   final String deviceId;
-  final String deviceName;
   final int httpPort;
   final String os;
-  final int avatar;
+  String deviceName;
+  int avatar;
 
   final _deviceController = StreamController<LanDevice>.broadcast();
   Stream<LanDevice> get onDeviceFound => _deviceController.stream;
@@ -27,6 +27,21 @@ class LanDiscoveryService {
     required this.os,
     this.avatar = 1,
   });
+
+  void updateLocalInfo({String? deviceName, int? avatar}) {
+    var changed = false;
+    if (deviceName != null && deviceName.isNotEmpty && deviceName != this.deviceName) {
+      this.deviceName = deviceName;
+      changed = true;
+    }
+    if (avatar != null && avatar > 0 && avatar != this.avatar) {
+      this.avatar = avatar;
+      changed = true;
+    }
+    if (changed) {
+      _broadcastPresence();
+    }
+  }
 
   Future<void> start() async {
     try {

@@ -33,9 +33,15 @@ class LanManager extends _$LanManager {
   }
 
   Future<void> _init() async {
-    final deviceId = ref.read(deviceIdProvider) ?? 'unknown_id';
-    final deviceName = ref.read(deviceNameProvider);
-    final deviceAvatar = ref.read(deviceAvatarProvider);
+    // 确保设备配置已加载，避免用 unknown_id/未知设备启动 LAN 服务
+    await ref.read(deviceConfigReadyProvider.future);
+
+    // 直接从 DeviceManager 读取，规避 provider 首帧尚未刷新导致的空值
+    final manager = ref.read(deviceManagerProvider);
+    final config = manager.config ?? await manager.loadConfig();
+    final deviceId = config.deviceId;
+    final deviceName = config.deviceName;
+    final deviceAvatar = config.avatar;
     final storageDir = ref.read(fileServiceProvider).storageDir;
 
     _server = LanHttpServer(
@@ -89,6 +95,14 @@ class LanManager extends _$LanManager {
       os: Platform.operatingSystem,
       avatar: deviceAvatar,
     );
+
+    // 设置页改名/改头像后，立即更新 LAN 广播内容
+    ref.listen<String>(deviceNameProvider, (prev, next) {
+      _discovery?.updateLocalInfo(deviceName: next);
+    });
+    ref.listen<int>(deviceAvatarProvider, (prev, next) {
+      _discovery?.updateLocalInfo(avatar: next);
+    });
 
     _sub = _discovery!.onDeviceFound.listen((device) {
       final current = List<LanDevice>.from(state);
