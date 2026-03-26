@@ -95,7 +95,7 @@ final class ShareListProvider
   ShareList create() => ShareList();
 }
 
-String _$shareListHash() => r'5680585d73b7f1e0df0212810dd8078f4f193c48';
+String _$shareListHash() => r'3061d493d7b627e2255fd8fce650b8c5ea6db7e5';
 
 /// 分享列表
 

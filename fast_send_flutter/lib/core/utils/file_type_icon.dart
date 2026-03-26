@@ -1,10 +1,11 @@
 import '../../features/cloud/models/fs_entry.dart';
 
-const String _base = 'assets/fileType';
+const String _base = 'assets/images/fileType';
 
 /// 根据文件条目返回对应的 PNG 图标资源路径（assets/fileType）。
 String fileTypePngForEntry(FsEntry entry) {
-  if (entry.isDirectory) return '$_base/wenjianleixing-biaozhuntu-wenjianjia.png';
+  if (entry.isDirectory)
+    return '$_base/wenjianleixing-biaozhuntu-wenjianjia.png';
   return fileTypePngForFileName(entry.name);
 }
 
@@ -107,4 +108,3 @@ String _safeExtension(String name) {
   if (dot <= 0 || dot == trimmed.length - 1) return '';
   return trimmed.substring(dot + 1).toLowerCase();
 }
-

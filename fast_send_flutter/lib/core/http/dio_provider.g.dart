@@ -48,4 +48,4 @@ final class HttpServiceProvider
   }
 }
 
-String _$httpServiceHash() => r'b2b5882c8dd58156c83eab317354743c05b3bbdd';
+String _$httpServiceHash() => r'41507e237c3532698ce7ec56143d3c0e3eacd795';

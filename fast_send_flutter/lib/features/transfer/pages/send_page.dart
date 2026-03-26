@@ -12,6 +12,9 @@ import '../../../styles/styles.dart';
 import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
 import '../../share/providers/share_provider.dart';
+import '../../lan/providers/lan_provider.dart';
+import '../../lan/models/lan_device.dart';
+import '../../lan/widgets/lan_device_list.dart';
 
 import '../widgets/send_drop_area.dart';
 import '../widgets/send_error_view.dart';
@@ -89,6 +92,54 @@ class _SendPageState extends ConsumerState<SendPage> {
     if (file.path == null) return;
 
     await _processFile(file.path!, file.name, file.size);
+  }
+
+  Future<void> _sendFileToLanDevice(LanDevice device) async {
+    final result = await FilePicker.platform.pickFiles();
+    if (result == null || result.files.isEmpty) return;
+
+    final file = result.files.first;
+    if (file.path == null) return;
+
+    final cleanedFilePath = _cleanDroppedPath(file.path!);
+    final cleanedFileName = _cleanFileName(file.name);
+
+    if (cleanedFilePath.isEmpty || cleanedFileName.isEmpty) {
+      setState(() {
+        _status = SendStatus.error;
+        _errorMsg = '无效文件路径';
+      });
+      return;
+    }
+
+    setState(() {
+      _status = SendStatus.uploading;
+      _fileName = cleanedFileName;
+      _fileSize = file.size;
+      _errorMsg = null;
+      _uploadProgress = 0;
+    });
+
+    try {
+      await ref.read(lanManagerProvider.notifier).sendFile(device, cleanedFilePath);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('成功发送至 ${device.deviceName}'),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+        _reset();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMsg = '$e';
+          _status = SendStatus.error;
+        });
+      }
+    }
   }
 
   Future<void> _processFile(
@@ -272,7 +323,7 @@ class _SendPageState extends ConsumerState<SendPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (_status == SendStatus.idle)
+                    if (_status == SendStatus.idle) ...[
                       SendDropArea(
                         enableDropTarget: false,
                         isDraggingOverride: _isPageDragging,
@@ -281,6 +332,11 @@ class _SendPageState extends ConsumerState<SendPage> {
                         },
                         onFileDropped: _processFile,
                       ),
+                      const SizedBox(height: 32),
+                      LanDeviceList(
+                        onDeviceSelected: _sendFileToLanDevice,
+                      ),
+                    ],
                     if (_status == SendStatus.uploading)
                       SendUploadingView(
                         fileName: _fileName,

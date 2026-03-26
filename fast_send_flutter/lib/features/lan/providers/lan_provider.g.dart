@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'theme_provider.dart';
+part of 'lan_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,51 +9,51 @@ part of 'theme_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(ThemeNotifier)
-final themeProvider = ThemeNotifierProvider._();
+@ProviderFor(LanManager)
+final lanManagerProvider = LanManagerProvider._();
 
-final class ThemeNotifierProvider
-    extends $NotifierProvider<ThemeNotifier, ThemeMode> {
-  ThemeNotifierProvider._()
+final class LanManagerProvider
+    extends $NotifierProvider<LanManager, List<LanDevice>> {
+  LanManagerProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'themeProvider',
-        isAutoDispose: true,
+        name: r'lanManagerProvider',
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$themeNotifierHash();
+  String debugGetCreateSourceHash() => _$lanManagerHash();
 
   @$internal
   @override
-  ThemeNotifier create() => ThemeNotifier();
+  LanManager create() => LanManager();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ThemeMode value) {
+  Override overrideWithValue(List<LanDevice> value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<ThemeMode>(value),
+      providerOverride: $SyncValueProvider<List<LanDevice>>(value),
     );
   }
 }
 
-String _$themeNotifierHash() => r'211bac36329a4890dc51e5079866dcb81c02098f';
+String _$lanManagerHash() => r'43a662c3ec7b63c71a096e6c9bc6858220fa2944';
 
-abstract class _$ThemeNotifier extends $Notifier<ThemeMode> {
-  ThemeMode build();
+abstract class _$LanManager extends $Notifier<List<LanDevice>> {
+  List<LanDevice> build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<ThemeMode, ThemeMode>;
+    final ref = this.ref as $Ref<List<LanDevice>, List<LanDevice>>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<ThemeMode, ThemeMode>,
-              ThemeMode,
+              AnyNotifier<List<LanDevice>, List<LanDevice>>,
+              List<LanDevice>,
               Object?,
               Object?
             >;
