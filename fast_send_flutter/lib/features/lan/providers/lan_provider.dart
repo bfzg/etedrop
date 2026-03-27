@@ -8,6 +8,7 @@ import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/message_provider.dart';
+import '../../../services/notification_service.dart';
 import '../models/lan_device.dart';
 import '../services/lan_discovery_service.dart';
 import '../services/lan_http_server.dart';
@@ -73,6 +74,10 @@ class LanManager extends _$LanManager {
             );
         if (msg != null) {
           ref.read(messageListProvider.notifier).markCompleted(msg.id);
+          NotificationService.instance.showTransferCompleted(
+            senderName: msg.senderName,
+            fileName: fileName,
+          );
         }
         ref.read(cloudFileListProvider.notifier).refresh();
       },
@@ -152,6 +157,10 @@ class LanManager extends _$LanManager {
       fileSize: 0,
       senderName: senderName,
       senderDeviceId: '',
+    );
+    NotificationService.instance.showIncomingTransfer(
+      senderName: senderName,
+      fileName: fileName,
     );
 
     final completer = Completer<bool>();
