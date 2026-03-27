@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -7,13 +5,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../styles/styles.dart';
+import '../../lan/models/lan_device.dart';
 import '../../lan/providers/lan_provider.dart';
 import '../widgets/file_drop_card.dart';
-import '../widgets/send_error_view.dart';
-import '../widgets/send_uploading_view.dart';
+import '../widgets/lan_share_panel.dart';
 import '../widgets/nearby_device_grid.dart';
-
-enum SendStatus { idle, uploading, done, error }
 
 class SendPage extends ConsumerStatefulWidget {
   const SendPage({super.key});
@@ -23,14 +19,13 @@ class SendPage extends ConsumerStatefulWidget {
 }
 
 class _SendPageState extends ConsumerState<SendPage> {
-  SendStatus _status = SendStatus.idle;
-  String? _errorMsg;
   bool _isPageDragging = false;
-  double _uploadProgress = 0;
-  String? _uploadFileName;
-  int? _uploadFileSize;
-
   final Set<String> _selectedDeviceIds = {};
+  final List<String> _pendingPaths = [];
+
+  String? _activeShareId;
+  DateTime? _activeExpiresAt;
+  List<LanDevice> _activeRecipients = [];
 
   String _cleanPath(String raw) {
     var s = raw.trim();
@@ -60,168 +55,116 @@ class _SendPageState extends ConsumerState<SendPage> {
     });
   }
 
-  Future<void> _pickAndSend() async {
-    final result = await FilePicker.platform.pickFiles();
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
     if (result == null || result.files.isEmpty) return;
 
-    final file = result.files.first;
-    if (file.path == null) return;
-
-    final filePath = _cleanPath(file.path!);
-    if (filePath.isEmpty) return;
-
-    await _sendToSelectedDevices(filePath);
+    final added = <String>[];
+    for (final f in result.files) {
+      if (f.path == null) continue;
+      final filePath = _cleanPath(f.path!);
+      if (filePath.isEmpty) continue;
+      if (!_pendingPaths.contains(filePath)) {
+        added.add(filePath);
+      }
+    }
+    if (added.isEmpty) return;
+    setState(() => _pendingPaths.addAll(added));
   }
 
   Future<void> _handleDropFile(DropDoneDetails details) async {
     if (details.files.isEmpty) return;
-
-    final dropped = details.files.first;
-    final droppedPath = _cleanPath(dropped.path);
-    if (droppedPath.isEmpty) return;
-
-    final fileName = p.basename(droppedPath);
-    final fileSize = await dropped.length();
-
-    await _sendDroppedToSelectedDevices(
-      fileName: fileName,
-      fileSize: fileSize,
-      openRead: () => dropped.openRead(),
-    );
+    final added = <String>[];
+    for (final dropped in details.files) {
+      final path = _cleanPath(dropped.path);
+      if (path.isEmpty) continue;
+      if (!_pendingPaths.contains(path)) {
+        added.add(path);
+      }
+    }
+    if (added.isEmpty) return;
+    setState(() => _pendingPaths.addAll(added));
   }
 
-  Future<void> _sendToSelectedDevices(String filePath) async {
+  void _removePendingAt(int index) {
+    setState(() => _pendingPaths.removeAt(index));
+  }
+
+  void _clearPending() {
+    setState(() => _pendingPaths.clear());
+  }
+
+  void _clearActiveShareState() {
+    setState(() {
+      _activeShareId = null;
+      _activeExpiresAt = null;
+      _activeRecipients = [];
+    });
+  }
+
+  void _cancelShare() {
+    final id = _activeShareId;
+    if (id != null) {
+      ref.read(lanManagerProvider.notifier).cancelOutgoingShare(
+            id,
+            userCancelled: true,
+          );
+    }
+    _clearActiveShareState();
+  }
+
+  Future<void> _startLanShare() async {
     final devices = ref.read(lanManagerProvider);
     final targets = devices
         .where((d) => _selectedDeviceIds.contains(d.deviceId))
         .toList();
 
     if (targets.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先选择至少一个设备')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择至少一个设备')),
+      );
+      return;
+    }
+    if (_pendingPaths.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请先选择或拖入至少一个文件')),
+      );
       return;
     }
 
-    final fileName = p.basename(filePath);
-    final fileSize = await File(filePath).length();
+    final prevId = _activeShareId;
+    if (prevId != null) {
+      ref.read(lanManagerProvider.notifier).cancelOutgoingShare(
+            prevId,
+            userCancelled: true,
+          );
+      _clearActiveShareState();
+    }
 
-    setState(() {
-      _status = SendStatus.uploading;
-      _uploadFileName = fileName;
-      _uploadFileSize = fileSize;
-      _uploadProgress = 0;
-      _errorMsg = null;
-    });
-
-    final errors = <String>[];
-    int completed = 0;
-
-    for (final device in targets) {
-      try {
-        await ref.read(lanManagerProvider.notifier).sendFile(device, filePath);
-        completed++;
-        if (mounted) {
-          setState(() => _uploadProgress = completed / targets.length);
-        }
-      } catch (e) {
-        errors.add('${device.deviceName}: $e');
+    try {
+      final id = await ref.read(lanManagerProvider.notifier).startBatchShare(
+            absoluteFilePaths: List<String>.from(_pendingPaths),
+            targetDeviceIds: targets.map((d) => d.deviceId).toList(),
+          );
+      if (!mounted) return;
+      setState(() {
+        _pendingPaths.clear();
+        _activeShareId = id;
+        _activeExpiresAt = DateTime.now().add(const Duration(minutes: 2));
+        _activeRecipients = List<LanDevice>.from(targets);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('已发送分享邀请，对方在消息里接受后开始传输')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('发起失败: $e')),
+        );
       }
     }
-
-    if (!mounted) return;
-
-    if (errors.isNotEmpty && completed == 0) {
-      setState(() {
-        _status = SendStatus.error;
-        _errorMsg = errors.join('\n');
-      });
-    } else {
-      setState(() => _status = SendStatus.done);
-      final msg = completed == targets.length
-          ? '已发送至 $completed 台设备'
-          : '已发送至 $completed/${targets.length} 台设备';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-      );
-      Future.delayed(const Duration(milliseconds: 800), _reset);
-    }
-  }
-
-  Future<void> _sendDroppedToSelectedDevices({
-    required String fileName,
-    required int fileSize,
-    required Stream<List<int>> Function() openRead,
-  }) async {
-    final devices = ref.read(lanManagerProvider);
-    final targets = devices
-        .where((d) => _selectedDeviceIds.contains(d.deviceId))
-        .toList();
-
-    if (targets.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('请先选择至少一个设备')));
-      return;
-    }
-
-    setState(() {
-      _status = SendStatus.uploading;
-      _uploadFileName = fileName;
-      _uploadFileSize = fileSize;
-      _uploadProgress = 0;
-      _errorMsg = null;
-    });
-
-    final errors = <String>[];
-    int completed = 0;
-
-    for (final device in targets) {
-      try {
-        await ref.read(lanManagerProvider.notifier).sendFileStream(
-              device,
-              fileStream: openRead(),
-              fileName: fileName,
-              fileSize: fileSize,
-            );
-        completed++;
-        if (mounted) {
-          setState(() => _uploadProgress = completed / targets.length);
-        }
-      } catch (e) {
-        errors.add('${device.deviceName}: $e');
-      }
-    }
-
-    if (!mounted) return;
-
-    if (errors.isNotEmpty && completed == 0) {
-      setState(() {
-        _status = SendStatus.error;
-        _errorMsg = errors.join('\n');
-      });
-    } else {
-      setState(() => _status = SendStatus.done);
-      final msg = completed == targets.length
-          ? '已发送至 $completed 台设备'
-          : '已发送至 $completed/${targets.length} 台设备';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), duration: const Duration(seconds: 2)),
-      );
-      Future.delayed(const Duration(milliseconds: 800), _reset);
-    }
-  }
-
-  void _reset() {
-    if (!mounted) return;
-    setState(() {
-      _status = SendStatus.idle;
-      _errorMsg = null;
-      _isPageDragging = false;
-      _uploadProgress = 0;
-      _uploadFileName = null;
-      _uploadFileSize = null;
-    });
   }
 
   @override
@@ -236,17 +179,10 @@ class _SendPageState extends ConsumerState<SendPage> {
     return Scaffold(
       appBar: isDesktopLayout ? null : AppBar(title: const Text('分享')),
       body: DropTarget(
-        onDragEntered: (_) {
-          if (_status != SendStatus.idle) return;
-          setState(() => _isPageDragging = true);
-        },
-        onDragExited: (_) {
-          if (_status != SendStatus.idle) return;
-          setState(() => _isPageDragging = false);
-        },
+        onDragEntered: (_) => setState(() => _isPageDragging = true),
+        onDragExited: (_) => setState(() => _isPageDragging = false),
         onDragDone: (details) async {
           setState(() => _isPageDragging = false);
-          if (_status != SendStatus.idle) return;
           await _handleDropFile(details);
         },
         child: _buildBody(context),
@@ -255,28 +191,13 @@ class _SendPageState extends ConsumerState<SendPage> {
   }
 
   Widget _buildBody(BuildContext context) {
-    if (_status == SendStatus.uploading) {
-      return Center(
-        child: SendUploadingView(
-          fileName: _uploadFileName,
-          fileSize: _uploadFileSize,
-          progress: _uploadProgress,
-        ),
-      );
-    }
-
-    if (_status == SendStatus.error) {
-      return Center(
-        child: SendErrorView(errorMsg: _errorMsg ?? '未知错误', onRetry: _reset),
-      );
-    }
+    final hasActive = _activeShareId != null && _activeExpiresAt != null;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Spacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 设备卡片 — 虚线边框
           Container(
             constraints: const BoxConstraints(minHeight: 120),
             padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
@@ -286,13 +207,131 @@ class _SendPageState extends ConsumerState<SendPage> {
             ),
           ),
           const SizedBox(height: Spacing.md),
-          // 文件拖入卡片 — 虚线边框
           FileDropCard(
             isDragging: _isPageDragging,
             hasSelectedDevices: _selectedDeviceIds.isNotEmpty,
-            onPickRequested: _pickAndSend,
+            selectedFileCount:
+                _pendingPaths.isEmpty ? null : _pendingPaths.length,
+            addToQueueMode: true,
+            onPickRequested: _pickFiles,
           ),
+          if (_pendingPaths.isNotEmpty) ...[
+            const SizedBox(height: Spacing.md),
+            _PendingFilesList(
+              paths: _pendingPaths,
+              onRemove: _removePendingAt,
+              onClear: _clearPending,
+            ),
+          ],
+          const SizedBox(height: Spacing.lg),
+          FilledButton.icon(
+            onPressed: (_selectedDeviceIds.isEmpty || _pendingPaths.isEmpty)
+                ? null
+                : _startLanShare,
+            icon: const Icon(Icons.share_outlined),
+            label: Text(
+              hasActive ? '重新发起分享（将结束当前会话）' : '发起局域网分享',
+            ),
+          ),
+          if (hasActive) ...[
+            const SizedBox(height: Spacing.md),
+            LanSharePanel(
+              shareId: _activeShareId!,
+              expiresAt: _activeExpiresAt!,
+              recipients: _activeRecipients,
+              onCancel: _cancelShare,
+              onExpired: () {
+                if (!mounted) return;
+                _clearActiveShareState();
+              },
+            ),
+          ],
         ],
+      ),
+    );
+  }
+}
+
+class _PendingFilesList extends StatelessWidget {
+  final List<String> paths;
+  final void Function(int index) onRemove;
+  final VoidCallback onClear;
+
+  const _PendingFilesList({
+    required this.paths,
+    required this.onRemove,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.35),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(Spacing.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  '待发送文件',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: onClear,
+                  child: const Text('清空'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: paths.length,
+                itemBuilder: (context, i) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.insert_drive_file_outlined,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            p.basename(paths[i]),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          icon: const Icon(Icons.close, size: 18),
+                          onPressed: () => onRemove(i),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

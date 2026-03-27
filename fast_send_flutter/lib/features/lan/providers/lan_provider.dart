@@ -2,7 +2,9 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
@@ -10,21 +12,40 @@ import '../../message/models/transfer_message.dart';
 import '../../message/providers/message_provider.dart';
 import '../../../services/notification_service.dart';
 import '../models/lan_device.dart';
+import '../models/lan_share_payload.dart';
 import '../services/lan_discovery_service.dart';
+import '../services/lan_http_context.dart';
 import '../services/lan_http_server.dart';
+import '../services/lan_network_utils.dart';
 import '../services/lan_transfer_service.dart';
 
 part 'lan_provider.g.dart';
+
+class _OutgoingShare {
+  final String shareId;
+  final List<String> filePaths;
+  final List<LanDevice> targets;
+  final Timer expiryTimer;
+  bool cancelled = false;
+
+  _OutgoingShare({
+    required this.shareId,
+    required this.filePaths,
+    required this.targets,
+    required this.expiryTimer,
+  });
+}
 
 @Riverpod(keepAlive: true)
 class LanManager extends _$LanManager {
   LanDiscoveryService? _discovery;
   LanHttpServer? _server;
+  int _listenPort = 0;
   StreamSubscription? _sub;
   Timer? _cleanupTimer;
 
-  /// 等待用户在消息页面对某条消息做出 接收/拒绝 决策的 completer
   final Map<String, Completer<bool>> _pendingDecisions = {};
+  final Map<String, _OutgoingShare> _outgoingShares = {};
 
   @override
   List<LanDevice> build() {
@@ -33,11 +54,11 @@ class LanManager extends _$LanManager {
     return [];
   }
 
+  int get localHttpPort => _listenPort;
+
   Future<void> _init() async {
-    // 确保设备配置已加载，避免用 unknown_id/未知设备启动 LAN 服务
     await ref.read(deviceConfigReadyProvider.future);
 
-    // 直接从 DeviceManager 读取，规避 provider 首帧尚未刷新导致的空值
     final manager = ref.read(deviceManagerProvider);
     final config = manager.config ?? await manager.loadConfig();
     final deviceId = config.deviceId;
@@ -51,60 +72,25 @@ class LanManager extends _$LanManager {
           ? downloadDir
           : (cloudDir.isNotEmpty ? cloudDir : Directory.systemTemp.path),
       deviceId: deviceId,
-      onReceiveRequest: _handleReceiveRequest,
-      onProgress: (fileName, progress) {
-        // 更新对应消息的进度（通过 fileName 查找）
-        final messages = ref.read(messageListProvider);
-        final msg = messages.cast<TransferMessage?>().firstWhere(
-              (m) => m!.fileName == fileName && m.status == TransferMessageStatus.receiving,
-              orElse: () => null,
-            );
-        if (msg != null) {
-          ref.read(messageListProvider.notifier).updateProgress(msg.id, progress);
-        }
-      },
-      onComplete: (fileName) {
-        final messages = ref.read(messageListProvider);
-        final msg = messages.cast<TransferMessage?>().firstWhere(
-              (m) =>
-                  m!.fileName == fileName &&
-                  (m.status == TransferMessageStatus.receiving ||
-                      m.status == TransferMessageStatus.accepted),
-              orElse: () => null,
-            );
-        if (msg != null) {
-          ref.read(messageListProvider.notifier).markCompleted(msg.id);
-          NotificationService.instance.showTransferCompleted(
-            senderName: msg.senderName,
-            fileName: fileName,
-          );
-        }
-        ref.read(cloudFileListProvider.notifier).refresh();
-      },
-      onError: (fileName, error) {
-        debugPrint('Receive error: $error');
-        final messages = ref.read(messageListProvider);
-        final msg = messages.cast<TransferMessage?>().firstWhere(
-              (m) => m!.fileName == fileName && m.status == TransferMessageStatus.receiving,
-              orElse: () => null,
-            );
-        if (msg != null) {
-          ref.read(messageListProvider.notifier).markFailed(msg.id, error);
-        }
-      },
+      onShareOffer: _onIncomingShareOffer,
+      onShareAccept: _onShareAcceptFromReceiver,
+      onShareCancel: _onIncomingShareCancel,
+      onReceiveUpload: _onReceiveUploadPermission,
+      onProgress: _onReceiveUploadProgress,
+      onComplete: _onReceiveUploadComplete,
+      onError: _onReceiveUploadError,
     );
 
-    final port = await _server!.start();
+    _listenPort = await _server!.start();
 
     _discovery = LanDiscoveryService(
       deviceId: deviceId,
       deviceName: deviceName,
-      httpPort: port,
+      httpPort: _listenPort,
       os: Platform.operatingSystem,
       avatar: deviceAvatar,
     );
 
-    // 设置页改名/改头像后，立即更新 LAN 广播内容
     ref.listen<String>(deviceNameProvider, (prev, next) {
       _discovery?.updateLocalInfo(deviceName: next);
     });
@@ -133,7 +119,6 @@ class LanManager extends _$LanManager {
       }
     });
 
-    // 监听消息状态变化以响应用户在消息页面的操作
     ref.listen(messageListProvider, (prev, next) {
       _checkPendingDecisions(next);
     });
@@ -148,25 +133,288 @@ class LanManager extends _$LanManager {
       if (!c.isCompleted) c.complete(false);
     }
     _pendingDecisions.clear();
+    for (final s in _outgoingShares.values) {
+      s.expiryTimer.cancel();
+    }
+    _outgoingShares.clear();
   }
 
-  Future<bool> _handleReceiveRequest({
-    required String fileName,
-    required String senderName,
-    required int fileSize,
-    required int senderAvatar,
+  // —— 接收：分享邀约 —— //
+  Future<void> _onIncomingShareOffer(LanShareOfferPayload offer) async {
+    if (DateTime.now().millisecondsSinceEpoch > offer.expiresAtMs) return;
+
+    final files = offer.files.map((e) => e.toJson()).toList();
+    ref.read(messageListProvider.notifier).addIncomingBatchOffer(
+          shareId: offer.shareId,
+          senderName: offer.senderName,
+          senderDeviceId: offer.senderDeviceId,
+          senderAvatar: offer.senderAvatar,
+          files: files,
+          senderHttpHost: offer.senderHost,
+          senderHttpPort: offer.senderPort,
+        );
+
+    final waitMs = offer.expiresAtMs - DateTime.now().millisecondsSinceEpoch;
+    if (waitMs > 0) {
+      Future.delayed(Duration(milliseconds: waitMs), () {
+        final m = ref
+            .read(messageListProvider.notifier)
+            .findIncomingByShareId(offer.shareId);
+        if (m != null && m.status == TransferMessageStatus.pending) {
+          ref.read(messageListProvider.notifier).expireIncomingByShareId(
+                offer.shareId,
+                reason: '等待超时',
+              );
+        }
+      });
+    }
+
+    final summary = files.length == 1
+        ? (files.first['name'] as String? ?? '文件')
+        : '${files.length} 个文件';
+    NotificationService.instance.showIncomingTransfer(
+      senderName: offer.senderName,
+      fileName: summary,
+    );
+  }
+
+  Future<void> _onIncomingShareCancel(LanShareCancelPayload cancel) async {
+    ref.read(messageListProvider.notifier).rejectByShareId(
+          cancel.shareId,
+          reason: '发送方已取消',
+        );
+  }
+
+  /// 接收方点击接受/拒绝后，回调发送方 HTTP
+  Future<void> receiverRespondToShare(TransferMessage msg, bool accepted) async {
+    if (msg.shareId == null ||
+        msg.senderHttpHost == null ||
+        msg.senderHttpPort == null) {
+      throw Exception('无效的分享消息');
+    }
+    final myId = ref.read(deviceIdProvider) ?? '';
+    final transfer = LanTransferService();
+    await transfer.postShareAccept(
+      senderHost: msg.senderHttpHost!,
+      senderPort: msg.senderHttpPort!,
+      payload: LanShareAcceptPayload(
+        shareId: msg.shareId!,
+        receiverDeviceId: myId,
+        accepted: accepted,
+      ),
+    );
+  }
+
+  // —— 发送方：接收端回调「已接受」后开始推流 —— //
+  Future<void> _onShareAcceptFromReceiver(LanShareAcceptPayload payload) async {
+    final session = _outgoingShares[payload.shareId];
+    if (session == null || session.cancelled) return;
+
+    if (!payload.accepted) return;
+
+    LanDevice? device;
+    for (final d in session.targets) {
+      if (d.deviceId == payload.receiverDeviceId) {
+        device = d;
+        break;
+      }
+    }
+    if (device == null) return;
+
+    unawaited(_uploadBatchToDevice(device, session));
+  }
+
+  Future<void> _uploadBatchToDevice(
+    LanDevice device,
+    _OutgoingShare session,
+  ) async {
+    final transfer = LanTransferService();
+    final senderName = ref.read(deviceNameProvider);
+    final senderAvatar = ref.read(deviceAvatarProvider);
+    final senderDeviceId = ref.read(deviceIdProvider) ?? '';
+
+    final isAlive = await transfer.ping(device.ip, device.port);
+    if (!isAlive) return;
+
+    var totalBytes = 0;
+    for (final path in session.filePaths) {
+      final f = File(path);
+      if (await f.exists()) {
+        totalBytes += await f.length();
+      }
+    }
+    final n = session.filePaths.length;
+
+    for (var i = 0; i < n; i++) {
+      final path = session.filePaths[i];
+      final f = File(path);
+      if (!await f.exists()) continue;
+      final size = await f.length();
+      try {
+        await transfer.sendFileStream(
+          ip: device.ip,
+          port: device.port,
+          fileStream: f.openRead(),
+          fileName: p.basename(path),
+          fileSize: size,
+          senderName: senderName,
+          senderAvatar: senderAvatar,
+          senderDeviceId: senderDeviceId,
+          shareId: session.shareId,
+          fileIndex: i,
+          fileCount: n,
+          batchTotalBytes: totalBytes,
+          onProgress: (_) {},
+        );
+      } catch (e) {
+        debugPrint('Upload failed: $e');
+      }
+    }
+  }
+
+  /// 发起批量分享：先发邀约，对端接受后再按文件顺序流式上传（多设备可并行）
+  /// 返回 shareId，供展示「分享链接」与取消
+  Future<String> startBatchShare({
+    required List<String> absoluteFilePaths,
+    required List<String> targetDeviceIds,
   }) async {
+    if (absoluteFilePaths.isEmpty) {
+      throw Exception('请选择至少一个文件');
+    }
+    if (targetDeviceIds.isEmpty) {
+      throw Exception('请选择至少一台设备');
+    }
+    if (_listenPort == 0) {
+      throw Exception('本地服务未就绪');
+    }
+
+    final manager = ref.read(deviceManagerProvider);
+    final config = manager.config ?? await manager.loadConfig();
+    final senderDeviceId = config.deviceId;
+    final senderName = config.deviceName;
+    final senderAvatar = config.avatar;
+
+    final host = await getLanIPv4() ?? '127.0.0.1';
+    final shareId = const Uuid().v4();
+    final expiresAt =
+        DateTime.now().add(const Duration(minutes: 2)).millisecondsSinceEpoch;
+
+    final files = <LanShareFileMeta>[];
+    for (final path in absoluteFilePaths) {
+      final f = File(path);
+      if (!await f.exists()) continue;
+      files.add(
+        LanShareFileMeta(
+          name: p.basename(path),
+          size: await f.length(),
+        ),
+      );
+    }
+    if (files.isEmpty) throw Exception('无法读取所选文件');
+
+    final targets =
+        state.where((d) => targetDeviceIds.contains(d.deviceId)).toList();
+    if (targets.isEmpty) throw Exception('所选设备不在线');
+
+    final payload = LanShareOfferPayload(
+      shareId: shareId,
+      senderDeviceId: senderDeviceId,
+      senderName: senderName,
+      senderAvatar: senderAvatar,
+      senderHost: host,
+      senderPort: _listenPort,
+      files: files,
+      expiresAtMs: expiresAt,
+    );
+
+    final transfer = LanTransferService();
+    for (final d in targets) {
+      final ok = await transfer.ping(d.ip, d.port);
+      if (!ok) continue;
+      await transfer.postShareOffer(ip: d.ip, port: d.port, payload: payload);
+    }
+
+    final timer = Timer(const Duration(minutes: 2), () {
+      cancelOutgoingShare(shareId);
+    });
+
+    _outgoingShares[shareId] = _OutgoingShare(
+      shareId: shareId,
+      filePaths: List<String>.from(absoluteFilePaths),
+      targets: targets,
+      expiryTimer: timer,
+    );
+
+    final fileMaps = files.map((e) => e.toJson()).toList();
+    ref.read(messageListProvider.notifier).addOutgoingBatchShare(
+          shareId: shareId,
+          absoluteFilePaths: List<String>.from(absoluteFilePaths),
+          targetDeviceIds: targets.map((d) => d.deviceId).toList(),
+          senderName: senderName,
+          senderDeviceId: senderDeviceId,
+          senderAvatar: senderAvatar,
+          files: fileMaps,
+        );
+    return shareId;
+  }
+
+  void cancelOutgoingShare(String shareId, {bool userCancelled = false}) {
+    final session = _outgoingShares.remove(shareId);
+    if (session != null && !session.cancelled) {
+      session.cancelled = true;
+      session.expiryTimer.cancel();
+
+      final transfer = LanTransferService();
+      final cancel = LanShareCancelPayload(shareId: shareId);
+      for (final d in session.targets) {
+        unawaited(
+          transfer.postShareCancel(ip: d.ip, port: d.port, payload: cancel),
+        );
+      }
+    }
+
+    ref.read(messageListProvider.notifier).expireOutgoingShareIfPending(
+          shareId,
+          reason: userCancelled ? '已取消' : '已超时',
+        );
+  }
+
+  // —— 上传权限（旧版单文件直传 / 新版批量） —— //
+  Future<bool> _onReceiveUploadPermission(LanUploadContext ctx) async {
+    final sid = ctx.shareId;
+    if (sid == null || sid.isEmpty) {
+      return _legacyReceiveUpload(ctx);
+    }
+
+    final msg = ref.read(messageListProvider.notifier).findIncomingByShareId(sid);
+    if (msg == null) return false;
+    if (msg.status == TransferMessageStatus.pending) return false;
+    if (msg.status == TransferMessageStatus.rejected) return false;
+    if (msg.status == TransferMessageStatus.expired) return false;
+    if (msg.status == TransferMessageStatus.accepted && ctx.fileIndex == 0) {
+      ref
+          .read(messageListProvider.notifier)
+          .updateStatus(msg.id, TransferMessageStatus.receiving);
+      return true;
+    }
+    if (msg.status == TransferMessageStatus.receiving) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> _legacyReceiveUpload(LanUploadContext ctx) async {
     final msgNotifier = ref.read(messageListProvider.notifier);
     final msg = msgNotifier.addIncoming(
-      fileName: fileName,
-      fileSize: fileSize,
-      senderName: senderName,
-      senderDeviceId: '',
-      senderAvatar: senderAvatar,
+      fileName: ctx.fileName,
+      fileSize: ctx.fileSize,
+      senderName: ctx.senderName,
+      senderDeviceId: ctx.senderDeviceId,
+      senderAvatar: ctx.senderAvatar,
     );
     NotificationService.instance.showIncomingTransfer(
-      senderName: senderName,
-      fileName: fileName,
+      senderName: ctx.senderName,
+      fileName: ctx.fileName,
     );
 
     final completer = Completer<bool>();
@@ -176,13 +424,89 @@ class LanManager extends _$LanManager {
     _pendingDecisions.remove(msg.id);
 
     if (accepted) {
-      ref.read(messageListProvider.notifier).updateStatus(
-            msg.id,
-            TransferMessageStatus.receiving,
-          );
+      msgNotifier.updateStatus(msg.id, TransferMessageStatus.receiving);
     }
-
     return accepted;
+  }
+
+  void _onReceiveUploadProgress(
+    LanUploadContext ctx,
+    double fileProgress,
+    double batchProgress,
+  ) {
+    if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
+      ref
+          .read(messageListProvider.notifier)
+          .updateProgressByShareId(ctx.shareId!, batchProgress);
+    } else {
+      final messages = ref.read(messageListProvider);
+      final msg = messages.cast<TransferMessage?>().firstWhere(
+            (m) =>
+                m!.fileName == ctx.fileName &&
+                m.status == TransferMessageStatus.receiving,
+            orElse: () => null,
+          );
+      if (msg != null) {
+        ref.read(messageListProvider.notifier).updateProgress(msg.id, batchProgress);
+      }
+    }
+  }
+
+  void _onReceiveUploadComplete(LanUploadContext ctx) {
+    if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
+      if (ctx.fileIndex == ctx.fileCount - 1) {
+        final msg = ref
+            .read(messageListProvider.notifier)
+            .findIncomingByShareId(ctx.shareId!);
+        if (msg != null) {
+          ref.read(messageListProvider.notifier).markCompleted(msg.id);
+          NotificationService.instance.showTransferCompleted(
+            senderName: msg.senderName,
+            fileName: msg.fileName,
+          );
+        }
+      }
+    } else {
+      final messages = ref.read(messageListProvider);
+      final msg = messages.cast<TransferMessage?>().firstWhere(
+            (m) =>
+                m!.fileName == ctx.fileName &&
+                (m.status == TransferMessageStatus.receiving ||
+                    m.status == TransferMessageStatus.accepted),
+            orElse: () => null,
+          );
+      if (msg != null) {
+        ref.read(messageListProvider.notifier).markCompleted(msg.id);
+        NotificationService.instance.showTransferCompleted(
+          senderName: msg.senderName,
+          fileName: ctx.fileName,
+        );
+      }
+    }
+    ref.read(cloudFileListProvider.notifier).refresh();
+  }
+
+  void _onReceiveUploadError(LanUploadContext ctx, String error) {
+    debugPrint('Receive error: $error');
+    if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
+      final msg = ref
+          .read(messageListProvider.notifier)
+          .findIncomingByShareId(ctx.shareId!);
+      if (msg != null) {
+        ref.read(messageListProvider.notifier).markFailed(msg.id, error);
+      }
+    } else {
+      final messages = ref.read(messageListProvider);
+      final msg = messages.cast<TransferMessage?>().firstWhere(
+            (m) =>
+                m!.fileName == ctx.fileName &&
+                m.status == TransferMessageStatus.receiving,
+            orElse: () => null,
+          );
+      if (msg != null) {
+        ref.read(messageListProvider.notifier).markFailed(msg.id, error);
+      }
+    }
   }
 
   void _checkPendingDecisions(List<TransferMessage> messages) {
@@ -192,7 +516,8 @@ class LanManager extends _$LanManager {
 
       if (msg.status == TransferMessageStatus.accepted) {
         completer.complete(true);
-      } else if (msg.status == TransferMessageStatus.rejected) {
+      } else if (msg.status == TransferMessageStatus.rejected ||
+          msg.status == TransferMessageStatus.expired) {
         completer.complete(false);
       }
     }
@@ -201,6 +526,7 @@ class LanManager extends _$LanManager {
   Future<void> sendFile(LanDevice target, String filePath) async {
     final senderName = ref.read(deviceNameProvider);
     final senderAvatar = ref.read(deviceAvatarProvider);
+    final senderDeviceId = ref.read(deviceIdProvider) ?? '';
     final transfer = LanTransferService();
 
     final isAlive = await transfer.ping(target.ip, target.port);
@@ -214,6 +540,7 @@ class LanManager extends _$LanManager {
       filePath: filePath,
       senderName: senderName,
       senderAvatar: senderAvatar,
+      senderDeviceId: senderDeviceId,
       onProgress: (p) {},
     );
   }
@@ -226,6 +553,7 @@ class LanManager extends _$LanManager {
   }) async {
     final senderName = ref.read(deviceNameProvider);
     final senderAvatar = ref.read(deviceAvatarProvider);
+    final senderDeviceId = ref.read(deviceIdProvider) ?? '';
     final transfer = LanTransferService();
 
     final isAlive = await transfer.ping(target.ip, target.port);
@@ -241,6 +569,7 @@ class LanManager extends _$LanManager {
       fileSize: fileSize,
       senderName: senderName,
       senderAvatar: senderAvatar,
+      senderDeviceId: senderDeviceId,
       onProgress: (p) {},
     );
   }

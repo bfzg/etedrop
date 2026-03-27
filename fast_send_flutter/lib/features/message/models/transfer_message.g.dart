@@ -20,6 +20,14 @@ _TransferMessage _$TransferMessageFromJson(Map<String, dynamic> json) =>
           TransferMessageStatus.pending,
       progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
       errorMessage: json['errorMessage'] as String?,
+      shareId: json['shareId'] as String?,
+      isBatch: json['isBatch'] as bool? ?? false,
+      batchFilesJson: json['batchFilesJson'] as String?,
+      senderHttpHost: json['senderHttpHost'] as String?,
+      senderHttpPort: (json['senderHttpPort'] as num?)?.toInt(),
+      isOutgoing: json['isOutgoing'] as bool? ?? false,
+      localFilePathsJson: json['localFilePathsJson'] as String?,
+      targetDeviceIdsJson: json['targetDeviceIdsJson'] as String?,
     );
 
 Map<String, dynamic> _$TransferMessageToJson(_TransferMessage instance) =>
@@ -34,6 +42,14 @@ Map<String, dynamic> _$TransferMessageToJson(_TransferMessage instance) =>
       'status': _$TransferMessageStatusEnumMap[instance.status]!,
       'progress': instance.progress,
       'errorMessage': instance.errorMessage,
+      'shareId': instance.shareId,
+      'isBatch': instance.isBatch,
+      'batchFilesJson': instance.batchFilesJson,
+      'senderHttpHost': instance.senderHttpHost,
+      'senderHttpPort': instance.senderHttpPort,
+      'isOutgoing': instance.isOutgoing,
+      'localFilePathsJson': instance.localFilePathsJson,
+      'targetDeviceIdsJson': instance.targetDeviceIdsJson,
     };
 
 const _$TransferMessageStatusEnumMap = {
@@ -43,4 +59,5 @@ const _$TransferMessageStatusEnumMap = {
   TransferMessageStatus.receiving: 'receiving',
   TransferMessageStatus.completed: 'completed',
   TransferMessageStatus.failed: 'failed',
+  TransferMessageStatus.expired: 'expired',
 };
