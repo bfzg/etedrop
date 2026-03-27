@@ -12,6 +12,7 @@ import '../services/file_service.dart';
 part 'cloud_provider.g.dart';
 
 const _storageDirKey = 'cloud_storage_dir';
+const _storageDirUserSelectedKey = 'cloud_storage_dir_user_selected';
 const _downloadDirKey = 'download_dir';
 
 Future<String> _defaultDownloadDir() async {
@@ -37,7 +38,15 @@ class FileServiceNotifier extends _$FileServiceNotifier {
   @override
   FileService build() {
     final fileService = FileService();
-    // 初始化时从本地存储读取存储目录
+    // 仅当用户明确手动选择过网盘目录时才恢复，默认保持未设置
+    final userSelected =
+        LocalStorageService.instance.get<bool>(_storageDirUserSelectedKey) ??
+        false;
+    if (!userSelected) {
+      return fileService;
+    }
+
+    // 初始化时从本地存储读取网盘目录
     final savedDir = LocalStorageService.instance.get<String>(_storageDirKey);
     if (savedDir != null && savedDir.isNotEmpty) {
       fileService.setStorageDir(savedDir);
@@ -50,6 +59,7 @@ class FileServiceNotifier extends _$FileServiceNotifier {
     next.setStorageDir(path);
     state = next;
     await LocalStorageService.instance.set<String>(_storageDirKey, path);
+    await LocalStorageService.instance.set<bool>(_storageDirUserSelectedKey, true);
   }
 
   Future<String?> selectStorageDir() async {
