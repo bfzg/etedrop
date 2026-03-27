@@ -57,27 +57,48 @@ class _AppLayoutState extends State<AppLayout> {
         if (isDesktopPlatform() || constraints.maxWidth >= 640) {
           return Scaffold(
             backgroundColor: Colors.transparent,
-            body: Row(
-              children: [
-                AppSidebarNavBar(
-                  items: widget.items,
-                  currentIndex: widget.navigationShell.currentIndex,
-                  onSelect: (index) => _onTap(context, index),
+            body: Padding(
+              padding: isWindowsPlatform()
+                  ? const EdgeInsets.all(4)
+                  : EdgeInsets.zero,
+              child: ClipRRect(
+                borderRadius: BorderRadius.vertical(
+                  top: isWindowsPlatform()
+                      ? Radius.circular(14)
+                      : Radius.circular(0),
                 ),
-                Expanded(
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.horizontal(
-                      left: Radius.circular(14),
-                    ),
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: isWindowsPlatform()
+                        ? Theme.of(context).scaffoldBackgroundColor
+                        : Colors.transparent,
+                  ),
+                  child: Row(
+                    children: [
+                      AppSidebarNavBar(
+                        items: widget.items,
+                        currentIndex: widget.navigationShell.currentIndex,
+                        onSelect: (index) => _onTap(context, index),
                       ),
-                      child: widget.navigationShell,
-                    ),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.horizontal(
+                            left: isWindowsPlatform()
+                                ? Radius.circular(0)
+                                : Radius.circular(14),
+                          ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                            ),
+                            child: widget.navigationShell,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           );
         }

@@ -200,7 +200,7 @@ class _SendPageState extends ConsumerState<SendPage> {
         children: [
           Container(
             constraints: const BoxConstraints(minHeight: 120),
-            padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
+            // padding: const EdgeInsets.symmetric(vertical: Spacing.sm),
             child: NearbyDeviceGrid(
               selectedIds: _selectedDeviceIds,
               onToggle: _toggleDevice,

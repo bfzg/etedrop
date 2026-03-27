@@ -144,7 +144,7 @@ class MessageCard extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         FormatUtils.dateTime(message.timestamp),
-                        style: AppTextStyles.hint(context),
+                        style: AppTextStyles.secondary(context),
                       ),
                     ],
                   ),

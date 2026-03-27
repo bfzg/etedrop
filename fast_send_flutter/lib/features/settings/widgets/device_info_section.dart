@@ -151,16 +151,24 @@ class DeviceInfoSection extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                connected
-                                    ? l10n.connected
-                                    : (lastError != null &&
-                                          lastError!.isNotEmpty)
-                                    ? lastError!
-                                    : l10n.disconnected,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                  fontSize: 12,
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.only(right: 32),
+                                  child: Text(
+                                    connected
+                                        ? l10n.connected
+                                        : (lastError != null &&
+                                              lastError!.isNotEmpty)
+                                        ? lastError!
+                                        : l10n.disconnected,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

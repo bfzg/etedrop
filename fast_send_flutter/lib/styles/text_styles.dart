@@ -20,12 +20,14 @@ class AppTextStyles {
   static TextStyle hint(BuildContext context) =>
       Theme.of(context).textTheme.bodyMedium!.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+            fontSize: 16,
           );
 
   /// 次要文字 - 小号、淡色
   static TextStyle secondary(BuildContext context) =>
       Theme.of(context).textTheme.bodySmall!.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+            fontSize: 14,
           );
 
   /// 错误文字
