@@ -3,6 +3,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/utils/format_utils.dart';
 import '../../../styles/styles.dart';
+import '../../device/models/device_config.dart';
 import '../models/transfer_message.dart';
 import '../providers/message_provider.dart';
 
@@ -79,6 +80,8 @@ class _MessageCard extends ConsumerWidget {
 
     return Card(
       elevation: 0,
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
@@ -90,17 +93,45 @@ class _MessageCard extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: _statusColor(theme).withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    _statusIcon(),
-                    size: 20,
-                    color: _statusColor(theme),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Stack(
+                    children: [
+                      ClipOval(
+                        child: Image.asset(
+                          memojiAssetPath(message.senderAvatar),
+                          fit: BoxFit.cover,
+                          width: 40,
+                          height: 40,
+                          errorBuilder: (_, _, _) => Icon(
+                            Icons.person,
+                            size: 24,
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: -2,
+                        bottom: -2,
+                        child: Container(
+                          width: 18,
+                          height: 18,
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: theme.colorScheme.outlineVariant,
+                            ),
+                          ),
+                          child: Icon(
+                            _statusIcon(),
+                            size: 12,
+                            color: _statusColor(theme),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -116,7 +147,12 @@ class _MessageCard extends ConsumerWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '来自 ${message.senderName} · ${FormatUtils.fileSize(message.fileSize)}',
+                        '${message.senderName} · ${FormatUtils.dateTime(message.timestamp)}',
+                        style: AppTextStyles.secondary(context),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        FormatUtils.fileSize(message.fileSize),
                         style: AppTextStyles.secondary(context),
                       ),
                     ],

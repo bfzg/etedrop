@@ -20,6 +20,7 @@ abstract class TransferMessage with _$TransferMessage {
     required int fileSize,
     required String senderName,
     required String senderDeviceId,
+    @Default(1) int senderAvatar,
     required int timestamp,
     @Default(TransferMessageStatus.pending) TransferMessageStatus status,
     @Default(0.0) double progress,

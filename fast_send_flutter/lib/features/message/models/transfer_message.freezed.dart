@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TransferMessage {
 
- String get id; String get fileName; int get fileSize; String get senderName; String get senderDeviceId; int get timestamp; TransferMessageStatus get status; double get progress; String? get errorMessage;
+ String get id; String get fileName; int get fileSize; String get senderName; String get senderDeviceId; int get senderAvatar; int get timestamp; TransferMessageStatus get status; double get progress; String? get errorMessage;
 /// Create a copy of TransferMessage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $TransferMessageCopyWith<TransferMessage> get copyWith => _$TransferMessageCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TransferMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.fileSize, fileSize) || other.fileSize == fileSize)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderDeviceId, senderDeviceId) || other.senderDeviceId == senderDeviceId)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.status, status) || other.status == status)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TransferMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.fileSize, fileSize) || other.fileSize == fileSize)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderDeviceId, senderDeviceId) || other.senderDeviceId == senderDeviceId)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.status, status) || other.status == status)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,fileName,fileSize,senderName,senderDeviceId,timestamp,status,progress,errorMessage);
+int get hashCode => Object.hash(runtimeType,id,fileName,fileSize,senderName,senderDeviceId,senderAvatar,timestamp,status,progress,errorMessage);
 
 @override
 String toString() {
-  return 'TransferMessage(id: $id, fileName: $fileName, fileSize: $fileSize, senderName: $senderName, senderDeviceId: $senderDeviceId, timestamp: $timestamp, status: $status, progress: $progress, errorMessage: $errorMessage)';
+  return 'TransferMessage(id: $id, fileName: $fileName, fileSize: $fileSize, senderName: $senderName, senderDeviceId: $senderDeviceId, senderAvatar: $senderAvatar, timestamp: $timestamp, status: $status, progress: $progress, errorMessage: $errorMessage)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $TransferMessageCopyWith<$Res>  {
   factory $TransferMessageCopyWith(TransferMessage value, $Res Function(TransferMessage) _then) = _$TransferMessageCopyWithImpl;
 @useResult
 $Res call({
- String id, String fileName, int fileSize, String senderName, String senderDeviceId, int timestamp, TransferMessageStatus status, double progress, String? errorMessage
+ String id, String fileName, int fileSize, String senderName, String senderDeviceId, int senderAvatar, int timestamp, TransferMessageStatus status, double progress, String? errorMessage
 });
 
 
@@ -65,14 +65,15 @@ class _$TransferMessageCopyWithImpl<$Res>
 
 /// Create a copy of TransferMessage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? fileName = null,Object? fileSize = null,Object? senderName = null,Object? senderDeviceId = null,Object? timestamp = null,Object? status = null,Object? progress = null,Object? errorMessage = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? fileName = null,Object? fileSize = null,Object? senderName = null,Object? senderDeviceId = null,Object? senderAvatar = null,Object? timestamp = null,Object? status = null,Object? progress = null,Object? errorMessage = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,fileName: null == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
 as String,fileSize: null == fileSize ? _self.fileSize : fileSize // ignore: cast_nullable_to_non_nullable
 as int,senderName: null == senderName ? _self.senderName : senderName // ignore: cast_nullable_to_non_nullable
 as String,senderDeviceId: null == senderDeviceId ? _self.senderDeviceId : senderDeviceId // ignore: cast_nullable_to_non_nullable
-as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
+as String,senderAvatar: null == senderAvatar ? _self.senderAvatar : senderAvatar // ignore: cast_nullable_to_non_nullable
+as int,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TransferMessageStatus,progress: null == progress ? _self.progress : progress // ignore: cast_nullable_to_non_nullable
 as double,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable
@@ -161,10 +162,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String fileName,  int fileSize,  String senderName,  String senderDeviceId,  int timestamp,  TransferMessageStatus status,  double progress,  String? errorMessage)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String fileName,  int fileSize,  String senderName,  String senderDeviceId,  int senderAvatar,  int timestamp,  TransferMessageStatus status,  double progress,  String? errorMessage)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TransferMessage() when $default != null:
-return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.senderDeviceId,_that.timestamp,_that.status,_that.progress,_that.errorMessage);case _:
+return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.senderDeviceId,_that.senderAvatar,_that.timestamp,_that.status,_that.progress,_that.errorMessage);case _:
   return orElse();
 
 }
@@ -182,10 +183,10 @@ return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.se
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String fileName,  int fileSize,  String senderName,  String senderDeviceId,  int timestamp,  TransferMessageStatus status,  double progress,  String? errorMessage)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String fileName,  int fileSize,  String senderName,  String senderDeviceId,  int senderAvatar,  int timestamp,  TransferMessageStatus status,  double progress,  String? errorMessage)  $default,) {final _that = this;
 switch (_that) {
 case _TransferMessage():
-return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.senderDeviceId,_that.timestamp,_that.status,_that.progress,_that.errorMessage);case _:
+return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.senderDeviceId,_that.senderAvatar,_that.timestamp,_that.status,_that.progress,_that.errorMessage);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +203,10 @@ return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.se
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String fileName,  int fileSize,  String senderName,  String senderDeviceId,  int timestamp,  TransferMessageStatus status,  double progress,  String? errorMessage)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String fileName,  int fileSize,  String senderName,  String senderDeviceId,  int senderAvatar,  int timestamp,  TransferMessageStatus status,  double progress,  String? errorMessage)?  $default,) {final _that = this;
 switch (_that) {
 case _TransferMessage() when $default != null:
-return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.senderDeviceId,_that.timestamp,_that.status,_that.progress,_that.errorMessage);case _:
+return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.senderDeviceId,_that.senderAvatar,_that.timestamp,_that.status,_that.progress,_that.errorMessage);case _:
   return null;
 
 }
@@ -217,7 +218,7 @@ return $default(_that.id,_that.fileName,_that.fileSize,_that.senderName,_that.se
 @JsonSerializable()
 
 class _TransferMessage implements TransferMessage {
-  const _TransferMessage({required this.id, required this.fileName, required this.fileSize, required this.senderName, required this.senderDeviceId, required this.timestamp, this.status = TransferMessageStatus.pending, this.progress = 0.0, this.errorMessage});
+  const _TransferMessage({required this.id, required this.fileName, required this.fileSize, required this.senderName, required this.senderDeviceId, this.senderAvatar = 1, required this.timestamp, this.status = TransferMessageStatus.pending, this.progress = 0.0, this.errorMessage});
   factory _TransferMessage.fromJson(Map<String, dynamic> json) => _$TransferMessageFromJson(json);
 
 @override final  String id;
@@ -225,6 +226,7 @@ class _TransferMessage implements TransferMessage {
 @override final  int fileSize;
 @override final  String senderName;
 @override final  String senderDeviceId;
+@override@JsonKey() final  int senderAvatar;
 @override final  int timestamp;
 @override@JsonKey() final  TransferMessageStatus status;
 @override@JsonKey() final  double progress;
@@ -243,16 +245,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TransferMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.fileSize, fileSize) || other.fileSize == fileSize)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderDeviceId, senderDeviceId) || other.senderDeviceId == senderDeviceId)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.status, status) || other.status == status)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _TransferMessage&&(identical(other.id, id) || other.id == id)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.fileSize, fileSize) || other.fileSize == fileSize)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderDeviceId, senderDeviceId) || other.senderDeviceId == senderDeviceId)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.status, status) || other.status == status)&&(identical(other.progress, progress) || other.progress == progress)&&(identical(other.errorMessage, errorMessage) || other.errorMessage == errorMessage));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,fileName,fileSize,senderName,senderDeviceId,timestamp,status,progress,errorMessage);
+int get hashCode => Object.hash(runtimeType,id,fileName,fileSize,senderName,senderDeviceId,senderAvatar,timestamp,status,progress,errorMessage);
 
 @override
 String toString() {
-  return 'TransferMessage(id: $id, fileName: $fileName, fileSize: $fileSize, senderName: $senderName, senderDeviceId: $senderDeviceId, timestamp: $timestamp, status: $status, progress: $progress, errorMessage: $errorMessage)';
+  return 'TransferMessage(id: $id, fileName: $fileName, fileSize: $fileSize, senderName: $senderName, senderDeviceId: $senderDeviceId, senderAvatar: $senderAvatar, timestamp: $timestamp, status: $status, progress: $progress, errorMessage: $errorMessage)';
 }
 
 
@@ -263,7 +265,7 @@ abstract mixin class _$TransferMessageCopyWith<$Res> implements $TransferMessage
   factory _$TransferMessageCopyWith(_TransferMessage value, $Res Function(_TransferMessage) _then) = __$TransferMessageCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String fileName, int fileSize, String senderName, String senderDeviceId, int timestamp, TransferMessageStatus status, double progress, String? errorMessage
+ String id, String fileName, int fileSize, String senderName, String senderDeviceId, int senderAvatar, int timestamp, TransferMessageStatus status, double progress, String? errorMessage
 });
 
 
@@ -280,14 +282,15 @@ class __$TransferMessageCopyWithImpl<$Res>
 
 /// Create a copy of TransferMessage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? fileName = null,Object? fileSize = null,Object? senderName = null,Object? senderDeviceId = null,Object? timestamp = null,Object? status = null,Object? progress = null,Object? errorMessage = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? fileName = null,Object? fileSize = null,Object? senderName = null,Object? senderDeviceId = null,Object? senderAvatar = null,Object? timestamp = null,Object? status = null,Object? progress = null,Object? errorMessage = freezed,}) {
   return _then(_TransferMessage(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,fileName: null == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
 as String,fileSize: null == fileSize ? _self.fileSize : fileSize // ignore: cast_nullable_to_non_nullable
 as int,senderName: null == senderName ? _self.senderName : senderName // ignore: cast_nullable_to_non_nullable
 as String,senderDeviceId: null == senderDeviceId ? _self.senderDeviceId : senderDeviceId // ignore: cast_nullable_to_non_nullable
-as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
+as String,senderAvatar: null == senderAvatar ? _self.senderAvatar : senderAvatar // ignore: cast_nullable_to_non_nullable
+as int,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: cast_nullable_to_non_nullable
 as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as TransferMessageStatus,progress: null == progress ? _self.progress : progress // ignore: cast_nullable_to_non_nullable
 as double,errorMessage: freezed == errorMessage ? _self.errorMessage : errorMessage // ignore: cast_nullable_to_non_nullable

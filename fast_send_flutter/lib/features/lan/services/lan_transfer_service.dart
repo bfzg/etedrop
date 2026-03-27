@@ -24,6 +24,7 @@ class LanTransferService {
     required int port,
     required String filePath,
     required String senderName,
+    required int senderAvatar,
     Function(double)? onProgress,
     CancelToken? cancelToken,
   }) async {
@@ -42,6 +43,7 @@ class LanTransferService {
       fileName: fileName,
       fileSize: fileSize,
       senderName: senderName,
+      senderAvatar: senderAvatar,
       onProgress: onProgress,
       cancelToken: cancelToken,
     );
@@ -54,6 +56,7 @@ class LanTransferService {
     required String fileName,
     required int fileSize,
     required String senderName,
+    required int senderAvatar,
     Function(double)? onProgress,
     CancelToken? cancelToken,
   }) async {
@@ -67,6 +70,7 @@ class LanTransferService {
           headers: {
             'X-File-Name': Uri.encodeComponent(fileName),
             'X-Sender-Name': Uri.encodeComponent(senderName),
+            'X-Sender-Avatar': senderAvatar.toString(),
             'X-File-Size': fileSize.toString(),
             Headers.contentLengthHeader: fileSize,
             Headers.contentTypeHeader: 'application/octet-stream',

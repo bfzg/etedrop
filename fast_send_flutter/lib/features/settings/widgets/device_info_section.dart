@@ -37,6 +37,7 @@ class DeviceInfoSection extends ConsumerWidget {
         SettingsSectionHeader(title: l10n.deviceInfo),
         SettingsCard(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // 头像 + 用户名 + 连接状态 一行
               Padding(
@@ -153,9 +154,10 @@ class DeviceInfoSection extends ConsumerWidget {
                               Text(
                                 connected
                                     ? l10n.connected
-                                    : (connecting
-                                          ? l10n.connecting
-                                          : l10n.disconnected),
+                                    : (lastError != null &&
+                                          lastError!.isNotEmpty)
+                                    ? lastError!
+                                    : l10n.disconnected,
                                 style: theme.textTheme.bodySmall?.copyWith(
                                   color: theme.colorScheme.onSurfaceVariant,
                                   fontSize: 12,
@@ -185,19 +187,6 @@ class DeviceInfoSection extends ConsumerWidget {
                   ],
                 ),
               ),
-              if (lastError != null && lastError!.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Text(
-                    lastError!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: theme.colorScheme.error,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
               if (devId != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),

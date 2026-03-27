@@ -13,6 +13,7 @@ _TransferMessage _$TransferMessageFromJson(Map<String, dynamic> json) =>
       fileSize: (json['fileSize'] as num).toInt(),
       senderName: json['senderName'] as String,
       senderDeviceId: json['senderDeviceId'] as String,
+      senderAvatar: (json['senderAvatar'] as num?)?.toInt() ?? 1,
       timestamp: (json['timestamp'] as num).toInt(),
       status:
           $enumDecodeNullable(_$TransferMessageStatusEnumMap, json['status']) ??
@@ -28,6 +29,7 @@ Map<String, dynamic> _$TransferMessageToJson(_TransferMessage instance) =>
       'fileSize': instance.fileSize,
       'senderName': instance.senderName,
       'senderDeviceId': instance.senderDeviceId,
+      'senderAvatar': instance.senderAvatar,
       'timestamp': instance.timestamp,
       'status': _$TransferMessageStatusEnumMap[instance.status]!,
       'progress': instance.progress,

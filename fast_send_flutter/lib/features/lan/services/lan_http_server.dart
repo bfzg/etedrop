@@ -9,7 +9,12 @@ class LanHttpServer {
   HttpServer? _server;
   final String saveDirectory;
   final String deviceId;
-  final Function(String fileName, String senderName)? onReceiveRequest;
+  final Future<bool> Function({
+    required String fileName,
+    required String senderName,
+    required int fileSize,
+    required int senderAvatar,
+  })? onReceiveRequest;
   final Function(String fileName, double progress)? onProgress;
   final Function(String fileName)? onComplete;
   final Function(String fileName, String error)? onError;
@@ -75,6 +80,7 @@ class LanHttpServer {
   Future<void> _handleUpload(HttpRequest request) async {
     final fileNameEncoded = request.headers.value('X-File-Name');
     final senderNameEncoded = request.headers.value('X-Sender-Name');
+    final senderAvatarStr = request.headers.value('X-Sender-Avatar');
     final fileSizeStr = request.headers.value('X-File-Size');
 
     if (fileNameEncoded == null || senderNameEncoded == null) {
@@ -87,10 +93,16 @@ class LanHttpServer {
     final fileName = Uri.decodeComponent(fileNameEncoded);
     final senderName = Uri.decodeComponent(senderNameEncoded);
     final fileSize = int.tryParse(fileSizeStr ?? '0') ?? 0;
+    final senderAvatar = int.tryParse(senderAvatarStr ?? '1') ?? 1;
 
     // Ask user for permission (if callback provided)
     if (onReceiveRequest != null) {
-      final accepted = await onReceiveRequest!(fileName, senderName);
+      final accepted = await onReceiveRequest!(
+        fileName: fileName,
+        senderName: senderName,
+        fileSize: fileSize,
+        senderAvatar: senderAvatar,
+      );
       if (accepted != true) {
         request.response.statusCode = HttpStatus.forbidden;
         request.response.write('Rejected by user');

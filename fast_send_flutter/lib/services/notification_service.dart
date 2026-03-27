@@ -11,6 +11,12 @@ class NotificationService {
 
   bool _initialized = false;
 
+  int _safeNotificationId(Object seed) {
+    // flutter_local_notifications 要求 32-bit signed int
+    final masked = seed.hashCode & 0x7fffffff;
+    return masked == 0 ? 1 : masked;
+  }
+
   Future<void> init() async {
     if (_initialized || kIsWeb) return;
 
@@ -81,11 +87,11 @@ class NotificationService {
       windows: WindowsNotificationDetails(),
     );
 
+    final id = _safeNotificationId(
+      '$senderName|$fileName|${DateTime.now().millisecondsSinceEpoch}',
+    );
     await _plugin.show(
-      id:
-          senderName.hashCode ^
-          fileName.hashCode ^
-          DateTime.now().millisecondsSinceEpoch,
+      id: id,
       title: '收到新的文件请求',
       body: '$senderName 正在发送：$fileName',
       notificationDetails: details,
@@ -112,8 +118,9 @@ class NotificationService {
       windows: WindowsNotificationDetails(),
     );
 
+    final id = _safeNotificationId('done|$senderName|$fileName');
     await _plugin.show(
-      id: senderName.hashCode ^ fileName.hashCode ^ 0x7f4a,
+      id: id,
       title: '文件接收完成',
       body: '$fileName（来自 $senderName）',
       notificationDetails: details,

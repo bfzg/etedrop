@@ -150,13 +150,19 @@ class LanManager extends _$LanManager {
     _pendingDecisions.clear();
   }
 
-  Future<bool> _handleReceiveRequest(String fileName, String senderName) async {
+  Future<bool> _handleReceiveRequest({
+    required String fileName,
+    required String senderName,
+    required int fileSize,
+    required int senderAvatar,
+  }) async {
     final msgNotifier = ref.read(messageListProvider.notifier);
     final msg = msgNotifier.addIncoming(
       fileName: fileName,
-      fileSize: 0,
+      fileSize: fileSize,
       senderName: senderName,
       senderDeviceId: '',
+      senderAvatar: senderAvatar,
     );
     NotificationService.instance.showIncomingTransfer(
       senderName: senderName,
@@ -194,6 +200,7 @@ class LanManager extends _$LanManager {
 
   Future<void> sendFile(LanDevice target, String filePath) async {
     final senderName = ref.read(deviceNameProvider);
+    final senderAvatar = ref.read(deviceAvatarProvider);
     final transfer = LanTransferService();
 
     final isAlive = await transfer.ping(target.ip, target.port);
@@ -206,6 +213,7 @@ class LanManager extends _$LanManager {
       port: target.port,
       filePath: filePath,
       senderName: senderName,
+      senderAvatar: senderAvatar,
       onProgress: (p) {},
     );
   }
@@ -217,6 +225,7 @@ class LanManager extends _$LanManager {
     required int fileSize,
   }) async {
     final senderName = ref.read(deviceNameProvider);
+    final senderAvatar = ref.read(deviceAvatarProvider);
     final transfer = LanTransferService();
 
     final isAlive = await transfer.ping(target.ip, target.port);
@@ -231,6 +240,7 @@ class LanManager extends _$LanManager {
       fileName: fileName,
       fileSize: fileSize,
       senderName: senderName,
+      senderAvatar: senderAvatar,
       onProgress: (p) {},
     );
   }
