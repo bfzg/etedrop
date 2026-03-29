@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/config/styles.dart';
+import '../../../widgets/ui/e_button.dart';
+import '../../../widgets/ui/e_dialog.dart';
 import '../../device/models/device_config.dart';
 
 class AvatarPickerDialog extends StatefulWidget {
@@ -30,7 +32,7 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
+    return EDialog.alert(
       title: const Text('选择头像'),
       content: SizedBox(
         width: 360,
@@ -68,13 +70,14 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog> {
         ),
       ),
       actions: [
-        TextButton(
+        EButton(
+          text: '取消',
+          variant: EButtonVariant.secondary,
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
         ),
-        FilledButton(
+        EButton(
+          text: '确定',
           onPressed: () => Navigator.of(context).pop(_selected),
-          child: const Text('确定'),
         ),
       ],
     );
