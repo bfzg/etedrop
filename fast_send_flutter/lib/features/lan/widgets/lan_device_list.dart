@@ -11,7 +11,11 @@ class LanDeviceList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final devices = ref.watch(lanManagerProvider);
+    final raw = ref.watch(lanManagerProvider);
+    final devices = [...raw]..sort((a, b) {
+        if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+        return a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase());
+      });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,7 +65,7 @@ class LanDeviceList extends ConsumerWidget {
                 final device = devices[index];
                 return _DeviceItem(
                   device: device,
-                  onTap: () => onDeviceSelected(device),
+                  onTap: device.isOnline ? () => onDeviceSelected(device) : null,
                 );
               },
             ),
@@ -73,12 +77,41 @@ class LanDeviceList extends ConsumerWidget {
 
 class _DeviceItem extends StatelessWidget {
   final LanDevice device;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   const _DeviceItem({required this.device, required this.onTap});
 
+  static const ColorFilter _grayscale = ColorFilter.matrix(<double>[
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0, 0, 0, 1, 0,
+  ]);
+
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final offline = !device.isOnline;
+
+    Widget iconCircle = Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        _getIconForOs(device.os),
+        color: theme.colorScheme.onPrimaryContainer,
+      ),
+    );
+    if (offline) {
+      iconCircle = ColorFiltered(
+        colorFilter: _grayscale,
+        child: Opacity(opacity: 0.52, child: iconCircle),
+      );
+    }
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -88,26 +121,30 @@ class _DeviceItem extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _getIconForOs(device.os),
-                color: Theme.of(context).colorScheme.onPrimaryContainer,
-              ),
-            ),
+            iconCircle,
             const SizedBox(height: 8),
             Text(
               device.deviceName,
-              style: const TextStyle(fontSize: 12),
+              style: TextStyle(
+                fontSize: 12,
+                color: offline
+                    ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
+                    : null,
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
+            if (offline)
+              Text(
+                '离线',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.45,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

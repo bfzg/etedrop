@@ -6,12 +6,15 @@ import 'dashed_border_painter.dart';
 class FileDropCard extends StatelessWidget {
   final bool isDragging;
   final bool hasSelectedDevices;
+  /// 已选设备但均为离线（与 [hasSelectedDevices] 互斥：后者为真时表示至少有一台在线已选）
+  final bool selectionOfflineOnly;
   final VoidCallback onPickRequested;
 
   const FileDropCard({
     super.key,
     required this.isDragging,
     required this.hasSelectedDevices,
+    this.selectionOfflineOnly = false,
     required this.onPickRequested,
   });
 
@@ -65,9 +68,11 @@ class FileDropCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  hasSelectedDevices
-                      ? '多选或拖入多个文件后将立即发出分享邀请'
-                      : '请先在上方选择接收设备，再选择或拖入文件',
+                  selectionOfflineOnly
+                      ? '所选设备当前离线，请等待上线后再发送，或点击头像取消选择'
+                      : hasSelectedDevices
+                          ? '多选或拖入多个文件后将立即发出分享邀请'
+                          : '请先在上方选择接收设备，再选择或拖入文件',
                   style: AppTextStyles.hint(context),
                 ),
               ],

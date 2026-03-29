@@ -8,6 +8,8 @@ class StorageKeys {
   static const String authToken = 'auth_token';
   static const String userInfo = 'user_info';
   static const String systemConfig = 'system_config';
+  /// 局域网曾出现过的设备（用于离线仍展示头像）
+  static const String lanRememberedDevices = 'lan_remembered_devices_v1';
 }
 
 /// 通用本地存储服务

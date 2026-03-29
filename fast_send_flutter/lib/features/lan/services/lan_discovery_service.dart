@@ -14,7 +14,7 @@ class LanDiscoveryService {
   /// 启动后一段时间内较快发心跳，便于新设备尽快出现在列表。
   static const Duration _fastHeartbeatPhase = Duration(seconds: 90);
   static const Duration _fastHeartbeatInterval = Duration(seconds: 2);
-  /// 稳定后降频，仍远低于上层离线判定窗口（如 120s）。
+  /// 稳定后降频；离线阈值见 `lan_provider` 的 `_lanDeviceStaleMs`，需明显大于本间隔。
   static const Duration _steadyHeartbeatInterval = Duration(seconds: 5);
   /// `connectivity_plus` 在「Wi‑Fi → Wi‑Fi」时常不派发事件（结果仍为 wifi），用网卡 IPv4 指纹轮询补齐。
   static const Duration _ifaceFingerprintPollInterval = Duration(seconds: 3);
@@ -36,6 +36,10 @@ class LanDiscoveryService {
 
   final _deviceController = StreamController<LanDevice>.broadcast();
   Stream<LanDevice> get onDeviceFound => _deviceController.stream;
+
+  final _goneController = StreamController<String>.broadcast();
+  /// 对端正常退出时广播 `bye`，此处收到 [deviceId] 后应从列表立即移除。
+  Stream<String> get onDeviceGone => _goneController.stream;
 
   LanDiscoveryService({
     required this.deviceId,
@@ -172,18 +176,20 @@ class LanDiscoveryService {
   }
 
   void _emitPresencePayload() {
-    final socket = _socket;
-    if (socket == null) return;
-
-    final payload = jsonEncode({
+    _sendJsonToLan({
       'deviceId': deviceId,
       'deviceName': deviceName,
       'port': httpPort,
       'os': os,
       'avatar': avatar,
     });
+  }
 
-    final bytes = utf8.encode(payload);
+  void _sendJsonToLan(Map<String, dynamic> map) {
+    final socket = _socket;
+    if (socket == null) return;
+
+    final bytes = utf8.encode(jsonEncode(map));
 
     void sendTo(InternetAddress addr) {
       try {
@@ -250,6 +256,12 @@ class LanDiscoveryService {
       final id = map['deviceId'] as String?;
       if (id == null) return;
 
+      final bye = map['bye'];
+      if (bye == true || bye == 1) {
+        _goneController.add(id);
+        return;
+      }
+
       // 不过滤本机：环回/反射的广播会让单机也能在列表里看到自己（网格里用「You」区分）
       final device = LanDevice(
         deviceId: id,
@@ -259,6 +271,7 @@ class LanDiscoveryService {
         os: map['os'] as String? ?? 'unknown',
         lastSeen: DateTime.now().millisecondsSinceEpoch,
         avatar: _jsonInt(map['avatar'], fallback: 1),
+        isOnline: true,
       );
 
       _deviceController.add(device);
@@ -275,6 +288,9 @@ class LanDiscoveryService {
   }
 
   void stop() {
+    // 正常退出时通知局域网内其他实例立即摘牌（崩溃/强杀则仍依赖对端超时）
+    _sendJsonToLan({'deviceId': deviceId, 'bye': true});
+
     _connectivitySub?.cancel();
     _connectivitySub = null;
     _ifacePollTimer?.cancel();

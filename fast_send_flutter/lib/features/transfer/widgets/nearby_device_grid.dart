@@ -20,9 +20,16 @@ class NearbyDeviceGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final devices = ref.watch(lanManagerProvider);
+    final raw = ref.watch(lanManagerProvider);
     final myDeviceId = ref.watch(deviceIdProvider);
     final theme = Theme.of(context);
+    final devices = [...raw]..sort((a, b) {
+        if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+        final aSelf = a.deviceId == myDeviceId;
+        final bSelf = b.deviceId == myDeviceId;
+        if (aSelf != bSelf) return aSelf ? -1 : 1;
+        return a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase());
+      });
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -89,7 +96,11 @@ class NearbyDeviceGrid extends ConsumerWidget {
                 device: device,
                 selected: selected,
                 isSelf: isSelf,
-                onTap: isSelf ? null : () => onToggle(device.deviceId),
+                onTap: isSelf
+                    ? null
+                    : (!device.isOnline && !selectedIds.contains(device.deviceId))
+                        ? null
+                        : () => onToggle(device.deviceId),
               );
             }).toList(),
           ),
@@ -112,6 +123,12 @@ class _DeviceAvatar extends StatelessWidget {
   });
 
   static const double _size = 84;
+  static const ColorFilter _grayscale = ColorFilter.matrix(<double>[
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0.2126, 0.7152, 0.0722, 0, 0,
+    0, 0, 0, 1, 0,
+  ]);
 
   String _osLabel(String os) {
     switch (os.toLowerCase()) {
@@ -133,6 +150,8 @@ class _DeviceAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final offline = !device.isOnline;
+    final dimmed = offline && !isSelf;
 
     return GestureDetector(
       onTap: onTap,
@@ -159,22 +178,36 @@ class _DeviceAvatar extends StatelessWidget {
                         border: Border.all(
                           color: selected
                               ? AppStyles.primary
-                              : theme.colorScheme.outlineVariant,
+                              : dimmed
+                                  ? theme.colorScheme.outlineVariant
+                                      .withValues(alpha: 0.45)
+                                  : theme.colorScheme.outlineVariant,
                           width: selected ? 3 : 2,
                         ),
                       ),
-                      child: ClipOval(
-                        child: Image.asset(
-                          memojiAssetPath(device.avatar),
-                          width: _size - 4,
-                          height: _size - 4,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) => Icon(
-                            Icons.person,
-                            size: 32,
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
+                      child: Builder(
+                        builder: (context) {
+                          Widget img = ClipOval(
+                            child: Image.asset(
+                              memojiAssetPath(device.avatar),
+                              width: _size - 4,
+                              height: _size - 4,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, _, _) => Icon(
+                                Icons.person,
+                                size: 32,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          );
+                          if (dimmed) {
+                            img = ColorFiltered(
+                              colorFilter: _grayscale,
+                              child: Opacity(opacity: 0.52, child: img),
+                            );
+                          }
+                          return img;
+                        },
                       ),
                     ),
                   ),
@@ -233,22 +266,28 @@ class _DeviceAvatar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected
-                    ? AppStyles.primary
-                    : theme.colorScheme.onSurface,
+                color: dimmed
+                    ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
+                    : selected
+                        ? AppStyles.primary
+                        : theme.colorScheme.onSurface,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.center,
             ),
-            // 系统名称
+            // 系统名称 / 离线
             Text(
-              _osLabel(device.os),
+              offline ? '离线' : _osLabel(device.os),
               style: TextStyle(
                 fontSize: 12,
-                color: theme.colorScheme.onSurfaceVariant.withValues(
-                  alpha: 0.6,
-                ),
+                color: offline
+                    ? theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.45,
+                      )
+                    : theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.6,
+                      ),
               ),
               maxLines: 1,
               textAlign: TextAlign.center,

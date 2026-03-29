@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
@@ -10,6 +11,7 @@ import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/message_provider.dart';
+import '../../../services/local_storage_service.dart';
 import '../../../services/notification_service.dart';
 import '../models/lan_device.dart';
 import '../models/lan_share_payload.dart';
@@ -21,8 +23,20 @@ import '../services/lan_transfer_service.dart';
 
 part 'lan_provider.g.dart';
 
-/// 超过该时间未收到发现广播才视为离线（UDP 易丢包，过短会导致头像周期性消失）
-const int _lanDeviceStaleMs = 120000;
+/// 超过该时间未收到发现广播则视为离线（仍保留在列表，仅 `isOnline: false`）。
+/// 需大于稳定心跳间隔的数倍（当前 5s），并留 UDP 丢包容忍。
+const int _lanDeviceStaleMs = 35000;
+
+/// 超过该时间无任何发现包则从列表与本地缓存移除，避免无限增长。
+const int _lanDeviceForgetMs = 14 * 24 * 60 * 60 * 1000;
+
+bool _lanDeviceListEquals(List<LanDevice> a, List<LanDevice> b) {
+  if (a.length != b.length) return false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i] != b[i]) return false;
+  }
+  return true;
+}
 
 class _OutgoingShare {
   final String shareId;
@@ -45,7 +59,9 @@ class LanManager extends _$LanManager {
   LanHttpServer? _server;
   int _listenPort = 0;
   StreamSubscription? _sub;
+  StreamSubscription<String>? _goneSub;
   Timer? _cleanupTimer;
+  Timer? _persistDebounce;
 
   final Map<String, Completer<bool>> _pendingDecisions = {};
   final Map<String, _OutgoingShare> _outgoingShares = {};
@@ -72,6 +88,8 @@ class LanManager extends _$LanManager {
     final deviceAvatar = config.avatar;
     final cloudDir = ref.read(fileServiceProvider).storageDir;
     final downloadDir = await ref.read(downloadDirProvider.future);
+
+    final remembered = await _loadRememberedLanDevices();
 
     _server = LanHttpServer(
       saveDirectory: downloadDir.isNotEmpty
@@ -104,26 +122,40 @@ class LanManager extends _$LanManager {
       _discovery?.updateLocalInfo(avatar: next);
     });
 
+    if (remembered.isNotEmpty) {
+      state = remembered;
+    }
+
     _sub = _discovery!.onDeviceFound.listen((device) {
+      final online = device.copyWith(isOnline: true);
       final current = List<LanDevice>.from(state);
-      final index = current.indexWhere((d) => d.deviceId == device.deviceId);
+      final index = current.indexWhere((d) => d.deviceId == online.deviceId);
       if (index >= 0) {
-        current[index] = device;
+        current[index] = online;
       } else {
-        current.add(device);
+        current.add(online);
       }
       state = current;
+      _schedulePersistRememberedDevices();
+    });
+
+    _goneSub = _discovery!.onDeviceGone.listen((id) {
+      final next = state
+          .map(
+            (d) =>
+                d.deviceId == id ? d.copyWith(isOnline: false) : d,
+          )
+          .toList();
+      if (!_lanDeviceListEquals(state, next)) {
+        state = next;
+        _schedulePersistRememberedDevices();
+      }
     });
 
     await _discovery!.start();
 
-    _cleanupTimer = Timer.periodic(const Duration(seconds: 15), (_) {
-      final now = DateTime.now().millisecondsSinceEpoch;
-      final filtered =
-          state.where((d) => now - d.lastSeen < _lanDeviceStaleMs).toList();
-      if (filtered.length != state.length) {
-        state = filtered;
-      }
+    _cleanupTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _applyStaleForgetAndOffline();
     });
 
     ref.listen(messageListProvider, (prev, next) {
@@ -131,8 +163,65 @@ class LanManager extends _$LanManager {
     });
   }
 
+  Future<List<LanDevice>> _loadRememberedLanDevices() async {
+    try {
+      final raw = LocalStorageService.instance
+          .get<String>(StorageKeys.lanRememberedDevices);
+      if (raw == null || raw.isEmpty) return [];
+      final decoded = jsonDecode(raw) as List<dynamic>;
+      return decoded
+          .map(
+            (e) => LanDevice.fromJson(
+                  Map<String, dynamic>.from(e as Map),
+                ).copyWith(isOnline: false),
+          )
+          .toList();
+    } catch (e) {
+      debugPrint('LAN remembered load: $e');
+      return [];
+    }
+  }
+
+  void _schedulePersistRememberedDevices() {
+    _persistDebounce?.cancel();
+    _persistDebounce = Timer(const Duration(milliseconds: 500), () {
+      unawaited(_flushPersistRememberedDevices());
+    });
+  }
+
+  Future<void> _flushPersistRememberedDevices() async {
+    try {
+      final encoded = jsonEncode(state.map((d) => d.toJson()).toList());
+      await LocalStorageService.instance
+          .set<String>(StorageKeys.lanRememberedDevices, encoded);
+    } catch (e) {
+      debugPrint('LAN remembered persist: $e');
+    }
+  }
+
+  void _applyStaleForgetAndOffline() {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final next = <LanDevice>[];
+    for (final d in state) {
+      if (now - d.lastSeen > _lanDeviceForgetMs) continue;
+      final stale = now - d.lastSeen >= _lanDeviceStaleMs;
+      if (stale && d.isOnline) {
+        next.add(d.copyWith(isOnline: false));
+      } else {
+        next.add(d);
+      }
+    }
+    if (!_lanDeviceListEquals(state, next)) {
+      state = next;
+      _schedulePersistRememberedDevices();
+    }
+  }
+
   void _dispose() {
+    _persistDebounce?.cancel();
+    unawaited(_flushPersistRememberedDevices());
     _sub?.cancel();
+    _goneSub?.cancel();
     _cleanupTimer?.cancel();
     _discovery?.stop();
     _server?.stop();
@@ -363,9 +452,14 @@ class LanManager extends _$LanManager {
     }
     if (files.isEmpty) throw Exception('无法读取所选文件');
 
-    final targets =
-        state.where((d) => targetDeviceIds.contains(d.deviceId)).toList();
-    if (targets.isEmpty) throw Exception('所选设备不在线');
+    final targets = state
+        .where(
+          (d) => targetDeviceIds.contains(d.deviceId) && d.isOnline,
+        )
+        .toList();
+    if (targets.isEmpty) {
+      throw Exception('所选设备不在线或已离线，请等待设备上线后再试');
+    }
 
     final payload = LanShareOfferPayload(
       shareId: shareId,

@@ -182,6 +182,11 @@ class _SendPageState extends ConsumerState<SendPage> {
 
   Widget _buildBody(BuildContext context) {
     final hasActive = _activeShareId != null && _activeExpiresAt != null;
+    final devices = ref.watch(lanManagerProvider);
+    final hasSelection = _selectedDeviceIds.isNotEmpty;
+    final hasOnlineTarget = _selectedDeviceIds.any(
+      (id) => devices.any((d) => d.deviceId == id && d.isOnline),
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(Spacing.xl),
@@ -198,7 +203,8 @@ class _SendPageState extends ConsumerState<SendPage> {
           const SizedBox(height: Spacing.md),
           FileDropCard(
             isDragging: _isPageDragging,
-            hasSelectedDevices: _selectedDeviceIds.isNotEmpty,
+            hasSelectedDevices: hasOnlineTarget,
+            selectionOfflineOnly: hasSelection && !hasOnlineTarget,
             onPickRequested: _pickFiles,
           ),
           if (hasActive) ...[

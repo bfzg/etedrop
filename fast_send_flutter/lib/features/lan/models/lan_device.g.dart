@@ -14,6 +14,7 @@ _LanDevice _$LanDeviceFromJson(Map<String, dynamic> json) => _LanDevice(
   os: json['os'] as String,
   lastSeen: (json['lastSeen'] as num?)?.toInt() ?? 0,
   avatar: (json['avatar'] as num?)?.toInt() ?? 1,
+  isOnline: json['isOnline'] as bool? ?? true,
 );
 
 Map<String, dynamic> _$LanDeviceToJson(_LanDevice instance) =>
@@ -25,4 +26,5 @@ Map<String, dynamic> _$LanDeviceToJson(_LanDevice instance) =>
       'os': instance.os,
       'lastSeen': instance.lastSeen,
       'avatar': instance.avatar,
+      'isOnline': instance.isOnline,
     };
