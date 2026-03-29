@@ -6,6 +6,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../services/local_storage_service.dart';
+import '../../../core/utils/resumable_transfer.dart';
 import '../models/fs_entry.dart';
 import '../services/file_service.dart';
 
@@ -33,7 +34,10 @@ Future<String> _defaultDownloadDir() async {
 }
 
 /// 文件服务单例 Provider
-@riverpod
+///
+/// keepAlive：避免 autoDispose 在首屏仅被 `ref.read`（如 LanManager 初始化）后释放，
+/// 与网盘列表异步扫描竞态，表现为长时间加载后误报无权限；设置里重选同一路径会新建实例因而「立刻好」。
+@Riverpod(keepAlive: true)
 class FileServiceNotifier extends _$FileServiceNotifier {
   @override
   FileService build() {
@@ -59,7 +63,10 @@ class FileServiceNotifier extends _$FileServiceNotifier {
     next.setStorageDir(path);
     state = next;
     await LocalStorageService.instance.set<String>(_storageDirKey, path);
-    await LocalStorageService.instance.set<bool>(_storageDirUserSelectedKey, true);
+    await LocalStorageService.instance.set<bool>(
+      _storageDirUserSelectedKey,
+      true,
+    );
   }
 
   Future<String?> selectStorageDir() async {
@@ -135,7 +142,9 @@ class CloudFileList extends _$CloudFileList {
       return [];
     }
 
-    final entries = await fileService.listFiles(dir: currentPath.isEmpty ? null : currentPath);
+    final entries = await fileService.listFiles(
+      dir: currentPath.isEmpty ? null : currentPath,
+    );
 
     // 排序：文件夹在前，然后按名称排序
     entries.sort((a, b) {
@@ -179,9 +188,14 @@ class CloudFileList extends _$CloudFileList {
 
     for (final file in result.files) {
       if (file.path == null) continue;
-      final bytes = await File(file.path!).readAsBytes();
-      final targetPath = currentPath.isEmpty ? file.name : p.join(currentPath, file.name);
-      await fileService.writeFile(targetPath, bytes);
+      final targetPath = currentPath.isEmpty
+          ? file.name
+          : p.join(currentPath, file.name);
+      try {
+        await fileService.importLocalFileResumable(targetPath, file.path!);
+      } on ResumableTransferException catch (e) {
+        if (e.message != '传输已取消') rethrow;
+      }
     }
 
     ref.invalidateSelf();
@@ -195,10 +209,15 @@ class CloudFileList extends _$CloudFileList {
     for (final filePath in paths) {
       final file = File(filePath);
       if (await file.exists()) {
-        final bytes = await file.readAsBytes();
         final name = p.basename(filePath);
-        final targetPath = currentPath.isEmpty ? name : p.join(currentPath, name);
-        await fileService.writeFile(targetPath, bytes);
+        final targetPath = currentPath.isEmpty
+            ? name
+            : p.join(currentPath, name);
+        try {
+          await fileService.importLocalFileResumable(targetPath, filePath);
+        } on ResumableTransferException catch (e) {
+          if (e.message != '传输已取消') rethrow;
+        }
       }
     }
 

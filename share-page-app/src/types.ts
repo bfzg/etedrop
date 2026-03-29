@@ -16,7 +16,12 @@ export interface VerifyResult {
 /** 文件元数据（DataChannel file-meta） */
 export interface FileMeta {
   type: 'file-meta'
+  fileName: string
   fileSize: number
+  /** 二进制帧前若干字节为偏移头；8 表示大端 uint64 绝对偏移 + 负载 */
+  chunkPrefixBytes?: number
+  /** 本连接实际从该字节开始发送（断点续传） */
+  resumeFrom?: number
 }
 
 /** 文件传输完成（DataChannel file-done） */

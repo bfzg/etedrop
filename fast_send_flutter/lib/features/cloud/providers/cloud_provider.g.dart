@@ -9,21 +9,30 @@ part of 'cloud_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// 文件服务单例 Provider
+///
+/// keepAlive：避免 autoDispose 在首屏仅被 `ref.read`（如 LanManager 初始化）后释放，
+/// 与网盘列表异步扫描竞态，表现为长时间加载后误报无权限；设置里重选同一路径会新建实例因而「立刻好」。
 
 @ProviderFor(FileServiceNotifier)
 final fileServiceProvider = FileServiceNotifierProvider._();
 
 /// 文件服务单例 Provider
+///
+/// keepAlive：避免 autoDispose 在首屏仅被 `ref.read`（如 LanManager 初始化）后释放，
+/// 与网盘列表异步扫描竞态，表现为长时间加载后误报无权限；设置里重选同一路径会新建实例因而「立刻好」。
 final class FileServiceNotifierProvider
     extends $NotifierProvider<FileServiceNotifier, FileService> {
   /// 文件服务单例 Provider
+  ///
+  /// keepAlive：避免 autoDispose 在首屏仅被 `ref.read`（如 LanManager 初始化）后释放，
+  /// 与网盘列表异步扫描竞态，表现为长时间加载后误报无权限；设置里重选同一路径会新建实例因而「立刻好」。
   FileServiceNotifierProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'fileServiceProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -45,9 +54,12 @@ final class FileServiceNotifierProvider
 }
 
 String _$fileServiceNotifierHash() =>
-    r'fe2c14efd0fe0077a6f7d8d7a05d27a7f5b4c7e2';
+    r'167a10273180939628a279698cc397f0daa88234';
 
 /// 文件服务单例 Provider
+///
+/// keepAlive：避免 autoDispose 在首屏仅被 `ref.read`（如 LanManager 初始化）后释放，
+/// 与网盘列表异步扫描竞态，表现为长时间加载后误报无权限；设置里重选同一路径会新建实例因而「立刻好」。
 
 abstract class _$FileServiceNotifier extends $Notifier<FileService> {
   FileService build();

@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/utils/resumable_transfer.dart';
 import '../models/lan_share_payload.dart';
 import 'lan_http_context.dart';
 
@@ -30,7 +31,8 @@ class LanHttpServer {
     LanUploadContext ctx,
     double fileProgress,
     double batchProgress,
-  )? onProgress;
+  )?
+  onProgress;
 
   final void Function(LanUploadContext ctx)? onComplete;
   final void Function(LanUploadContext ctx, String error)? onError;
@@ -77,11 +79,17 @@ class LanHttpServer {
     try {
       if (request.method == 'GET' && request.uri.path == '/ping') {
         _handlePing(request);
-      } else if (request.method == 'POST' && request.uri.path == '/share-offer') {
+      } else if (request.method == 'GET' &&
+          request.uri.path == '/upload-state') {
+        await _handleUploadState(request);
+      } else if (request.method == 'POST' &&
+          request.uri.path == '/share-offer') {
         await _handleShareOffer(request);
-      } else if (request.method == 'POST' && request.uri.path == '/share-accept') {
+      } else if (request.method == 'POST' &&
+          request.uri.path == '/share-accept') {
         await _handleShareAccept(request);
-      } else if (request.method == 'POST' && request.uri.path == '/share-cancel') {
+      } else if (request.method == 'POST' &&
+          request.uri.path == '/share-cancel') {
         await _handleShareCancel(request);
       } else if (request.method == 'POST' && request.uri.path == '/upload') {
         await _handleUpload(request);
@@ -167,6 +175,35 @@ class LanHttpServer {
     await request.response.close();
   }
 
+  Future<void> _handleUploadState(HttpRequest request) async {
+    try {
+      final rawName = request.uri.queryParameters['file'];
+      if (rawName == null || rawName.isEmpty) {
+        request.response.statusCode = HttpStatus.badRequest;
+        request.response.write('missing file');
+        await request.response.close();
+        return;
+      }
+      final name = Uri.decodeComponent(rawName);
+      final safeName = p.basename(name);
+      if (safeName.isEmpty || safeName != name) {
+        request.response.statusCode = HttpStatus.badRequest;
+        await request.response.close();
+        return;
+      }
+      final path = p.join(saveDirectory, safeName);
+      final f = File(path);
+      final offset = await f.exists() ? await f.length() : 0;
+      request.response.statusCode = HttpStatus.ok;
+      request.response.headers.contentType = ContentType.json;
+      request.response.write('{"offset":$offset}');
+    } catch (e) {
+      request.response.statusCode = HttpStatus.internalServerError;
+      request.response.write(e.toString());
+    }
+    await request.response.close();
+  }
+
   Future<void> _handleUpload(HttpRequest request) async {
     final fileNameEncoded = request.headers.value('X-File-Name');
     final senderNameEncoded = request.headers.value('X-Sender-Name');
@@ -177,6 +214,10 @@ class LanHttpServer {
     final fileIndexStr = request.headers.value('X-File-Index');
     final fileCountStr = request.headers.value('X-File-Count');
     final batchTotalStr = request.headers.value('X-Batch-Total-Bytes');
+    final resumeOffsetStr = request.headers.value(
+      ResumableTransferHeaders.resumeOffset,
+    );
+    final resumeOffset = int.tryParse(resumeOffsetStr ?? '0') ?? 0;
 
     if (fileNameEncoded == null || senderNameEncoded == null) {
       request.response.statusCode = HttpStatus.badRequest;
@@ -218,17 +259,31 @@ class LanHttpServer {
 
     final savePath = p.join(saveDirectory, fileName);
     final file = File(savePath);
-    final sink = file.openWrite();
 
-    int receivedBytes = 0;
+    late final IOSink sink;
+    try {
+      sink = await openReceiverSinkForResume(
+        targetFile: file,
+        declaredOffset: resumeOffset,
+        declaredTotalSize: fileSize,
+      );
+    } on ResumableTransferException catch (e) {
+      request.response.statusCode = HttpStatus.conflict;
+      request.response.write(e.message);
+      await request.response.close();
+      return;
+    }
+
+    var receivedBytes = 0;
 
     try {
       await for (final chunk in request) {
         sink.add(chunk);
         receivedBytes += chunk.length;
         if (onProgress != null) {
+          final absolute = resumeOffset + receivedBytes;
           final inFile = fileSize > 0
-              ? (receivedBytes / fileSize).clamp(0.0, 1.0)
+              ? (absolute / fileSize).clamp(0.0, 1.0)
               : 0.0;
           final batchProgress = fileCount > 0
               ? ((fileIndex + inFile) / fileCount).clamp(0.0, 1.0)
@@ -238,13 +293,22 @@ class LanHttpServer {
       }
       await sink.close();
 
+      if (fileSize > 0) {
+        final finalLen = await file.length();
+        if (finalLen != fileSize) {
+          throw StateError('长度不符: 期望 $fileSize，实际 $finalLen');
+        }
+      }
+
       request.response.statusCode = HttpStatus.ok;
       request.response.write('Success');
       await request.response.close();
 
       onComplete?.call(ctx);
     } catch (e) {
-      await sink.close();
+      try {
+        await sink.close();
+      } catch (_) {}
       onError?.call(ctx, e.toString());
       request.response.statusCode = HttpStatus.internalServerError;
       await request.response.close();

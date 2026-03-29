@@ -47,6 +47,7 @@ export function SharePageView() {
     sendVerify,
     sendDownloadStart,
     reconnect,
+    resumeHintBytes,
   } = useSharePage(deviceId, shareCode)
 
   const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error
@@ -124,11 +125,13 @@ export function SharePageView() {
           <button
             type="button"
             onClick={() => {
-              sendDownloadStart()
+              void sendDownloadStart()
             }}
             className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            下载文件
+            {resumeHintBytes > 0
+              ? `继续下载（已保存 ${formatBytes(resumeHintBytes)}）`
+              : '下载文件'}
           </button>
         )}
 

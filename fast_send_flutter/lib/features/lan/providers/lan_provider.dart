@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -43,6 +44,7 @@ class _OutgoingShare {
   final List<String> filePaths;
   final List<LanDevice> targets;
   final Timer expiryTimer;
+  final CancelToken uploadCancelToken = CancelToken();
   bool cancelled = false;
 
   _OutgoingShare({
@@ -388,14 +390,12 @@ class LanManager extends _$LanManager {
         final f = File(path);
         if (!await f.exists()) continue;
         expected++;
-        final size = await f.length();
+        if (session.cancelled) break;
         try {
-          await transfer.sendFileStream(
+          await transfer.sendLocalFileWithResume(
             ip: device.ip,
             port: device.port,
-            fileStream: f.openRead(),
-            fileName: p.basename(path),
-            fileSize: size,
+            filePath: path,
             senderName: senderName,
             senderAvatar: senderAvatar,
             senderDeviceId: senderDeviceId,
@@ -404,6 +404,7 @@ class LanManager extends _$LanManager {
             fileCount: n,
             batchTotalBytes: totalBytes,
             onProgress: (_) {},
+            cancelToken: session.uploadCancelToken,
           );
           uploaded++;
         } catch (e) {
@@ -510,6 +511,7 @@ class LanManager extends _$LanManager {
     if (session != null && !session.cancelled) {
       session.cancelled = true;
       session.expiryTimer.cancel();
+      session.uploadCancelToken.cancel();
 
       final transfer = LanTransferService();
       final cancel = LanShareCancelPayload(shareId: shareId);
@@ -676,7 +678,12 @@ class LanManager extends _$LanManager {
     }
   }
 
-  Future<void> sendFile(LanDevice target, String filePath) async {
+  Future<void> sendFile(
+    LanDevice target,
+    String filePath, {
+    CancelToken? cancelToken,
+    bool useResume = true,
+  }) async {
     final senderName = ref.read(deviceNameProvider);
     final senderAvatar = ref.read(deviceAvatarProvider);
     final senderDeviceId = ref.read(deviceIdProvider) ?? '';
@@ -687,6 +694,19 @@ class LanManager extends _$LanManager {
       throw Exception('设备无响应');
     }
 
+    if (useResume) {
+      await transfer.sendLocalFileWithResume(
+        ip: target.ip,
+        port: target.port,
+        filePath: filePath,
+        senderName: senderName,
+        senderAvatar: senderAvatar,
+        senderDeviceId: senderDeviceId,
+        cancelToken: cancelToken,
+      );
+      return;
+    }
+
     await transfer.sendFile(
       ip: target.ip,
       port: target.port,
@@ -695,6 +715,7 @@ class LanManager extends _$LanManager {
       senderAvatar: senderAvatar,
       senderDeviceId: senderDeviceId,
       onProgress: (p) {},
+      cancelToken: cancelToken,
     );
   }
 
@@ -703,6 +724,8 @@ class LanManager extends _$LanManager {
     required Stream<List<int>> fileStream,
     required String fileName,
     required int fileSize,
+    CancelToken? cancelToken,
+    int resumeFromOffset = 0,
   }) async {
     final senderName = ref.read(deviceNameProvider);
     final senderAvatar = ref.read(deviceAvatarProvider);
@@ -723,7 +746,9 @@ class LanManager extends _$LanManager {
       senderName: senderName,
       senderAvatar: senderAvatar,
       senderDeviceId: senderDeviceId,
+      resumeFromOffset: resumeFromOffset,
       onProgress: (p) {},
+      cancelToken: cancelToken,
     );
   }
 }

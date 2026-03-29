@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DataChannelMessage } from "../types";
+import {
+  clearPartialFile,
+  clearSessionMeta,
+  ensureMetaMatchesOrClear,
+  getOpfsPartialSize,
+  hasOpfs,
+  OpfsChunkWriter,
+  parseOffsetPrefixedChunk,
+  readSessionMeta,
+} from "../utils/shareDownloadStorage";
 
 type StatusKind = "pending" | "online" | "error";
+
+type BinaryMode = "legacy" | "prefixed-opfs" | "prefixed-memory";
 
 export function useSharePage(deviceId: string, shareCode: string) {
   const [status, setStatus] = useState<{ kind: StatusKind; text: string }>({
@@ -22,12 +34,20 @@ export function useSharePage(deviceId: string, shareCode: string) {
   const [progress, setProgress] = useState({ received: 0, total: 0 });
   const [showDone, setShowDone] = useState(false);
   const [showReconnect, setShowReconnect] = useState(false);
+  const [resumeHintBytes, setResumeHintBytes] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const dcRef = useRef<RTCDataChannel | null>(null);
   const chunksRef = useRef<ArrayBuffer[]>([]);
+  const memoryDataChunksRef = useRef<ArrayBuffer[]>([]);
   const totalBytesRef = useRef(0);
+  const expectedNextOffsetRef = useRef(0);
+  const binaryModeRef = useRef<BinaryMode>("legacy");
+  const opfsWriterRef = useRef<OpfsChunkWriter | null>(null);
+  const opfsGateRef = useRef(Promise.resolve());
+  const writeChainRef = useRef(Promise.resolve());
+  const downloadCompletedRef = useRef(false);
   const fileInfoRef = useRef<{
     fileName: string;
     fileSize: number;
@@ -39,7 +59,22 @@ export function useSharePage(deviceId: string, shareCode: string) {
     setShowStatusBar(true);
   }, []);
 
+  const closeOpfsWriter = useCallback(async () => {
+    const w = opfsWriterRef.current;
+    opfsWriterRef.current = null;
+    if (w) {
+      try {
+        await w.close();
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
   const reset = useCallback(() => {
+    void closeOpfsWriter();
+    writeChainRef.current = Promise.resolve();
+    opfsGateRef.current = Promise.resolve();
     setFileInfo(null);
     fileInfoRef.current = null;
     setShowPassword(false);
@@ -49,26 +84,58 @@ export function useSharePage(deviceId: string, shareCode: string) {
     setProgress({ received: 0, total: 0 });
     setShowDone(false);
     setShowReconnect(false);
+    setResumeHintBytes(0);
     chunksRef.current = [];
-  }, []);
+    memoryDataChunksRef.current = [];
+    totalBytesRef.current = 0;
+    expectedNextOffsetRef.current = 0;
+    binaryModeRef.current = "legacy";
+    downloadCompletedRef.current = false;
+  }, [closeOpfsWriter]);
 
-  const finishDownload = useCallback(() => {
-    const chunks = chunksRef.current;
+  const finishDownload = useCallback(async () => {
+    await writeChainRef.current.catch(() => {});
+    await opfsGateRef.current.catch(() => {});
     const fi = fileInfoRef.current;
-    if (chunks.length === 0) return;
-    const blob = new Blob(chunks);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fi?.fileName ?? "download";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
-    chunksRef.current = [];
-    setShowProgress(false);
-    setShowDone(true);
-  }, []);
+    const mode = binaryModeRef.current;
+
+    try {
+      const triggerSave = (blob: Blob) => {
+        if (blob.size === 0) return;
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = fi?.fileName ?? "download";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+      };
+
+      if (mode === "prefixed-opfs" && opfsWriterRef.current && hasOpfs()) {
+        const w = opfsWriterRef.current;
+        opfsWriterRef.current = null;
+        await w.close();
+        const blob = await w.getBlob();
+        triggerSave(blob);
+        await clearPartialFile(deviceId, shareCode);
+        clearSessionMeta(deviceId, shareCode);
+      } else if (mode === "prefixed-opfs" || mode === "prefixed-memory") {
+        const blob = new Blob(memoryDataChunksRef.current);
+        triggerSave(blob);
+        memoryDataChunksRef.current = [];
+      } else {
+        const parts = chunksRef.current;
+        if (parts.length === 0) return;
+        const blob = new Blob(parts);
+        triggerSave(blob);
+        chunksRef.current = [];
+      }
+    } finally {
+      setShowProgress(false);
+      setShowDone(true);
+    }
+  }, [deviceId, shareCode]);
 
   const connect = useCallback(() => {
     reset();
@@ -138,15 +205,27 @@ export function useSharePage(deviceId: string, shareCode: string) {
       if (dcRef.current) {
         try {
           dcRef.current.close();
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         dcRef.current = null;
       }
       if (pcRef.current) {
         try {
           pcRef.current.close();
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         pcRef.current = null;
       }
+
+      void closeOpfsWriter();
+      writeChainRef.current = Promise.resolve();
+      opfsGateRef.current = Promise.resolve();
+      chunksRef.current = [];
+      memoryDataChunksRef.current = [];
+      binaryModeRef.current = "legacy";
+      downloadCompletedRef.current = false;
 
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
@@ -168,6 +247,12 @@ export function useSharePage(deviceId: string, shareCode: string) {
             const m = JSON.parse(ev.data) as DataChannelMessage;
             switch (m.type) {
               case "share-info":
+                void ensureMetaMatchesOrClear(
+                  deviceId,
+                  shareCode,
+                  m.fileName,
+                  m.fileSize,
+                );
                 fileInfoRef.current = {
                   fileName: m.fileName,
                   fileSize: m.fileSize,
@@ -175,6 +260,27 @@ export function useSharePage(deviceId: string, shareCode: string) {
                 };
                 setFileInfo(fileInfoRef.current);
                 setShowStatusBar(false);
+                if (hasOpfs()) {
+                  void (async () => {
+                    const meta = readSessionMeta(deviceId, shareCode);
+                    const fi = fileInfoRef.current;
+                    if (
+                      !fi ||
+                      !meta ||
+                      meta.fileName !== fi.fileName ||
+                      meta.fileSize !== fi.fileSize
+                    ) {
+                      setResumeHintBytes(0);
+                      return;
+                    }
+                    const n = await getOpfsPartialSize(deviceId, shareCode);
+                    setResumeHintBytes(
+                      n > 0 && n < fi.fileSize ? n : 0,
+                    );
+                  })();
+                } else {
+                  setResumeHintBytes(0);
+                }
                 if (m.hasPassword) {
                   setShowPassword(true);
                   setShowDownloadBtn(false);
@@ -197,32 +303,110 @@ export function useSharePage(deviceId: string, shareCode: string) {
                   setVerifyLoading(false);
                 }
                 break;
-              case "file-meta":
-                chunksRef.current = [];
+              case "file-meta": {
+                const prefix = m.chunkPrefixBytes ?? 0;
+                const resumeEcho = m.resumeFrom ?? 0;
                 totalBytesRef.current = m.fileSize;
-                setProgress({ received: 0, total: m.fileSize });
+                expectedNextOffsetRef.current = resumeEcho;
+                setProgress({ received: resumeEcho, total: m.fileSize });
+
+                if (prefix === 8) {
+                  memoryDataChunksRef.current = [];
+                  let releaseGate!: () => void;
+                  opfsGateRef.current = new Promise<void>((r) => {
+                    releaseGate = r;
+                  });
+
+                  if (hasOpfs()) {
+                    binaryModeRef.current = "prefixed-opfs";
+                    void (async () => {
+                      try {
+                        await closeOpfsWriter();
+                        const w = new OpfsChunkWriter(deviceId, shareCode);
+                        await w.open(resumeEcho === 0);
+                        opfsWriterRef.current = w;
+                      } catch {
+                        binaryModeRef.current = "prefixed-memory";
+                        opfsWriterRef.current = null;
+                      } finally {
+                        releaseGate();
+                      }
+                    })();
+                  } else {
+                    binaryModeRef.current = "prefixed-memory";
+                    releaseGate();
+                  }
+                } else {
+                  opfsGateRef.current = Promise.resolve();
+                  binaryModeRef.current = "legacy";
+                  chunksRef.current = [];
+                }
+
                 setShowDownloadBtn(false);
                 setShowProgress(true);
                 break;
+              }
               case "file-done":
-                finishDownload();
+                downloadCompletedRef.current = true;
+                void finishDownload();
                 break;
             }
-          } catch {}
+          } catch {
+            /* ignore */
+          }
         } else {
-          chunksRef.current.push(ev.data as ArrayBuffer);
-          const total = totalBytesRef.current || 1;
-          const received = chunksRef.current.reduce(
-            (acc, c) => acc + c.byteLength,
-            0,
-          );
-          setProgress((p) => ({ ...p, received, total }));
+          const buf = ev.data as ArrayBuffer;
+          const mode = binaryModeRef.current;
+
+          if (mode === "legacy") {
+            chunksRef.current.push(buf);
+            const total = totalBytesRef.current || 1;
+            const received = chunksRef.current.reduce(
+              (acc, c) => acc + c.byteLength,
+              0,
+            );
+            setProgress((p) => ({ ...p, received, total }));
+            return;
+          }
+
+          writeChainRef.current = writeChainRef.current
+            .then(async () => {
+              await opfsGateRef.current;
+              const { offset, data } = parseOffsetPrefixedChunk(buf);
+              if (offset !== expectedNextOffsetRef.current) {
+                console.warn(
+                  "[fastsend] chunk offset mismatch",
+                  offset,
+                  expectedNextOffsetRef.current,
+                );
+                return;
+              }
+              if (binaryModeRef.current === "prefixed-opfs") {
+                const w = opfsWriterRef.current;
+                if (w) {
+                  await w.writeAt(offset, data);
+                } else {
+                  memoryDataChunksRef.current.push(data);
+                }
+              } else {
+                memoryDataChunksRef.current.push(data);
+              }
+              expectedNextOffsetRef.current += data.byteLength;
+              const t = totalBytesRef.current;
+              setProgress({
+                received: expectedNextOffsetRef.current,
+                total: t,
+              });
+            })
+            .catch((e) => {
+              console.error("[fastsend] write chunk", e);
+            });
         }
       };
 
       dc.onclose = () => {
-        if (!showDone) {
-          setStatusState("error", "P2P 连接已断开");
+        if (!downloadCompletedRef.current) {
+          setStatusState("error", "P2P 连接已断开（可重新连接后续传）");
           setShowReconnect(true);
         }
       };
@@ -267,28 +451,35 @@ export function useSharePage(deviceId: string, shareCode: string) {
           setShowReconnect(true);
         });
     },
-    [shareCode, setStatusState, showDone, finishDownload],
+    [shareCode, setStatusState, finishDownload, deviceId, closeOpfsWriter],
   );
 
   useEffect(() => {
     connect();
     return () => {
+      void closeOpfsWriter();
       if (dcRef.current) {
         try {
           dcRef.current.close();
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         dcRef.current = null;
       }
       if (pcRef.current) {
         try {
           pcRef.current.close();
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         pcRef.current = null;
       }
       if (wsRef.current) {
         try {
           wsRef.current.close();
-        } catch {}
+        } catch {
+          /* ignore */
+        }
         wsRef.current = null;
       }
     };
@@ -302,29 +493,50 @@ export function useSharePage(deviceId: string, shareCode: string) {
     dc.send(JSON.stringify({ type: "share-verify", password }));
   }, []);
 
-  const sendDownloadStart = useCallback(() => {
+  const sendDownloadStart = useCallback(async () => {
     const dc = dcRef.current;
     if (!dc || dc.readyState !== "open") return;
-    dc.send(JSON.stringify({ type: "download-start" }));
-  }, []);
+    let resume = 0;
+    const fi = fileInfoRef.current;
+    if (fi && hasOpfs()) {
+      const meta = readSessionMeta(deviceId, shareCode);
+      if (
+        meta &&
+        meta.fileName === fi.fileName &&
+        meta.fileSize === fi.fileSize
+      ) {
+        resume = await getOpfsPartialSize(deviceId, shareCode);
+        if (resume > fi.fileSize) resume = fi.fileSize;
+      }
+    }
+    dc.send(
+      JSON.stringify({ type: "download-start", resumeFrom: resume }),
+    );
+  }, [deviceId, shareCode]);
 
   const reconnect = useCallback(() => {
     if (dcRef.current) {
       try {
         dcRef.current.close();
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       dcRef.current = null;
     }
     if (pcRef.current) {
       try {
         pcRef.current.close();
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       pcRef.current = null;
     }
     if (wsRef.current) {
       try {
         wsRef.current.close();
-      } catch {}
+      } catch {
+        /* ignore */
+      }
       wsRef.current = null;
     }
     connect();
@@ -342,6 +554,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
     progress,
     showDone,
     showReconnect,
+    resumeHintBytes,
     sendVerify,
     sendDownloadStart,
     reconnect,
