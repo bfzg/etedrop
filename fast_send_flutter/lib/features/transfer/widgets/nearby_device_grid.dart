@@ -60,24 +60,22 @@ class NearbyDeviceGrid extends ConsumerWidget {
         if (devices.isEmpty)
           SizedBox(
             height: 100,
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.4,
-                      ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: 0.4,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Text('正在扫描局域网设备...', style: AppTextStyles.secondary(context)),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                Text('正在查找用户...', style: AppTextStyles.secondary(context)),
+              ],
             ),
           )
         else

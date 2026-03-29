@@ -5,6 +5,10 @@ import 'package:path/path.dart' as p;
 
 import '../models/fs_entry.dart';
 
+/// 云盘列表不展示以 `.` 开头的条目（如 `.git`、`.DS_Store`、`.svn`）。
+bool _isHiddenCloudEntryName(String name) =>
+    name.isNotEmpty && name.startsWith('.');
+
 /// 文件系统服务
 /// 对应 Electron: src/ipc/fs/handlers.ts
 class FileService {
@@ -82,6 +86,9 @@ class FileService {
     final results = <FsEntry>[];
 
     for (final entity in entries) {
+      final name = p.basename(entity.path);
+      if (_isHiddenCloudEntryName(name)) continue;
+
       try {
         final stat = await entity.stat();
         final relPath = p.relative(entity.path, from: rootDir);
@@ -89,7 +96,7 @@ class FileService {
 
         results.add(FsEntry(
           path: relPath,
-          name: p.basename(entity.path),
+          name: name,
           size: isDir ? 0 : stat.size,
           mtime: stat.modified.millisecondsSinceEpoch,
           isDirectory: isDir,

@@ -39,7 +39,7 @@ class LanDiscoveryService {
       changed = true;
     }
     if (changed) {
-      _broadcastPresence();
+      unawaited(_broadcastPresence());
     }
   }
 
@@ -66,12 +66,12 @@ class LanDiscoveryService {
   void _startBroadcasting() {
     _broadcastTimer?.cancel();
     _broadcastTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      _broadcastPresence();
+      unawaited(_broadcastPresence());
     });
-    _broadcastPresence(); // immediate first broadcast
+    unawaited(_broadcastPresence());
   }
 
-  void _broadcastPresence() {
+  Future<void> _broadcastPresence() async {
     if (_socket == null) return;
 
     final payload = jsonEncode({
@@ -83,12 +83,51 @@ class LanDiscoveryService {
     });
 
     final bytes = utf8.encode(payload);
-    
-    try {
-      _socket!.send(bytes, InternetAddress('255.255.255.255'), _broadcastPort);
-    } catch (e) {
-      // Ignore broadcast errors (e.g. network unreachable)
+    final socket = _socket!;
+
+    void sendTo(InternetAddress addr) {
+      try {
+        socket.send(bytes, addr, _broadcastPort);
+      } catch (e) {
+        debugPrint('LAN broadcast to ${addr.address} failed: $e');
+      }
     }
+
+    // 全局广播（部分路由器/系统会丢弃）
+    sendTo(InternetAddress('255.255.255.255'));
+
+    // 各网卡子网定向广播（/24），显著改善 macOS ↔ Windows 等跨平台发现
+    try {
+      final ifaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+      final seen = <String>{};
+      for (final ni in ifaces) {
+        for (final a in ni.addresses) {
+          if (a.type != InternetAddressType.IPv4 || a.isLoopback) continue;
+          final bcast = _ipv4SubnetBroadcast24(a.address);
+          if (bcast == null || seen.contains(bcast)) continue;
+          seen.add(bcast);
+          try {
+            sendTo(InternetAddress(bcast));
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      debugPrint('LAN NetworkInterface.list for broadcast: $e');
+    }
+  }
+
+  /// 按常见家用局域网 /24 计算定向广播地址（如 192.168.1.10 → 192.168.1.255）
+  static String? _ipv4SubnetBroadcast24(String dotted) {
+    final parts = dotted.split('.');
+    if (parts.length != 4) return null;
+    for (final s in parts) {
+      final n = int.tryParse(s);
+      if (n == null || n < 0 || n > 255) return null;
+    }
+    return '${parts[0]}.${parts[1]}.${parts[2]}.255';
   }
 
   void _handleMessage(Datagram datagram) {
@@ -97,25 +136,30 @@ class LanDiscoveryService {
       final map = jsonDecode(jsonStr) as Map<String, dynamic>;
       
       final id = map['deviceId'] as String?;
-      if (id == null) return; 
-      
-      // TODO: 生产环境应过滤掉自己，开发测试时可注释掉此行以便单机调试
-      // if (id == deviceId) return;
+      if (id == null) return;
 
+      // 不过滤本机：环回/反射的广播会让单机也能在列表里看到自己（网格里用「You」区分）
       final device = LanDevice(
         deviceId: id,
         deviceName: map['deviceName'] as String? ?? 'Unknown',
         ip: datagram.address.address,
-        port: map['port'] as int? ?? 53318,
+        port: _jsonInt(map['port'], fallback: 53318),
         os: map['os'] as String? ?? 'unknown',
         lastSeen: DateTime.now().millisecondsSinceEpoch,
-        avatar: map['avatar'] as int? ?? 1,
+        avatar: _jsonInt(map['avatar'], fallback: 1),
       );
 
       _deviceController.add(device);
     } catch (e) {
-      // Ignore invalid messages
+      debugPrint('LAN discovery parse error: $e');
     }
+  }
+
+  static int _jsonInt(Object? value, {required int fallback}) {
+    if (value == null) return fallback;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return fallback;
   }
 
   void stop() {
