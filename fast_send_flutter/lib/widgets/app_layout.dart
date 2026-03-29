@@ -66,6 +66,9 @@ class _AppLayoutState extends State<AppLayout> {
                   top: isWindowsPlatform()
                       ? Radius.circular(14)
                       : Radius.circular(0),
+                  bottom: isWindowsPlatform()
+                      ? Radius.circular(8)
+                      : Radius.circular(0),
                 ),
                 child: DecoratedBox(
                   decoration: BoxDecoration(

@@ -9,6 +9,9 @@ import '../models/lan_device.dart';
 
 class LanDiscoveryService {
   static const int _broadcastPort = 53317;
+  /// 与广播并行发送，缓解部分网络/macOS 上「能发广播但收不到对端子网广播」的不对称发现。
+  /// 选用 IANA 组织本地范围 239.255.x.x（非互联网路由）。
+  static const String _multicastGroupIpv4 = '239.255.88.117';
   /// 子网广播地址列表缓存 TTL，避免每轮广播都 `NetworkInterface.list`。
   static const Duration _subnetBcastCacheTtl = Duration(seconds: 45);
   /// 启动后一段时间内较快发心跳，便于新设备尽快出现在列表。
@@ -27,6 +30,7 @@ class LanDiscoveryService {
   DateTime? _subnetBcastCacheAt;
   List<String> _subnetBroadcastAddresses = const [];
   String _ifaceFingerprint = '';
+  final Set<String> _multicastJoinedIfNames = {};
 
   final String deviceId;
   final int httpPort;
@@ -66,7 +70,11 @@ class LanDiscoveryService {
 
   Future<void> start() async {
     try {
-      _socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, _broadcastPort);
+      _socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        _broadcastPort,
+        reuseAddress: true,
+      );
       _socket!.broadcastEnabled = true;
 
       _socket!.listen((RawSocketEvent event) {
@@ -80,11 +88,51 @@ class LanDiscoveryService {
         }
       });
 
+      await _syncMulticastMembership();
+
       _startBroadcasting();
       _watchConnectivity();
       _startIfaceFingerprintPolling();
     } catch (e) {
       debugPrint('LAN Discovery start failed: $e');
+    }
+  }
+
+  /// 在可用 IPv4 网卡上加入多播组；网卡集变化时需重新同步，否则可能收不到对端多播心跳。
+  Future<void> _syncMulticastMembership() async {
+    final socket = _socket;
+    if (socket == null) return;
+    final group = InternetAddress(_multicastGroupIpv4);
+    try {
+      final ifaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+
+      for (final name in _multicastJoinedIfNames.toList()) {
+        try {
+          final ni = ifaces.firstWhere((n) => n.name == name);
+          socket.leaveMulticast(group, ni);
+        } catch (_) {}
+      }
+      _multicastJoinedIfNames.clear();
+
+      socket.multicastHops = 1;
+
+      for (final ni in ifaces) {
+        final hasIpv4 = ni.addresses.any(
+          (a) => a.type == InternetAddressType.IPv4 && !a.isLoopback,
+        );
+        if (!hasIpv4) continue;
+        try {
+          socket.joinMulticast(group, ni);
+          _multicastJoinedIfNames.add(ni.name);
+        } catch (e) {
+          debugPrint('LAN joinMulticast ${ni.name}: $e');
+        }
+      }
+    } catch (e) {
+      debugPrint('LAN multicast sync: $e');
     }
   }
 
@@ -95,7 +143,10 @@ class LanDiscoveryService {
         if (_socket == null) return;
         // Wi‑Fi / 网络切换后子网会变：强制重算定向广播并重发，避免卡在旧缓存
         _heartbeatPhaseStartedAt = DateTime.now();
-        unawaited(_broadcastPresence(forceSubnetRefresh: true));
+        unawaited(() async {
+          await _syncMulticastMembership();
+          await _broadcastPresence(forceSubnetRefresh: true);
+        }());
       },
       onError: (Object e, StackTrace _) {
         debugPrint('LAN connectivity watch error: $e');
@@ -123,6 +174,7 @@ class LanDiscoveryService {
       _subnetBroadcastAddresses = _subnetBcastsFromIfaces(ifaces);
       _subnetBcastCacheAt = DateTime.now();
       _heartbeatPhaseStartedAt = DateTime.now();
+      unawaited(_syncMulticastMembership());
       _emitPresencePayload();
     } catch (e) {
       debugPrint('LAN iface fingerprint poll: $e');
@@ -161,9 +213,14 @@ class LanDiscoveryService {
         includeLoopback: false,
         type: InternetAddressType.IPv4,
       );
-      _ifaceFingerprint = _fingerprintForIfaces(ifaces);
+      final newFp = _fingerprintForIfaces(ifaces);
+      final fpChanged = newFp != _ifaceFingerprint;
+      _ifaceFingerprint = newFp;
       _subnetBroadcastAddresses = _subnetBcastsFromIfaces(ifaces);
       _subnetBcastCacheAt = now;
+      if (fpChanged) {
+        unawaited(_syncMulticastMembership());
+      }
     } catch (e) {
       debugPrint('LAN NetworkInterface.list for broadcast: $e');
     }
@@ -207,6 +264,13 @@ class LanDiscoveryService {
       try {
         sendTo(InternetAddress(bcast));
       } catch (_) {}
+    }
+
+    // 多播：与广播同端口，部分环境下 macOS 收对端广播异常时仍可互通
+    try {
+      sendTo(InternetAddress(_multicastGroupIpv4));
+    } catch (e) {
+      debugPrint('LAN multicast send failed: $e');
     }
   }
 
@@ -301,6 +365,7 @@ class LanDiscoveryService {
     _subnetBcastCacheAt = null;
     _subnetBroadcastAddresses = const [];
     _ifaceFingerprint = '';
+    _multicastJoinedIfNames.clear();
     _socket?.close();
     _socket = null;
   }
