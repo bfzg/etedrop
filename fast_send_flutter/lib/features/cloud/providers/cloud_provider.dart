@@ -7,13 +7,13 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../../services/local_storage_service.dart';
 import '../../../core/utils/resumable_transfer.dart';
+import '../cloud_storage_prefs.dart';
 import '../models/fs_entry.dart';
 import '../services/file_service.dart';
+import '../services/macos_cloud_storage_access.dart';
 
 part 'cloud_provider.g.dart';
 
-const _storageDirKey = 'cloud_storage_dir';
-const _storageDirUserSelectedKey = 'cloud_storage_dir_user_selected';
 const _downloadDirKey = 'download_dir';
 
 Future<String> _defaultDownloadDir() async {
@@ -44,16 +44,21 @@ class FileServiceNotifier extends _$FileServiceNotifier {
     final fileService = FileService();
     // 仅当用户明确手动选择过网盘目录时才恢复，默认保持未设置
     final userSelected =
-        LocalStorageService.instance.get<bool>(_storageDirUserSelectedKey) ??
+        LocalStorageService.instance.get<bool>(kCloudStorageDirUserSelectedKey) ??
         false;
     if (!userSelected) {
       return fileService;
     }
 
-    // 初始化时从本地存储读取网盘目录
-    final savedDir = LocalStorageService.instance.get<String>(_storageDirKey);
-    if (savedDir != null && savedDir.isNotEmpty) {
-      fileService.setStorageDir(savedDir);
+    // macOS 沙盒：须在 main 中已通过书签 startAccessing，此处优先使用恢复后的路径
+    String? dir;
+    if (Platform.isMacOS && MacosCloudStorageAccess.scopedStorageDir != null) {
+      dir = MacosCloudStorageAccess.scopedStorageDir;
+    } else {
+      dir = LocalStorageService.instance.get<String>(kCloudStorageDirKey);
+    }
+    if (dir != null && dir.isNotEmpty) {
+      fileService.setStorageDir(dir);
     }
     return fileService;
   }
@@ -62,11 +67,12 @@ class FileServiceNotifier extends _$FileServiceNotifier {
     final next = FileService();
     next.setStorageDir(path);
     state = next;
-    await LocalStorageService.instance.set<String>(_storageDirKey, path);
+    await LocalStorageService.instance.set<String>(kCloudStorageDirKey, path);
     await LocalStorageService.instance.set<bool>(
-      _storageDirUserSelectedKey,
+      kCloudStorageDirUserSelectedKey,
       true,
     );
+    await MacosCloudStorageAccess.persistBookmarkForPath(path);
   }
 
   Future<String?> selectStorageDir() async {

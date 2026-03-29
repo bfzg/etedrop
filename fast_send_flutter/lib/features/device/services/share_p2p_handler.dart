@@ -9,9 +9,8 @@ import 'package:path/path.dart' as p;
 
 import '../../../core/config/constants.dart';
 import '../../../services/local_storage_service.dart';
+import '../../cloud/cloud_storage_prefs.dart';
 import '../../share/services/share_service.dart';
-
-const _storageDirKey = 'cloud_storage_dir';
 
 /// 单帧二进制负载（不含 8 字节偏移头），与 AppConstants.defaultBlockSize 对齐便于维护。
 int get _dataChunkSize => AppConstants.defaultBlockSize;
@@ -42,7 +41,7 @@ class ShareP2PHandler {
   ShareP2PHandler({required this.sendSignaling});
 
   String get _storageDir =>
-      LocalStorageService.instance.get<String>(_storageDirKey) ?? '';
+      LocalStorageService.instance.get<String>(kCloudStorageDirKey) ?? '';
 
   Future<void> _ensureInit() async {
     if (!_initialized) {
