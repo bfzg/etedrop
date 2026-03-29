@@ -51,6 +51,8 @@ class LanHttpServer {
 
   Future<int> start({int port = 0}) async {
     _server = await HttpServer.bind(InternetAddress.anyIPv4, port);
+    // 大文件上传若长时间无「空闲」以外的读超时，默认空闲超时会误杀连接。
+    _server!.idleTimeout = null;
     debugPrint('LAN HTTP Server listening on port ${_server!.port}');
 
     _server!.listen(_handleRequest);
@@ -275,11 +277,18 @@ class LanHttpServer {
     }
 
     var receivedBytes = 0;
+    const flushStrideBytes = 4 * 1024 * 1024;
+    var sinceFlush = 0;
 
     try {
       await for (final chunk in request) {
         sink.add(chunk);
         receivedBytes += chunk.length;
+        sinceFlush += chunk.length;
+        if (sinceFlush >= flushStrideBytes) {
+          sinceFlush = 0;
+          await sink.flush();
+        }
         if (onProgress != null) {
           final absolute = resumeOffset + receivedBytes;
           final inFile = fileSize > 0
@@ -291,6 +300,7 @@ class LanHttpServer {
           onProgress!(ctx, inFile, batchProgress);
         }
       }
+      await sink.flush();
       await sink.close();
 
       if (fileSize > 0) {

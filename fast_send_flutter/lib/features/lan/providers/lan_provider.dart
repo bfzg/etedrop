@@ -343,6 +343,18 @@ class LanManager extends _$LanManager {
       final anyOk = _outboundHadSuccess.remove(shareId) == true;
       if (anyOk) {
         _finalizeOutboundShareDelivery(shareId);
+      } else {
+        ref
+            .read(messageListProvider.notifier)
+            .markOutgoingShareFailedByShareId(
+              shareId,
+              '传输中断或接收失败，可让对方重试接收',
+            );
+        final session = _outgoingShares.remove(shareId);
+        if (session != null) {
+          session.cancelled = true;
+          session.expiryTimer.cancel();
+        }
       }
     } else {
       _outboundUploadRefCount[shareId] = next;
@@ -409,6 +421,7 @@ class LanManager extends _$LanManager {
           uploaded++;
         } catch (e) {
           debugPrint('Upload failed: $e');
+          break;
         }
       }
       batchOk = expected > 0 && uploaded == expected;

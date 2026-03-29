@@ -256,6 +256,23 @@ class MessageList extends _$MessageList {
     _persist();
   }
 
+  /// 发送方：全部接收端均未成功完成传输（或本机上传已放弃）
+  void markOutgoingShareFailedByShareId(String shareId, String error) {
+    state = [
+      for (final m in state)
+        if (m.shareId == shareId &&
+            m.isOutgoing &&
+            m.status != TransferMessageStatus.completed)
+          m.copyWith(
+            status: TransferMessageStatus.failed,
+            errorMessage: error,
+          )
+        else
+          m,
+    ];
+    _persist();
+  }
+
   void updateStatus(String id, TransferMessageStatus status) {
     state = [
       for (final m in state)
