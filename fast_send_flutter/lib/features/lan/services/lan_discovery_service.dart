@@ -127,17 +127,19 @@ class LanDiscoveryService {
     _disposeBindings();
     if (gen != _lifecycleEpoch) return;
 
-    // macOS（Darwin）上按「网卡 IPv4 + 独立 socket」绑定后，多播/子网广播常被内核投递异常，表现为
-    // 本机能发出发现包、对端可见，但收不到 Windows 等发来的包。统一 bind 0.0.0.0 并对各接口 joinMulticast
-    // 与多数原生实现一致，可恢复双向发现。
-    var usedMacUnifiedBind = false;
-    if (Platform.isMacOS) {
+    // macOS：按「每网卡独立 socket」绑定时，多播/子网广播常被内核投递异常；统一 bind 0.0.0.0 + 各接口
+    // joinMulticast 可恢复双向发现。
+    //
+    // Windows：同样走单 socket。否则每块网卡（含 Hyper-V / WSL / VPN / 虚拟适配器）各开一个 UDP，
+    // 易触发 ERROR_NO_SYSTEM_RESOURCES（errno 1450，中文「系统资源不足」），且每 10s 整组销毁再建会放大问题。
+    var usedUnifiedBind = false;
+    if (Platform.isMacOS || Platform.isWindows) {
       await _openFallbackBinding();
-      usedMacUnifiedBind = _bindings.isNotEmpty;
+      usedUnifiedBind = _bindings.isNotEmpty;
       if (gen != _lifecycleEpoch) return;
     }
 
-    if (!usedMacUnifiedBind) {
+    if (!usedUnifiedBind) {
       for (final ni in ifaces) {
         if (gen != _lifecycleEpoch) return;
         final b = await _openBindingForInterface(ni);
