@@ -21,6 +21,7 @@ import '../services/lan_http_context.dart';
 import '../services/lan_http_server.dart';
 import '../services/lan_network_utils.dart';
 import '../services/lan_transfer_service.dart';
+import 'transfer_receive_speed_provider.dart';
 
 part 'lan_provider.g.dart';
 
@@ -30,6 +31,9 @@ const int _lanDeviceStaleMs = 24000;
 
 /// 超过该时间无任何发现包则从列表与本地缓存移除，避免无限增长。
 const int _lanDeviceForgetMs = 14 * 24 * 60 * 60 * 1000;
+
+/// 单文件在内层断点续传仍失败后，外层再试次数（网络闪断等）。
+const int _lanUploadOuterRetries = 5;
 
 bool _lanDeviceListEquals(List<LanDevice> a, List<LanDevice> b) {
   if (a.length != b.length) return false;
@@ -386,43 +390,83 @@ class LanManager extends _$LanManager {
       final isAlive = await transfer.ping(device.ip, device.port);
       if (!isAlive) return;
 
-      var totalBytes = 0;
+      final fileSizes = <int>[];
       for (final path in session.filePaths) {
         final f = File(path);
-        if (await f.exists()) {
-          totalBytes += await f.length();
-        }
+        fileSizes.add(await f.exists() ? await f.length() : 0);
       }
+      final totalBytes = fileSizes.fold<int>(0, (a, b) => a + b);
       final n = session.filePaths.length;
 
       var expected = 0;
       var uploaded = 0;
+      var cumulativeBase = 0;
+      var lastProgressAt = DateTime.fromMillisecondsSinceEpoch(0);
+      var lastProgressValue = -1.0;
+
+      void pushOutgoingProgress(double p) {
+        final clamped = p.clamp(0.0, 1.0);
+        final now = DateTime.now();
+        if (now.difference(lastProgressAt).inMilliseconds < 180 &&
+            (clamped - lastProgressValue).abs() < 0.015 &&
+            clamped < 0.999) {
+          return;
+        }
+        lastProgressAt = now;
+        lastProgressValue = clamped;
+        ref
+            .read(messageListProvider.notifier)
+            .updateOutgoingProgressByShareId(session.shareId, clamped);
+      }
+
       for (var i = 0; i < n; i++) {
         final path = session.filePaths[i];
         final f = File(path);
         if (!await f.exists()) continue;
         expected++;
         if (session.cancelled) break;
-        try {
-          await transfer.sendLocalFileWithResume(
-            ip: device.ip,
-            port: device.port,
-            filePath: path,
-            senderName: senderName,
-            senderAvatar: senderAvatar,
-            senderDeviceId: senderDeviceId,
-            shareId: session.shareId,
-            fileIndex: i,
-            fileCount: n,
-            batchTotalBytes: totalBytes,
-            onProgress: (_) {},
-            cancelToken: session.uploadCancelToken,
-          );
-          uploaded++;
-        } catch (e) {
-          debugPrint('Upload failed: $e');
-          break;
+
+        final fileSize = fileSizes[i];
+        var fileSent = false;
+
+        for (var outer = 0; outer < _lanUploadOuterRetries; outer++) {
+          if (session.cancelled) break;
+          try {
+            await transfer.sendLocalFileWithResume(
+              ip: device.ip,
+              port: device.port,
+              filePath: path,
+              senderName: senderName,
+              senderAvatar: senderAvatar,
+              senderDeviceId: senderDeviceId,
+              shareId: session.shareId,
+              fileIndex: i,
+              fileCount: n,
+              batchTotalBytes: totalBytes,
+              batchBaseBytes: cumulativeBase,
+              onProgress: pushOutgoingProgress,
+              cancelToken: session.uploadCancelToken,
+            );
+            fileSent = true;
+            uploaded++;
+            break;
+          } catch (e) {
+            final es = e.toString();
+            debugPrint('Upload attempt ${outer + 1}/$_lanUploadOuterRetries: $e');
+            if (es.contains('已取消') || es.contains('拒绝')) {
+              break;
+            }
+            if (outer >= _lanUploadOuterRetries - 1) {
+              break;
+            }
+            await Future<void>.delayed(
+              Duration(milliseconds: 350 * (outer + 1)),
+            );
+          }
         }
+
+        if (!fileSent) break;
+        cumulativeBase += fileSize;
       }
       batchOk = expected > 0 && uploaded == expected;
     } finally {
@@ -600,7 +644,12 @@ class LanManager extends _$LanManager {
     double fileProgress,
     double batchProgress,
   ) {
+    final speed = ref.read(transferReceiveSpeedProvider.notifier);
+    final basis =
+        ctx.batchTotalBytes > 0 ? ctx.batchTotalBytes : ctx.fileSize;
+
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
+      speed.tick(ctx.shareId!, batchProgress, basis);
       ref
           .read(messageListProvider.notifier)
           .updateProgressByShareId(ctx.shareId!, batchProgress);
@@ -613,6 +662,7 @@ class LanManager extends _$LanManager {
         orElse: () => null,
       );
       if (msg != null) {
+        speed.tick(msg.id, batchProgress, basis);
         ref
             .read(messageListProvider.notifier)
             .updateProgress(msg.id, batchProgress);
@@ -623,6 +673,7 @@ class LanManager extends _$LanManager {
   void _onReceiveUploadComplete(LanUploadContext ctx) {
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
       if (ctx.fileIndex == ctx.fileCount - 1) {
+        ref.read(transferReceiveSpeedProvider.notifier).clear(ctx.shareId!);
         final msg = ref
             .read(messageListProvider.notifier)
             .findIncomingByShareId(ctx.shareId!);
@@ -644,6 +695,7 @@ class LanManager extends _$LanManager {
         orElse: () => null,
       );
       if (msg != null) {
+        ref.read(transferReceiveSpeedProvider.notifier).clear(msg.id);
         ref.read(messageListProvider.notifier).markCompleted(msg.id);
         NotificationService.instance.showTransferCompleted(
           senderName: msg.senderName,
@@ -657,6 +709,7 @@ class LanManager extends _$LanManager {
   void _onReceiveUploadError(LanUploadContext ctx, String error) {
     debugPrint('Receive error: $error');
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
+      ref.read(transferReceiveSpeedProvider.notifier).clear(ctx.shareId!);
       final msg = ref
           .read(messageListProvider.notifier)
           .findIncomingByShareId(ctx.shareId!);
@@ -672,6 +725,7 @@ class LanManager extends _$LanManager {
         orElse: () => null,
       );
       if (msg != null) {
+        ref.read(transferReceiveSpeedProvider.notifier).clear(msg.id);
         ref.read(messageListProvider.notifier).markFailed(msg.id, error);
       }
     }

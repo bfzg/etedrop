@@ -179,6 +179,18 @@ class MessageList extends _$MessageList {
     _persist();
   }
 
+  /// 发送方批量分享：根据本机实际上传字节更新进度条
+  void updateOutgoingProgressByShareId(String shareId, double progress) {
+    state = [
+      for (final m in state)
+        if (m.shareId == shareId && m.isOutgoing)
+          m.copyWith(progress: progress.clamp(0.0, 1.0))
+        else
+          m,
+    ];
+    _persist();
+  }
+
   void rejectByShareId(String shareId, {String? reason}) {
     state = [
       for (final m in state)

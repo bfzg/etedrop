@@ -9,6 +9,7 @@ import '../../../styles/styles.dart';
 import '../../device/models/device_config.dart';
 import '../../lan/models/lan_device.dart';
 import '../../lan/providers/lan_provider.dart';
+import '../../lan/providers/transfer_receive_speed_provider.dart';
 import '../models/transfer_message.dart';
 import '../providers/message_provider.dart';
 
@@ -55,6 +56,10 @@ class MessageCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final receiveSpeeds = ref.watch(transferReceiveSpeedProvider);
+    final receiveSpeedKey = message.shareId ?? message.id;
+    final receiveBps =
+        !message.isOutgoing ? receiveSpeeds[receiveSpeedKey] : null;
     final isPending = message.status == TransferMessageStatus.pending;
     final showIncomingActions = isPending && !message.isOutgoing;
     final batch = _batchFiles(message);
@@ -226,14 +231,28 @@ class MessageCard extends ConsumerWidget {
             ],
             if (message.status == TransferMessageStatus.receiving) ...[
               const SizedBox(height: 12),
-              LinearProgressIndicator(
-                value: message.progress,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '接收中 ${(message.progress * 100).toStringAsFixed(0)}%',
-                style: AppTextStyles.secondary(context),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: message.progress <= 0 ? null : message.progress,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    message.isOutgoing
+                        ? '发送中 ${(message.progress * 100).toStringAsFixed(0)}%'
+                        : '接收中 ${(message.progress * 100).toStringAsFixed(0)}%',
+                    style: AppTextStyles.secondary(context),
+                  ),
+                  if (receiveBps != null && receiveBps > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      '约 ${FormatUtils.transferSpeed(receiveBps)}',
+                      style: AppTextStyles.hint(context),
+                    ),
+                  ],
+                ],
               ),
             ],
             if (message.status == TransferMessageStatus.failed &&

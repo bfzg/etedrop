@@ -240,6 +240,9 @@ class LanTransferService {
   }
 
   /// 大文件：失败自动按对端已写字节续传；取消请使用 [cancelToken]。
+  ///
+  /// [onProgress] 为整体进度 0~1：单文件时为已传字节/文件大小；批量时为本批已传字节/
+  /// [batchTotalBytes]（需传入前面各文件体积之和 [batchBaseBytes]）。
   Future<void> sendLocalFileWithResume({
     required String ip,
     required int port,
@@ -251,7 +254,9 @@ class LanTransferService {
     int fileIndex = 0,
     int fileCount = 1,
     int batchTotalBytes = 0,
-    Function(double fileInBatchProgress)? onProgress,
+    /// 本文件之前各文件体积之和（批量时用于 [onProgress]）。
+    int batchBaseBytes = 0,
+    void Function(double overallProgress01)? onProgress,
     CancelToken? cancelToken,
     int maxAttempts = 48,
   }) async {
@@ -261,6 +266,16 @@ class LanTransferService {
     }
     final fileName = p.basename(filePath);
     final fileSize = await f.length();
+
+    void reportOverallBytesInFile(int uploadedInFile) {
+      if (onProgress == null) return;
+      final denom = batchTotalBytes > 0 ? batchTotalBytes : fileSize;
+      if (denom <= 0) return;
+      final numer = batchTotalBytes > 0
+          ? batchBaseBytes + uploadedInFile
+          : uploadedInFile;
+      onProgress((numer / denom).clamp(0.0, 1.0));
+    }
 
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       if (cancelToken?.isCancelled == true) {
@@ -283,6 +298,7 @@ class LanTransferService {
       if (start < 0) start = 0;
       if (start > fileSize) start = fileSize;
       if (start == fileSize) {
+        reportOverallBytesInFile(fileSize);
         return;
       }
 
@@ -317,10 +333,11 @@ class LanTransferService {
           cancelToken: cancelToken,
           onSendProgress: (count, totalBytes) {
             if (totalBytes > 0 && onProgress != null) {
-              onProgress(count / totalBytes);
+              reportOverallBytesInFile(start + count);
             }
           },
         );
+        reportOverallBytesInFile(fileSize);
         return;
       } on DioException catch (e) {
         if (e.type == DioExceptionType.cancel) {

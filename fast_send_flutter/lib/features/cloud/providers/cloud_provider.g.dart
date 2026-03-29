@@ -214,7 +214,7 @@ final class CloudFileListProvider
   CloudFileList create() => CloudFileList();
 }
 
-String _$cloudFileListHash() => r'd80b3906356bf6e5a061e3d91c5e1ad7d3c20b79';
+String _$cloudFileListHash() => r'ab98104703ce492c01d51e7d9b2c229dfb184006';
 
 /// 文件列表状态
 

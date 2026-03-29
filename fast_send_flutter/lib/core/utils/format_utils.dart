@@ -2,6 +2,18 @@
 class FormatUtils {
   FormatUtils._();
 
+  /// 传输速度，如 "2.3 MB/s"
+  static String transferSpeed(double bytesPerSecond) {
+    if (bytesPerSecond.isNaN || bytesPerSecond <= 0) return '';
+    if (bytesPerSecond < 1024) {
+      return '${bytesPerSecond.toStringAsFixed(0)} B/s';
+    }
+    if (bytesPerSecond < 1024 * 1024) {
+      return '${(bytesPerSecond / 1024).toStringAsFixed(1)} KB/s';
+    }
+    return '${(bytesPerSecond / (1024 * 1024)).toStringAsFixed(1)} MB/s';
+  }
+
   /// 将字节数转换为人类可读的格式，如 "1.5 MB"
   static String fileSize(int bytes) {
     if (bytes < 1024) return '$bytes B';
