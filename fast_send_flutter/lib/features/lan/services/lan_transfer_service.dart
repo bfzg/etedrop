@@ -7,19 +7,20 @@ import 'package:path/path.dart' as p;
 
 import '../../../core/utils/resumable_transfer.dart';
 import '../models/lan_share_payload.dart';
+import 'lan_http_client_upload.dart';
 
 void _lanUploadLog(String message) {
   developer.log(message, name: 'LAN.upload');
 }
 
-void _lanUploadLogDio(String url, DioException e) {
-  final inner = e.error;
+void _lanUploadLogHttpResult(String url, HttpClientUploadResult r) {
   _lanUploadLog(
-    '[LAN /upload][send] FAIL url=$url dioType=${e.type} '
-    'status=${e.response?.statusCode} msg=${e.message} '
-    'inner=${inner.runtimeType}: $inner',
+    '[LAN /upload][send] FAIL url=$url status=${r.statusCode} '
+    'preview=${r.bodyPreview} err=${r.error} (${r.error.runtimeType})',
   );
-  _lanUploadLog('[LAN /upload][send] dio stack:\n${e.stackTrace}');
+  if (r.stackTrace != null) {
+    _lanUploadLog('[LAN /upload][send] stack:\n${r.stackTrace}');
+  }
 }
 
 class LanTransferService {
@@ -72,7 +73,7 @@ class LanTransferService {
     await sendFileStream(
       ip: ip,
       port: port,
-      fileStream: file.openRead(),
+      fileStream: fileOpenReadChunked(file, 0, fileSize),
       fileName: fileName,
       fileSize: fileSize,
       senderName: senderName,
@@ -172,25 +173,44 @@ class LanTransferService {
     return 0;
   }
 
-  /// 流式 POST；不强制 Connection: close（对齐 LocalSend/reqwest 默认 keep-alive，利于长传稳定）。
+  /// 大文件走 [dart:io] [HttpClient]（显式关闭 idle 超时），避免 Dio 包装层长传断连。
   Future<void> _postUploadOctetStream({
     required String url,
     required Stream<List<int>> fileStream,
     required Map<String, dynamic> headers,
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
-  }) {
-    return _dio.post<void>(
-      url,
-      data: fileStream,
-      options: Options(
-        headers: headers,
-        sendTimeout: null,
-        receiveTimeout: null,
-      ),
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
+  }) async {
+    final uri = Uri.parse(url);
+    final clRaw = headers[Headers.contentLengthHeader];
+    final contentLength = clRaw is int ? clRaw : int.parse(clRaw.toString());
+    final stringHeaders = headers.map(
+      (k, v) => MapEntry(k.toString(), v.toString()),
     );
+
+    final result = await httpClientUploadOctetStream(
+      uri: uri,
+      contentLength: contentLength,
+      headers: stringHeaders,
+      body: fileStream,
+      onProgress: onSendProgress == null
+          ? null
+          : (sent, total) => onSendProgress(sent, total),
+      isCancelled: cancelTokenToChecker(cancelToken),
+    );
+
+    if (result.isSuccess) return;
+
+    _lanUploadLogHttpResult(url, result);
+    if (result.statusCode == HttpStatus.forbidden) {
+      throw Exception('对方拒绝了接收文件');
+    }
+    if (result.statusCode == HttpStatus.conflict) {
+      throw Exception('断点不一致，请重试: ${result.bodyPreview}');
+    }
+    final err = result.error;
+    final tail = err != null ? '$err' : (result.bodyPreview ?? 'unknown');
+    throw Exception('传输失败: $tail');
   }
 
   Future<void> sendFileStream({
@@ -254,18 +274,8 @@ class LanTransferService {
       _lanUploadLog(
         '[LAN /upload][send] response OK $url file=$fileName',
       );
-    } on DioException catch (e) {
-      _lanUploadLogDio(url, e);
-      if (e.type == DioExceptionType.cancel) {
-        throw Exception('传输已取消');
-      }
-      if (e.response?.statusCode == HttpStatus.forbidden) {
-        throw Exception('对方拒绝了接收文件');
-      }
-      if (e.response?.statusCode == HttpStatus.conflict) {
-        throw Exception('断点不一致，请重试: ${e.response?.data}');
-      }
-      throw Exception('传输失败: ${e.message}');
+    } on LanUploadCancelledException {
+      throw Exception('传输已取消');
     }
   }
 
@@ -362,7 +372,7 @@ class LanTransferService {
         );
         await _postUploadOctetStream(
           url: url,
-          fileStream: f.openRead(start),
+          fileStream: fileOpenReadChunked(f, start, fileSize),
           headers: headers,
           cancelToken: cancelToken,
           onSendProgress: (count, totalBytes) {
@@ -376,23 +386,20 @@ class LanTransferService {
         );
         reportOverallBytesInFile(fileSize);
         return;
-      } on DioException catch (e) {
-        _lanUploadLogDio(url, e);
-        if (e.type == DioExceptionType.cancel) {
-          throw Exception('传输已取消');
-        }
-        if (e.response?.statusCode == HttpStatus.forbidden) {
-          throw Exception('对方拒绝了接收文件');
-        }
+      } on LanUploadCancelledException {
+        throw Exception('传输已取消');
+      } on Exception catch (e) {
+        final msg = e.toString();
+        final isForbidden = msg.contains('对方拒绝了接收文件');
+        final isConflict = msg.contains('断点不一致');
+        if (isForbidden) rethrow;
         if (attempt >= maxAttempts - 1) {
-          if (e.response?.statusCode == HttpStatus.conflict) {
-            throw Exception('断点不一致，请重试: ${e.response?.data}');
-          }
-          throw Exception('传输失败: ${e.message}');
+          rethrow;
         }
+        if (isConflict) rethrow;
         _lanUploadLog(
           '[LAN /upload][send] will retry after '
-          '${200 + attempt * 100}ms (attempt ${attempt + 1})',
+          '${200 + attempt * 100}ms (attempt ${attempt + 1}) err=$e',
         );
         await Future<void>.delayed(Duration(milliseconds: 200 + attempt * 100));
       }

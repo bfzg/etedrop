@@ -289,8 +289,13 @@ class LanHttpServer {
     }
 
     var receivedBytes = 0;
-    const flushStrideBytes = 4 * 1024 * 1024;
+    // 更大 flush 间隔减少磁盘 fsync 频率，提升大文件吞吐（与频繁 UI 回调解耦）
+    const flushStrideBytes = 16 * 1024 * 1024;
     var sinceFlush = 0;
+    var sinceProgressBytes = 0;
+    DateTime lastProgressAt = DateTime.fromMillisecondsSinceEpoch(0);
+    const progressMinInterval = Duration(milliseconds: 200);
+    const progressMinBytes = 512 * 1024;
 
     var responseClosed = false;
     try {
@@ -303,15 +308,30 @@ class LanHttpServer {
           await sink.flush();
         }
         if (onProgress != null) {
-          final absolute = resumeOffset + receivedBytes;
-          final inFile = fileSize > 0
-              ? (absolute / fileSize).clamp(0.0, 1.0)
-              : 0.0;
-          final batchProgress = fileCount > 0
-              ? ((fileIndex + inFile) / fileCount).clamp(0.0, 1.0)
-              : inFile;
-          onProgress!(ctx, inFile, batchProgress);
+          sinceProgressBytes += chunk.length;
+          final now = DateTime.now();
+          final due = sinceProgressBytes >= progressMinBytes ||
+              now.difference(lastProgressAt) >= progressMinInterval;
+          if (due) {
+            sinceProgressBytes = 0;
+            lastProgressAt = now;
+            final absolute = resumeOffset + receivedBytes;
+            final inFile = fileSize > 0
+                ? (absolute / fileSize).clamp(0.0, 1.0)
+                : 0.0;
+            final batchProgress = fileCount > 0
+                ? ((fileIndex + inFile) / fileCount).clamp(0.0, 1.0)
+                : inFile;
+            onProgress!(ctx, inFile, batchProgress);
+          }
         }
+      }
+      if (onProgress != null && fileSize > 0) {
+        final inFile = 1.0;
+        final batchProgress = fileCount > 0
+            ? ((fileIndex + inFile) / fileCount).clamp(0.0, 1.0)
+            : inFile;
+        onProgress!(ctx, inFile, batchProgress);
       }
       await sink.flush();
       await sink.close();
