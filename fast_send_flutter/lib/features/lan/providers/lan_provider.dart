@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -12,6 +11,7 @@ import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/message_provider.dart';
+import '../../../core/http/cancel_token.dart';
 import '../../../services/local_storage_service.dart';
 import '../../../services/notification_service.dart';
 import '../models/lan_device.dart';
@@ -48,7 +48,7 @@ class _OutgoingShare {
   final List<String> filePaths;
   final List<LanDevice> targets;
   final Timer expiryTimer;
-  final CancelToken uploadCancelToken = CancelToken();
+  final LanCancelToken uploadCancelToken = LanCancelToken();
   bool cancelled = false;
 
   _OutgoingShare({
@@ -750,7 +750,7 @@ class LanManager extends _$LanManager {
   Future<void> sendFile(
     LanDevice target,
     String filePath, {
-    CancelToken? cancelToken,
+    LanCancelToken? cancelToken,
     bool useResume = true,
   }) async {
     final senderName = ref.read(deviceNameProvider);
@@ -793,7 +793,7 @@ class LanManager extends _$LanManager {
     required Stream<List<int>> fileStream,
     required String fileName,
     required int fileSize,
-    CancelToken? cancelToken,
+    LanCancelToken? cancelToken,
     int resumeFromOffset = 0,
   }) async {
     final senderName = ref.read(deviceNameProvider);

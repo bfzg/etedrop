@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:dio/dio.dart';
+import '../../../core/http/cancel_token.dart';
 
 /// 使用 [dart:io] [HttpClient] 流式 POST 大文件（与 LocalSend/reqwest 一样走系统 HTTP 栈），
-/// 避免 Dio 包装层在长传、背压场景下与默认 idle 策略叠加导致对端看到「Connection closed」。
+/// 避免第三方 HTTP 包装层在长传、背压场景下与默认 idle 策略叠加导致对端看到「Connection closed」。
 Future<HttpClientUploadResult> httpClientUploadOctetStream({
   required Uri uri,
   required int contentLength,
@@ -157,8 +157,8 @@ Stream<List<int>> _fileOpenReadChunkedImpl(
   }
 }
 
-/// 将 Dio [CancelToken] 转为 [httpClientUploadOctetStream] 可用的取消检查。
-bool Function()? cancelTokenToChecker(CancelToken? token) {
+/// 将 [LanCancelToken] 转为 [httpClientUploadOctetStream] 可用的取消检查。
+bool Function()? cancelTokenToChecker(LanCancelToken? token) {
   if (token == null) return null;
   return () => token.isCancelled;
 }

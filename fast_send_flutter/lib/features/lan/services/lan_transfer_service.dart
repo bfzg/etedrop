@@ -1,10 +1,11 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:developer' as developer;
 import 'dart:io';
 
-import 'package:dio/dio.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/http/cancel_token.dart';
 import '../../../core/utils/resumable_transfer.dart';
 import '../models/lan_share_payload.dart';
 import 'lan_http_client_upload.dart';
@@ -23,32 +24,28 @@ void _lanUploadLogHttpResult(String url, HttpClientUploadResult r) {
   }
 }
 
-class LanTransferService {
-  final Dio _dio;
+HttpClient _newLanPeerClient() {
+  final c = HttpClient();
+  c.connectionTimeout = const Duration(minutes: 10);
+  c.idleTimeout = const Duration(days: 365);
+  return c;
+}
 
-  /// 与 LocalSend「longLiving」客户端类似：长连接/大文件时避免默认 connect 过短；各请求仍可用 Options 覆盖。
-  LanTransferService({Dio? dio})
-      : _dio = dio ??
-            Dio(
-              BaseOptions(
-                connectTimeout: const Duration(minutes: 10),
-                receiveTimeout: null,
-                sendTimeout: null,
-              ),
-            );
+class LanTransferService {
+  LanTransferService();
 
   Future<bool> ping(String ip, int port) async {
+    final client = _newLanPeerClient();
     try {
-      final response = await _dio.get(
-        'http://$ip:$port/ping',
-        options: Options(
-          sendTimeout: const Duration(seconds: 2),
-          receiveTimeout: const Duration(seconds: 2),
-        ),
-      );
-      return response.statusCode == 200;
-    } catch (e) {
+      final uri = Uri(scheme: 'http', host: ip, port: port, path: '/ping');
+      final req = await client.getUrl(uri);
+      final res = await req.close().timeout(const Duration(seconds: 2));
+      await res.drain<void>();
+      return res.statusCode == HttpStatus.ok;
+    } catch (_) {
       return false;
+    } finally {
+      client.close(force: true);
     }
   }
 
@@ -60,7 +57,7 @@ class LanTransferService {
     required int senderAvatar,
     required String senderDeviceId,
     Function(double)? onProgress,
-    CancelToken? cancelToken,
+    LanCancelToken? cancelToken,
   }) async {
     final file = File(filePath);
     if (!await file.exists()) {
@@ -84,21 +81,36 @@ class LanTransferService {
     );
   }
 
+  Future<void> _postJson(
+    String url,
+    Map<String, dynamic> body,
+    Duration timeout,
+  ) async {
+    final client = _newLanPeerClient();
+    try {
+      final uri = Uri.parse(url);
+      final req = await client.postUrl(uri);
+      req.headers.contentType = ContentType.json;
+      final bytes = utf8.encode(jsonEncode(body));
+      req.contentLength = bytes.length;
+      req.add(bytes);
+      final res = await req.close().timeout(timeout);
+      await res.drain<void>();
+      if (res.statusCode != HttpStatus.ok) {
+        throw Exception('HTTP ${res.statusCode}');
+      }
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<void> postShareOffer({
     required String ip,
     required int port,
     required LanShareOfferPayload payload,
   }) async {
     final url = 'http://$ip:$port/share-offer';
-    await _dio.post(
-      url,
-      data: payload.toJson(),
-      options: Options(
-        headers: {Headers.contentTypeHeader: 'application/json'},
-        sendTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-      ),
-    );
+    await _postJson(url, payload.toJson(), const Duration(seconds: 15));
   }
 
   Future<void> postShareAccept({
@@ -107,15 +119,7 @@ class LanTransferService {
     required LanShareAcceptPayload payload,
   }) async {
     final url = 'http://$senderHost:$senderPort/share-accept';
-    await _dio.post(
-      url,
-      data: payload.toJson(),
-      options: Options(
-        headers: {Headers.contentTypeHeader: 'application/json'},
-        sendTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-      ),
-    );
+    await _postJson(url, payload.toJson(), const Duration(seconds: 15));
   }
 
   Future<void> postShareCancel({
@@ -124,15 +128,7 @@ class LanTransferService {
     required LanShareCancelPayload payload,
   }) async {
     final url = 'http://$ip:$port/share-cancel';
-    await _dio.post(
-      url,
-      data: payload.toJson(),
-      options: Options(
-        headers: {Headers.contentTypeHeader: 'application/json'},
-        sendTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
-      ),
-    );
+    await _postJson(url, payload.toJson(), const Duration(seconds: 10));
   }
 
   /// 查询对端已写入字节数（与 [sendFileStream] 使用相同的 `fileName` / `shareId` / `fileIndex`）。
@@ -154,23 +150,27 @@ class LanTransferService {
         'fileIndex': '$fileIndex',
       },
     );
-    final response = await _dio.getUri(
-      uri,
-      options: Options(
-        responseType: ResponseType.json,
-        sendTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
-      ),
-    );
-    dynamic data = response.data;
-    if (data is String) {
-      data = jsonDecode(data) as Map<String, dynamic>?;
+    final client = _newLanPeerClient();
+    try {
+      final req = await client.getUrl(uri);
+      req.headers.set(HttpHeaders.acceptHeader, 'application/json');
+      final res = await req.close().timeout(const Duration(seconds: 10));
+      final text = await utf8.decodeStream(res).timeout(const Duration(seconds: 10));
+      if (res.statusCode != HttpStatus.ok) return 0;
+      dynamic data = jsonDecode(text);
+      if (data is String) {
+        data = jsonDecode(data) as Map<String, dynamic>?;
+      }
+      if (data is! Map) return 0;
+      final o = data['offset'];
+      if (o is int) return o;
+      if (o is num) return o.toInt();
+      return 0;
+    } catch (_) {
+      return 0;
+    } finally {
+      client.close(force: true);
     }
-    if (data is! Map) return 0;
-    final o = data['offset'];
-    if (o is int) return o;
-    if (o is num) return o.toInt();
-    return 0;
   }
 
   /// 大文件走 [dart:io] [HttpClient]（显式关闭 idle 超时），避免 Dio 包装层长传断连。
@@ -178,11 +178,11 @@ class LanTransferService {
     required String url,
     required Stream<List<int>> fileStream,
     required Map<String, dynamic> headers,
-    CancelToken? cancelToken,
+    LanCancelToken? cancelToken,
     ProgressCallback? onSendProgress,
   }) async {
     final uri = Uri.parse(url);
-    final clRaw = headers[Headers.contentLengthHeader];
+    final clRaw = headers[HttpHeaders.contentLengthHeader];
     final contentLength = clRaw is int ? clRaw : int.parse(clRaw.toString());
     final stringHeaders = headers.map(
       (k, v) => MapEntry(k.toString(), v.toString()),
@@ -230,7 +230,7 @@ class LanTransferService {
     /// 从源文件的该偏移开始发送（请求体长度为 fileSize - resumeFromOffset）。
     int resumeFromOffset = 0,
     Function(double)? onProgress,
-    CancelToken? cancelToken,
+    LanCancelToken? cancelToken,
   }) async {
     final url = 'http://$ip:$port/upload';
     final total = batchTotalBytes > 0 ? batchTotalBytes : fileSize;
@@ -250,8 +250,8 @@ class LanTransferService {
         'X-File-Count': fileCount.toString(),
         'X-Batch-Total-Bytes': total.toString(),
         ResumableTransferHeaders.resumeOffset: resumeFromOffset.toString(),
-        Headers.contentLengthHeader: remaining,
-        Headers.contentTypeHeader: 'application/octet-stream',
+        HttpHeaders.contentLengthHeader: remaining,
+        HttpHeaders.contentTypeHeader: 'application/octet-stream',
       };
       if (shareId != null) {
         headers['X-Share-Id'] = shareId;
@@ -297,7 +297,7 @@ class LanTransferService {
     /// 本文件之前各文件体积之和（批量时用于 [onProgress]）。
     int batchBaseBytes = 0,
     void Function(double overallProgress01)? onProgress,
-    CancelToken? cancelToken,
+    LanCancelToken? cancelToken,
     int maxAttempts = 48,
   }) async {
     final f = File(filePath);
@@ -358,8 +358,8 @@ class LanTransferService {
         'X-File-Count': fileCount.toString(),
         'X-Batch-Total-Bytes': total.toString(),
         ResumableTransferHeaders.resumeOffset: start.toString(),
-        Headers.contentLengthHeader: remaining,
-        Headers.contentTypeHeader: 'application/octet-stream',
+        HttpHeaders.contentLengthHeader: remaining,
+        HttpHeaders.contentTypeHeader: 'application/octet-stream',
       };
       if (shareId != null) {
         headers['X-Share-Id'] = shareId;
@@ -406,3 +406,6 @@ class LanTransferService {
     }
   }
 }
+
+/// 与 Dio [ProgressCallback] 签名一致，便于与 [httpClientUploadOctetStream] 对接。
+typedef ProgressCallback = void Function(int count, int total);
