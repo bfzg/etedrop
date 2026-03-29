@@ -227,6 +227,35 @@ class MessageList extends _$MessageList {
     _persist();
   }
 
+  /// 发送方：对端已接受，开始推流
+  void markOutgoingShareReceivingByShareId(String shareId) {
+    state = [
+      for (final m in state)
+        if (m.shareId == shareId &&
+            m.isOutgoing &&
+            m.status == TransferMessageStatus.pending)
+          m.copyWith(status: TransferMessageStatus.receiving)
+        else
+          m,
+    ];
+    _persist();
+  }
+
+  /// 发送方：整批已成功送达（更新消息与分享页状态）
+  void markOutgoingShareCompletedByShareId(String shareId) {
+    state = [
+      for (final m in state)
+        if (m.shareId == shareId && m.isOutgoing)
+          m.copyWith(
+            status: TransferMessageStatus.completed,
+            progress: 1.0,
+          )
+        else
+          m,
+    ];
+    _persist();
+  }
+
   void updateStatus(String id, TransferMessageStatus status) {
     state = [
       for (final m in state)

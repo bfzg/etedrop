@@ -8,14 +8,21 @@ import '../../../styles/styles.dart';
 import '../../device/models/device_config.dart';
 import '../../lan/models/lan_device.dart';
 import '../../lan/providers/lan_provider.dart';
+import '../../message/models/transfer_message.dart';
+import '../../message/providers/message_provider.dart';
 
-/// 发起局域网分享后的状态区：分享 ID / 链接文案、取消、倒计时
+/// 发起局域网分享后的状态区：分享 ID / 链接文案、取消、倒计时；传输完成后与消息列表状态同步
 class LanSharePanel extends ConsumerStatefulWidget {
   final String shareId;
   final DateTime expiresAt;
-  final VoidCallback onCancel;
-  /// 2 分钟到期且本地倒计时归零时回调（用于同步清空页面状态；服务端取消已由 LanManager 处理）
+  /// 取消进行中的分享（通知对端 + 清空会话）
+  final VoidCallback onCancelSharing;
+  /// 仅关闭本卡片（已完成或无需再取消时）
+  final VoidCallback onDismissRecord;
+
+  /// 2 分钟到期且本地倒计时归零时回调（未完成传输时）
   final VoidCallback? onExpired;
+
   /// 本次邀约的目标设备（头像叠放）
   final List<LanDevice> recipients;
 
@@ -23,7 +30,8 @@ class LanSharePanel extends ConsumerStatefulWidget {
     super.key,
     required this.shareId,
     required this.expiresAt,
-    required this.onCancel,
+    required this.onCancelSharing,
+    required this.onDismissRecord,
     this.onExpired,
     this.recipients = const [],
   });
@@ -37,6 +45,15 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
   Duration _left = Duration.zero;
   bool _expiredNotified = false;
 
+  TransferMessage? _outgoing() {
+    for (final m in ref.watch(messageListProvider)) {
+      if (m.shareId == widget.shareId && m.isOutgoing) {
+        return m;
+      }
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +62,16 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
   }
 
   void _tick() {
+    final outgoing = _outgoingFromRead();
+    if (outgoing?.status == TransferMessageStatus.completed) {
+      _t?.cancel();
+      _t = null;
+      if (mounted) {
+        setState(() => _left = Duration.zero);
+      }
+      return;
+    }
+
     final now = DateTime.now();
     final expired = !now.isBefore(widget.expiresAt);
     final left = widget.expiresAt.difference(now);
@@ -54,6 +81,15 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
       _expiredNotified = true;
       widget.onExpired!();
     }
+  }
+
+  TransferMessage? _outgoingFromRead() {
+    for (final m in ref.read(messageListProvider)) {
+      if (m.shareId == widget.shareId && m.isOutgoing) {
+        return m;
+      }
+    }
+    return null;
   }
 
   @override
@@ -70,8 +106,24 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final outgoing = _outgoing();
+    final completed = outgoing?.status == TransferMessageStatus.completed;
+    final receiving = outgoing?.status == TransferMessageStatus.receiving;
+
     final mm = _left.inMinutes.remainder(60).toString().padLeft(2, '0');
     final ss = _left.inSeconds.remainder(60).toString().padLeft(2, '0');
+
+    final statusText = completed
+        ? '已完成'
+        : receiving
+            ? '传输中'
+            : (_left == Duration.zero ? '已结束' : '剩余 $mm:$ss');
+
+    final statusColor = completed
+        ? Colors.green
+        : receiving
+            ? theme.colorScheme.primary
+            : theme.colorScheme.onSurfaceVariant;
 
     return Card(
       elevation: 0,
@@ -88,18 +140,19 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
           children: [
             Row(
               children: [
-                Icon(Icons.link, size: 20, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
                 Text(
-                  '分享会话',
+                  '分享记录',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
                 const Spacer(),
                 Text(
-                  _left == Duration.zero ? '已结束' : '剩余 $mm:$ss',
-                  style: AppTextStyles.hint(context),
+                  statusText,
+                  style: AppTextStyles.hint(context).copyWith(
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -117,7 +170,11 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
             ),
             const SizedBox(height: 4),
             Text(
-              '对端需在消息里「接收」后才会开始传输；无人接受 2 分钟后自动取消。',
+              completed
+                  ? '对方已成功接收本次分享的全部文件。'
+                  : receiving
+                      ? '正在向对方设备传输文件，请保持本应用在前台或勿断网。'
+                      : '对端需在消息里「接收」后才会开始传输；无人接受 2 分钟后自动取消。',
               style: AppTextStyles.secondary(context),
             ),
             const SizedBox(height: 12),
@@ -127,22 +184,28 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: _linkText()));
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('已复制到剪贴板')),
-                      );
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
                     }
                   },
                   icon: const Icon(Icons.copy, size: 18),
                   label: const Text('复制'),
                 ),
                 const SizedBox(width: 8),
-                TextButton(
-                  onPressed: widget.onCancel,
-                  child: Text(
-                    '取消分享',
-                    style: TextStyle(color: theme.colorScheme.error),
+                if (completed)
+                  FilledButton.tonal(
+                    onPressed: widget.onDismissRecord,
+                    child: const Text('关闭'),
+                  )
+                else
+                  TextButton(
+                    onPressed: widget.onCancelSharing,
+                    child: Text(
+                      '取消分享',
+                      style: TextStyle(color: theme.colorScheme.error),
+                    ),
                   ),
-                ),
               ],
             ),
           ],
@@ -165,7 +228,9 @@ class _RecipientAvatarStack extends StatelessWidget {
     final theme = Theme.of(context);
     final n = devices.length > 8 ? 8 : devices.length;
     final extra = devices.length - n;
-    final width = n <= 1 ? _size : _size + (n - 1) * _overlap + (extra > 0 ? 12 : 0);
+    final width = n <= 1
+        ? _size
+        : _size + (n - 1) * _overlap + (extra > 0 ? 12 : 0);
 
     return SizedBox(
       height: _size + 4,
@@ -179,7 +244,10 @@ class _RecipientAvatarStack extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: theme.colorScheme.surface, width: 2),
+                  border: Border.all(
+                    color: theme.colorScheme.surface,
+                    width: 2,
+                  ),
                 ),
                 child: ClipOval(
                   child: Image.asset(

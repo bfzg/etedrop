@@ -2,15 +2,32 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/lan_device.dart';
 
 class LanDiscoveryService {
   static const int _broadcastPort = 53317;
+  /// 子网广播地址列表缓存 TTL，避免每轮广播都 `NetworkInterface.list`。
+  static const Duration _subnetBcastCacheTtl = Duration(seconds: 45);
+  /// 启动后一段时间内较快发心跳，便于新设备尽快出现在列表。
+  static const Duration _fastHeartbeatPhase = Duration(seconds: 90);
+  static const Duration _fastHeartbeatInterval = Duration(seconds: 2);
+  /// 稳定后降频，仍远低于上层离线判定窗口（如 120s）。
+  static const Duration _steadyHeartbeatInterval = Duration(seconds: 5);
+  /// `connectivity_plus` 在「Wi‑Fi → Wi‑Fi」时常不派发事件（结果仍为 wifi），用网卡 IPv4 指纹轮询补齐。
+  static const Duration _ifaceFingerprintPollInterval = Duration(seconds: 3);
+
   RawDatagramSocket? _socket;
   Timer? _broadcastTimer;
-  
+  Timer? _ifacePollTimer;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  DateTime? _heartbeatPhaseStartedAt;
+  DateTime? _subnetBcastCacheAt;
+  List<String> _subnetBroadcastAddresses = const [];
+  String _ifaceFingerprint = '';
+
   final String deviceId;
   final int httpPort;
   final String os;
@@ -39,7 +56,7 @@ class LanDiscoveryService {
       changed = true;
     }
     if (changed) {
-      unawaited(_broadcastPresence());
+      unawaited(_broadcastPresence(forceSubnetRefresh: false));
     }
   }
 
@@ -50,29 +67,113 @@ class LanDiscoveryService {
 
       _socket!.listen((RawSocketEvent event) {
         if (event == RawSocketEvent.read) {
-          final datagram = _socket!.receive();
-          if (datagram != null) {
+          // 一次 read 事件里可能积压多包，需排空队列，否则会漏更新 lastSeen 导致误判离线
+          while (true) {
+            final datagram = _socket!.receive();
+            if (datagram == null) break;
             _handleMessage(datagram);
           }
         }
       });
 
       _startBroadcasting();
+      _watchConnectivity();
+      _startIfaceFingerprintPolling();
     } catch (e) {
       debugPrint('LAN Discovery start failed: $e');
     }
   }
 
-  void _startBroadcasting() {
-    _broadcastTimer?.cancel();
-    _broadcastTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      unawaited(_broadcastPresence());
-    });
-    unawaited(_broadcastPresence());
+  void _watchConnectivity() {
+    _connectivitySub?.cancel();
+    _connectivitySub = Connectivity().onConnectivityChanged.listen(
+      (List<ConnectivityResult> _) {
+        if (_socket == null) return;
+        // Wi‑Fi / 网络切换后子网会变：强制重算定向广播并重发，避免卡在旧缓存
+        _heartbeatPhaseStartedAt = DateTime.now();
+        unawaited(_broadcastPresence(forceSubnetRefresh: true));
+      },
+      onError: (Object e, StackTrace _) {
+        debugPrint('LAN connectivity watch error: $e');
+      },
+    );
   }
 
-  Future<void> _broadcastPresence() async {
+  void _startIfaceFingerprintPolling() {
+    _ifacePollTimer?.cancel();
+    _ifacePollTimer = Timer.periodic(_ifaceFingerprintPollInterval, (_) {
+      unawaited(_pollIfaceFingerprintIfChanged());
+    });
+  }
+
+  Future<void> _pollIfaceFingerprintIfChanged() async {
     if (_socket == null) return;
+    try {
+      final ifaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+      final fp = _fingerprintForIfaces(ifaces);
+      if (fp == _ifaceFingerprint) return;
+      _ifaceFingerprint = fp;
+      _subnetBroadcastAddresses = _subnetBcastsFromIfaces(ifaces);
+      _subnetBcastCacheAt = DateTime.now();
+      _heartbeatPhaseStartedAt = DateTime.now();
+      _emitPresencePayload();
+    } catch (e) {
+      debugPrint('LAN iface fingerprint poll: $e');
+    }
+  }
+
+  void _startBroadcasting() {
+    _broadcastTimer?.cancel();
+    _heartbeatPhaseStartedAt = DateTime.now();
+    unawaited(_broadcastPresence(forceSubnetRefresh: true));
+    _scheduleNextHeartbeat();
+  }
+
+  void _scheduleNextHeartbeat() {
+    _broadcastTimer?.cancel();
+    final started = _heartbeatPhaseStartedAt;
+    final interval = started != null &&
+            DateTime.now().difference(started) < _fastHeartbeatPhase
+        ? _fastHeartbeatInterval
+        : _steadyHeartbeatInterval;
+    _broadcastTimer = Timer(interval, () {
+      unawaited(_broadcastPresence(forceSubnetRefresh: false));
+      _scheduleNextHeartbeat();
+    });
+  }
+
+  Future<void> _refreshSubnetBroadcastTargets({bool force = false}) async {
+    final now = DateTime.now();
+    if (!force &&
+        _subnetBcastCacheAt != null &&
+        now.difference(_subnetBcastCacheAt!) < _subnetBcastCacheTtl) {
+      return;
+    }
+    try {
+      final ifaces = await NetworkInterface.list(
+        includeLoopback: false,
+        type: InternetAddressType.IPv4,
+      );
+      _ifaceFingerprint = _fingerprintForIfaces(ifaces);
+      _subnetBroadcastAddresses = _subnetBcastsFromIfaces(ifaces);
+      _subnetBcastCacheAt = now;
+    } catch (e) {
+      debugPrint('LAN NetworkInterface.list for broadcast: $e');
+    }
+  }
+
+  Future<void> _broadcastPresence({required bool forceSubnetRefresh}) async {
+    if (_socket == null) return;
+    await _refreshSubnetBroadcastTargets(force: forceSubnetRefresh);
+    _emitPresencePayload();
+  }
+
+  void _emitPresencePayload() {
+    final socket = _socket;
+    if (socket == null) return;
 
     final payload = jsonEncode({
       'deviceId': deviceId,
@@ -83,7 +184,6 @@ class LanDiscoveryService {
     });
 
     final bytes = utf8.encode(payload);
-    final socket = _socket!;
 
     void sendTo(InternetAddress addr) {
       try {
@@ -97,26 +197,38 @@ class LanDiscoveryService {
     sendTo(InternetAddress('255.255.255.255'));
 
     // 各网卡子网定向广播（/24），显著改善 macOS ↔ Windows 等跨平台发现
-    try {
-      final ifaces = await NetworkInterface.list(
-        includeLoopback: false,
-        type: InternetAddressType.IPv4,
-      );
-      final seen = <String>{};
-      for (final ni in ifaces) {
-        for (final a in ni.addresses) {
-          if (a.type != InternetAddressType.IPv4 || a.isLoopback) continue;
-          final bcast = _ipv4SubnetBroadcast24(a.address);
-          if (bcast == null || seen.contains(bcast)) continue;
-          seen.add(bcast);
-          try {
-            sendTo(InternetAddress(bcast));
-          } catch (_) {}
-        }
-      }
-    } catch (e) {
-      debugPrint('LAN NetworkInterface.list for broadcast: $e');
+    for (final bcast in _subnetBroadcastAddresses) {
+      try {
+        sendTo(InternetAddress(bcast));
+      } catch (_) {}
     }
+  }
+
+  static String _fingerprintForIfaces(List<NetworkInterface> ifaces) {
+    final ips = <String>[];
+    for (final ni in ifaces) {
+      for (final a in ni.addresses) {
+        if (a.type != InternetAddressType.IPv4 || a.isLoopback) continue;
+        ips.add(a.address);
+      }
+    }
+    ips.sort();
+    return ips.join('|');
+  }
+
+  static List<String> _subnetBcastsFromIfaces(List<NetworkInterface> ifaces) {
+    final seen = <String>{};
+    final next = <String>[];
+    for (final ni in ifaces) {
+      for (final a in ni.addresses) {
+        if (a.type != InternetAddressType.IPv4 || a.isLoopback) continue;
+        final bcast = _ipv4SubnetBroadcast24(a.address);
+        if (bcast == null || seen.contains(bcast)) continue;
+        seen.add(bcast);
+        next.add(bcast);
+      }
+    }
+    return next;
   }
 
   /// 按常见家用局域网 /24 计算定向广播地址（如 192.168.1.10 → 192.168.1.255）
@@ -163,8 +275,16 @@ class LanDiscoveryService {
   }
 
   void stop() {
+    _connectivitySub?.cancel();
+    _connectivitySub = null;
+    _ifacePollTimer?.cancel();
+    _ifacePollTimer = null;
     _broadcastTimer?.cancel();
     _broadcastTimer = null;
+    _heartbeatPhaseStartedAt = null;
+    _subnetBcastCacheAt = null;
+    _subnetBroadcastAddresses = const [];
+    _ifaceFingerprint = '';
     _socket?.close();
     _socket = null;
   }

@@ -207,7 +207,8 @@ class _SendPageState extends ConsumerState<SendPage> {
               shareId: _activeShareId!,
               expiresAt: _activeExpiresAt!,
               recipients: _activeRecipients,
-              onCancel: _cancelShare,
+              onCancelSharing: _cancelShare,
+              onDismissRecord: _clearActiveShareState,
               onExpired: () {
                 if (!mounted) return;
                 _clearActiveShareState();

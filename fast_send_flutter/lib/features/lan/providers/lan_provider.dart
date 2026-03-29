@@ -21,6 +21,9 @@ import '../services/lan_transfer_service.dart';
 
 part 'lan_provider.g.dart';
 
+/// 超过该时间未收到发现广播才视为离线（UDP 易丢包，过短会导致头像周期性消失）
+const int _lanDeviceStaleMs = 120000;
+
 class _OutgoingShare {
   final String shareId;
   final List<String> filePaths;
@@ -46,6 +49,9 @@ class LanManager extends _$LanManager {
 
   final Map<String, Completer<bool>> _pendingDecisions = {};
   final Map<String, _OutgoingShare> _outgoingShares = {};
+  /// 多设备同时接受时，每个上传任务结束递减；归零且任一批成功则收尾会话
+  final Map<String, int> _outboundUploadRefCount = {};
+  final Map<String, bool> _outboundHadSuccess = {};
 
   @override
   List<LanDevice> build() {
@@ -111,9 +117,10 @@ class LanManager extends _$LanManager {
 
     await _discovery!.start();
 
-    _cleanupTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _cleanupTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       final now = DateTime.now().millisecondsSinceEpoch;
-      final filtered = state.where((d) => now - d.lastSeen < 10000).toList();
+      final filtered =
+          state.where((d) => now - d.lastSeen < _lanDeviceStaleMs).toList();
       if (filtered.length != state.length) {
         state = filtered;
       }
@@ -137,6 +144,8 @@ class LanManager extends _$LanManager {
       s.expiryTimer.cancel();
     }
     _outgoingShares.clear();
+    _outboundUploadRefCount.clear();
+    _outboundHadSuccess.clear();
   }
 
   // —— 接收：分享邀约 —— //
@@ -221,54 +230,96 @@ class LanManager extends _$LanManager {
     }
     if (device == null) return;
 
+    _outboundUploadRefCount[payload.shareId] =
+        (_outboundUploadRefCount[payload.shareId] ?? 0) + 1;
+    ref
+        .read(messageListProvider.notifier)
+        .markOutgoingShareReceivingByShareId(payload.shareId);
     unawaited(_uploadBatchToDevice(device, session));
+  }
+
+  void _onOutboundUploadFinished(String shareId, bool batchOk) {
+    if (batchOk) {
+      _outboundHadSuccess[shareId] = true;
+    }
+    final next = (_outboundUploadRefCount[shareId] ?? 1) - 1;
+    if (next <= 0) {
+      _outboundUploadRefCount.remove(shareId);
+      final anyOk = _outboundHadSuccess.remove(shareId) == true;
+      if (anyOk) {
+        _finalizeOutboundShareDelivery(shareId);
+      }
+    } else {
+      _outboundUploadRefCount[shareId] = next;
+    }
+  }
+
+  void _finalizeOutboundShareDelivery(String shareId) {
+    final session = _outgoingShares.remove(shareId);
+    if (session != null && !session.cancelled) {
+      session.cancelled = true;
+      session.expiryTimer.cancel();
+    }
+    ref
+        .read(messageListProvider.notifier)
+        .markOutgoingShareCompletedByShareId(shareId);
   }
 
   Future<void> _uploadBatchToDevice(
     LanDevice device,
     _OutgoingShare session,
   ) async {
-    final transfer = LanTransferService();
-    final senderName = ref.read(deviceNameProvider);
-    final senderAvatar = ref.read(deviceAvatarProvider);
-    final senderDeviceId = ref.read(deviceIdProvider) ?? '';
+    var batchOk = false;
+    try {
+      final transfer = LanTransferService();
+      final senderName = ref.read(deviceNameProvider);
+      final senderAvatar = ref.read(deviceAvatarProvider);
+      final senderDeviceId = ref.read(deviceIdProvider) ?? '';
 
-    final isAlive = await transfer.ping(device.ip, device.port);
-    if (!isAlive) return;
+      final isAlive = await transfer.ping(device.ip, device.port);
+      if (!isAlive) return;
 
-    var totalBytes = 0;
-    for (final path in session.filePaths) {
-      final f = File(path);
-      if (await f.exists()) {
-        totalBytes += await f.length();
+      var totalBytes = 0;
+      for (final path in session.filePaths) {
+        final f = File(path);
+        if (await f.exists()) {
+          totalBytes += await f.length();
+        }
       }
-    }
-    final n = session.filePaths.length;
+      final n = session.filePaths.length;
 
-    for (var i = 0; i < n; i++) {
-      final path = session.filePaths[i];
-      final f = File(path);
-      if (!await f.exists()) continue;
-      final size = await f.length();
-      try {
-        await transfer.sendFileStream(
-          ip: device.ip,
-          port: device.port,
-          fileStream: f.openRead(),
-          fileName: p.basename(path),
-          fileSize: size,
-          senderName: senderName,
-          senderAvatar: senderAvatar,
-          senderDeviceId: senderDeviceId,
-          shareId: session.shareId,
-          fileIndex: i,
-          fileCount: n,
-          batchTotalBytes: totalBytes,
-          onProgress: (_) {},
-        );
-      } catch (e) {
-        debugPrint('Upload failed: $e');
+      var expected = 0;
+      var uploaded = 0;
+      for (var i = 0; i < n; i++) {
+        final path = session.filePaths[i];
+        final f = File(path);
+        if (!await f.exists()) continue;
+        expected++;
+        final size = await f.length();
+        try {
+          await transfer.sendFileStream(
+            ip: device.ip,
+            port: device.port,
+            fileStream: f.openRead(),
+            fileName: p.basename(path),
+            fileSize: size,
+            senderName: senderName,
+            senderAvatar: senderAvatar,
+            senderDeviceId: senderDeviceId,
+            shareId: session.shareId,
+            fileIndex: i,
+            fileCount: n,
+            batchTotalBytes: totalBytes,
+            onProgress: (_) {},
+          );
+          uploaded++;
+        } catch (e) {
+          debugPrint('Upload failed: $e');
+        }
       }
+      batchOk = expected > 0 && uploaded == expected;
+    } finally {
+      _onOutboundUploadFinished(session.shareId, batchOk);
     }
   }
 
