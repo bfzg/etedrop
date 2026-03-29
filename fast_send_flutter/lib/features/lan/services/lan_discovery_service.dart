@@ -21,6 +21,8 @@ class LanDiscoveryService {
   static const Duration _steadyHeartbeatInterval = Duration(seconds: 5);
   /// `connectivity_plus` 在「Wi‑Fi → Wi‑Fi」时常不派发事件（结果仍为 wifi），用网卡 IPv4 指纹轮询补齐。
   static const Duration _ifaceFingerprintPollInterval = Duration(seconds: 3);
+  /// 正常退出时连发 bye，降低单包丢失导致对端长时间仍显示在线的概率。
+  static const int _byeBurstCount = 5;
 
   RawDatagramSocket? _socket;
   Timer? _broadcastTimer;
@@ -104,9 +106,11 @@ class LanDiscoveryService {
     if (socket == null) return;
     final group = InternetAddress(_multicastGroupIpv4);
     try {
-      final ifaces = await NetworkInterface.list(
-        includeLoopback: false,
-        type: InternetAddressType.IPv4,
+      final ifaces = _interfacesForLanDiscovery(
+        await NetworkInterface.list(
+          includeLoopback: false,
+          type: InternetAddressType.IPv4,
+        ),
       );
 
       for (final name in _multicastJoinedIfNames.toList()) {
@@ -164,9 +168,11 @@ class LanDiscoveryService {
   Future<void> _pollIfaceFingerprintIfChanged() async {
     if (_socket == null) return;
     try {
-      final ifaces = await NetworkInterface.list(
-        includeLoopback: false,
-        type: InternetAddressType.IPv4,
+      final ifaces = _interfacesForLanDiscovery(
+        await NetworkInterface.list(
+          includeLoopback: false,
+          type: InternetAddressType.IPv4,
+        ),
       );
       final fp = _fingerprintForIfaces(ifaces);
       if (fp == _ifaceFingerprint) return;
@@ -209,9 +215,11 @@ class LanDiscoveryService {
       return;
     }
     try {
-      final ifaces = await NetworkInterface.list(
-        includeLoopback: false,
-        type: InternetAddressType.IPv4,
+      final ifaces = _interfacesForLanDiscovery(
+        await NetworkInterface.list(
+          includeLoopback: false,
+          type: InternetAddressType.IPv4,
+        ),
       );
       final newFp = _fingerprintForIfaces(ifaces);
       final fpChanged = newFp != _ifaceFingerprint;
@@ -272,6 +280,29 @@ class LanDiscoveryService {
     } catch (e) {
       debugPrint('LAN multicast send failed: $e');
     }
+  }
+
+  /// 排除易抖动的隧道/虚拟网卡，避免 macOS 上 utun/awdl 等地址变化触发频繁多播重绑，误判对端离线。
+  static bool _shouldSkipInterfaceForLanDiscovery(String name) {
+    final n = name.toLowerCase();
+    if (n.startsWith('utun')) return true;
+    if (n.contains('awdl')) return true;
+    if (n.startsWith('llw')) return true;
+    if (n.startsWith('bridge')) return true;
+    if (n.startsWith('docker')) return true;
+    if (n.startsWith('br-') || n.startsWith('veth')) return true;
+    if (n.startsWith('virbr')) return true;
+    if (n == 'gif0' || n == 'stf0') return true;
+    return false;
+  }
+
+  static List<NetworkInterface> _interfacesForLanDiscovery(
+    List<NetworkInterface> ifaces,
+  ) {
+    final filtered = ifaces
+        .where((ni) => !_shouldSkipInterfaceForLanDiscovery(ni.name))
+        .toList();
+    return filtered.isNotEmpty ? filtered : ifaces;
   }
 
   static String _fingerprintForIfaces(List<NetworkInterface> ifaces) {
@@ -353,7 +384,10 @@ class LanDiscoveryService {
 
   void stop() {
     // 正常退出时通知局域网内其他实例立即摘牌（崩溃/强杀则仍依赖对端超时）
-    _sendJsonToLan({'deviceId': deviceId, 'bye': true});
+    final bye = {'deviceId': deviceId, 'bye': true};
+    for (var i = 0; i < _byeBurstCount; i++) {
+      _sendJsonToLan(bye);
+    }
 
     _connectivitySub?.cancel();
     _connectivitySub = null;
