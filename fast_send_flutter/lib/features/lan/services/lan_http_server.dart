@@ -280,6 +280,7 @@ class LanHttpServer {
     const flushStrideBytes = 4 * 1024 * 1024;
     var sinceFlush = 0;
 
+    var responseClosed = false;
     try {
       await for (final chunk in request) {
         sink.add(chunk);
@@ -310,18 +311,31 @@ class LanHttpServer {
         }
       }
 
+      request.response.headers.set(HttpHeaders.connectionHeader, 'close');
       request.response.statusCode = HttpStatus.ok;
       request.response.write('Success');
       await request.response.close();
-
-      onComplete?.call(ctx);
+      responseClosed = true;
     } catch (e) {
       try {
         await sink.close();
       } catch (_) {}
       onError?.call(ctx, e.toString());
-      request.response.statusCode = HttpStatus.internalServerError;
-      await request.response.close();
+      if (!responseClosed) {
+        try {
+          request.response.headers.set(HttpHeaders.connectionHeader, 'close');
+          request.response.statusCode = HttpStatus.internalServerError;
+          await request.response.close();
+        } catch (_) {}
+      }
+      return;
+    }
+
+    try {
+      onComplete?.call(ctx);
+    } catch (e, st) {
+      // 文件已落盘且 HTTP 200 已发出；此处失败不应再写 response，也不应把整次接收标为失败。
+      debugPrint('LAN upload onComplete error: $e\n$st');
     }
   }
 }
