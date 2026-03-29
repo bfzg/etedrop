@@ -28,5 +28,13 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- macOS 本地网络隐私：无此项则不会弹出「允许在网络上发现设备」类授权，多播/局域网发现可能被静默拦截 -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>用于在同一局域网内发现并连接附近设备，以进行文件分享与传输。</string>
+	<!-- 声明会通过局域网暴露/使用的 Bonjour 类型；与内置 HTTP 服务一致，满足系统对本地网络权限的校验 -->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_http._tcp</string>
+	</array>
 </dict>
 </plist>

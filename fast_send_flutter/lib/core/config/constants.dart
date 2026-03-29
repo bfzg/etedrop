@@ -9,11 +9,11 @@ class AppConstants {
   /// 信令服务器地址（WebRTC 文件传输用）
   // static const String signalingServerUrl = 'wss://fastsend.ing/api/connect';
   // static const String signalingServerUrl = 'ws://43.153.143.37:40321/api/connect';
-  static const String signalingServerUrl = 'ws://192.168.1.7/api/connect';
+  static const String signalingServerUrl = 'ws://192.168.1.7:3000/api/connect';
 
   /// 设备管理 WebSocket 地址（分享功能用）
   // static const String shareServerUrl = 'ws://43.153.143.37:40321/api/share';
-  static const String shareServerUrl = 'ws://192.168.1.7/api/share';
+  static const String shareServerUrl = 'ws://192.168.1.7:3000/api/share';
 
   /// 应用名称
   static const String appName = 'Eddy';
