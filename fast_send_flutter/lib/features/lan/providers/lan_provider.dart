@@ -65,6 +65,7 @@ class LanManager extends _$LanManager {
 
   final Map<String, Completer<bool>> _pendingDecisions = {};
   final Map<String, _OutgoingShare> _outgoingShares = {};
+
   /// 多设备同时接受时，每个上传任务结束递减；归零且任一批成功则收尾会话
   final Map<String, int> _outboundUploadRefCount = {};
   final Map<String, bool> _outboundHadSuccess = {};
@@ -141,10 +142,7 @@ class LanManager extends _$LanManager {
 
     _goneSub = _discovery!.onDeviceGone.listen((id) {
       final next = state
-          .map(
-            (d) =>
-                d.deviceId == id ? d.copyWith(isOnline: false) : d,
-          )
+          .map((d) => d.deviceId == id ? d.copyWith(isOnline: false) : d)
           .toList();
       if (!_lanDeviceListEquals(state, next)) {
         state = next;
@@ -165,15 +163,16 @@ class LanManager extends _$LanManager {
 
   Future<List<LanDevice>> _loadRememberedLanDevices() async {
     try {
-      final raw = LocalStorageService.instance
-          .get<String>(StorageKeys.lanRememberedDevices);
+      final raw = LocalStorageService.instance.get<String>(
+        StorageKeys.lanRememberedDevices,
+      );
       if (raw == null || raw.isEmpty) return [];
       final decoded = jsonDecode(raw) as List<dynamic>;
       return decoded
           .map(
             (e) => LanDevice.fromJson(
-                  Map<String, dynamic>.from(e as Map),
-                ).copyWith(isOnline: false),
+              Map<String, dynamic>.from(e as Map),
+            ).copyWith(isOnline: false),
           )
           .toList();
     } catch (e) {
@@ -192,8 +191,10 @@ class LanManager extends _$LanManager {
   Future<void> _flushPersistRememberedDevices() async {
     try {
       final encoded = jsonEncode(state.map((d) => d.toJson()).toList());
-      await LocalStorageService.instance
-          .set<String>(StorageKeys.lanRememberedDevices, encoded);
+      await LocalStorageService.instance.set<String>(
+        StorageKeys.lanRememberedDevices,
+        encoded,
+      );
     } catch (e) {
       debugPrint('LAN remembered persist: $e');
     }
@@ -242,7 +243,9 @@ class LanManager extends _$LanManager {
     if (DateTime.now().millisecondsSinceEpoch > offer.expiresAtMs) return;
 
     final files = offer.files.map((e) => e.toJson()).toList();
-    ref.read(messageListProvider.notifier).addIncomingBatchOffer(
+    ref
+        .read(messageListProvider.notifier)
+        .addIncomingBatchOffer(
           shareId: offer.shareId,
           senderName: offer.senderName,
           senderDeviceId: offer.senderDeviceId,
@@ -259,10 +262,9 @@ class LanManager extends _$LanManager {
             .read(messageListProvider.notifier)
             .findIncomingByShareId(offer.shareId);
         if (m != null && m.status == TransferMessageStatus.pending) {
-          ref.read(messageListProvider.notifier).expireIncomingByShareId(
-                offer.shareId,
-                reason: '等待超时',
-              );
+          ref
+              .read(messageListProvider.notifier)
+              .expireIncomingByShareId(offer.shareId, reason: '等待超时');
         }
       });
     }
@@ -277,14 +279,16 @@ class LanManager extends _$LanManager {
   }
 
   Future<void> _onIncomingShareCancel(LanShareCancelPayload cancel) async {
-    ref.read(messageListProvider.notifier).rejectByShareId(
-          cancel.shareId,
-          reason: '发送方已取消',
-        );
+    ref
+        .read(messageListProvider.notifier)
+        .rejectByShareId(cancel.shareId, reason: '发送方已取消');
   }
 
   /// 接收方点击接受/拒绝后，回调发送方 HTTP
-  Future<void> receiverRespondToShare(TransferMessage msg, bool accepted) async {
+  Future<void> receiverRespondToShare(
+    TransferMessage msg,
+    bool accepted,
+  ) async {
     if (msg.shareId == null ||
         msg.senderHttpHost == null ||
         msg.senderHttpPort == null) {
@@ -436,26 +440,22 @@ class LanManager extends _$LanManager {
 
     final host = await getLanIPv4() ?? '127.0.0.1';
     final shareId = const Uuid().v4();
-    final expiresAt =
-        DateTime.now().add(const Duration(minutes: 2)).millisecondsSinceEpoch;
+    final expiresAt = DateTime.now()
+        .add(const Duration(minutes: 2))
+        .millisecondsSinceEpoch;
 
     final files = <LanShareFileMeta>[];
     for (final path in absoluteFilePaths) {
       final f = File(path);
       if (!await f.exists()) continue;
       files.add(
-        LanShareFileMeta(
-          name: p.basename(path),
-          size: await f.length(),
-        ),
+        LanShareFileMeta(name: p.basename(path), size: await f.length()),
       );
     }
     if (files.isEmpty) throw Exception('无法读取所选文件');
 
     final targets = state
-        .where(
-          (d) => targetDeviceIds.contains(d.deviceId) && d.isOnline,
-        )
+        .where((d) => targetDeviceIds.contains(d.deviceId) && d.isOnline)
         .toList();
     if (targets.isEmpty) {
       throw Exception('所选设备不在线或已离线，请等待设备上线后再试');
@@ -491,7 +491,9 @@ class LanManager extends _$LanManager {
     );
 
     final fileMaps = files.map((e) => e.toJson()).toList();
-    ref.read(messageListProvider.notifier).addOutgoingBatchShare(
+    ref
+        .read(messageListProvider.notifier)
+        .addOutgoingBatchShare(
           shareId: shareId,
           absoluteFilePaths: List<String>.from(absoluteFilePaths),
           targetDeviceIds: targets.map((d) => d.deviceId).toList(),
@@ -518,7 +520,9 @@ class LanManager extends _$LanManager {
       }
     }
 
-    ref.read(messageListProvider.notifier).expireOutgoingShareIfPending(
+    ref
+        .read(messageListProvider.notifier)
+        .expireOutgoingShareIfPending(
           shareId,
           reason: userCancelled ? '已取消' : '已超时',
         );
@@ -531,7 +535,9 @@ class LanManager extends _$LanManager {
       return _legacyReceiveUpload(ctx);
     }
 
-    final msg = ref.read(messageListProvider.notifier).findIncomingByShareId(sid);
+    final msg = ref
+        .read(messageListProvider.notifier)
+        .findIncomingByShareId(sid);
     if (msg == null) return false;
     if (msg.status == TransferMessageStatus.pending) return false;
     if (msg.status == TransferMessageStatus.rejected) return false;
@@ -586,13 +592,15 @@ class LanManager extends _$LanManager {
     } else {
       final messages = ref.read(messageListProvider);
       final msg = messages.cast<TransferMessage?>().firstWhere(
-            (m) =>
-                m!.fileName == ctx.fileName &&
-                m.status == TransferMessageStatus.receiving,
-            orElse: () => null,
-          );
+        (m) =>
+            m!.fileName == ctx.fileName &&
+            m.status == TransferMessageStatus.receiving,
+        orElse: () => null,
+      );
       if (msg != null) {
-        ref.read(messageListProvider.notifier).updateProgress(msg.id, batchProgress);
+        ref
+            .read(messageListProvider.notifier)
+            .updateProgress(msg.id, batchProgress);
       }
     }
   }
@@ -614,12 +622,12 @@ class LanManager extends _$LanManager {
     } else {
       final messages = ref.read(messageListProvider);
       final msg = messages.cast<TransferMessage?>().firstWhere(
-            (m) =>
-                m!.fileName == ctx.fileName &&
-                (m.status == TransferMessageStatus.receiving ||
-                    m.status == TransferMessageStatus.accepted),
-            orElse: () => null,
-          );
+        (m) =>
+            m!.fileName == ctx.fileName &&
+            (m.status == TransferMessageStatus.receiving ||
+                m.status == TransferMessageStatus.accepted),
+        orElse: () => null,
+      );
       if (msg != null) {
         ref.read(messageListProvider.notifier).markCompleted(msg.id);
         NotificationService.instance.showTransferCompleted(
@@ -643,11 +651,11 @@ class LanManager extends _$LanManager {
     } else {
       final messages = ref.read(messageListProvider);
       final msg = messages.cast<TransferMessage?>().firstWhere(
-            (m) =>
-                m!.fileName == ctx.fileName &&
-                m.status == TransferMessageStatus.receiving,
-            orElse: () => null,
-          );
+        (m) =>
+            m!.fileName == ctx.fileName &&
+            m.status == TransferMessageStatus.receiving,
+        orElse: () => null,
+      );
       if (msg != null) {
         ref.read(messageListProvider.notifier).markFailed(msg.id, error);
       }

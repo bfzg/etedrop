@@ -23,7 +23,8 @@ class NearbyDeviceGrid extends ConsumerWidget {
     final raw = ref.watch(lanManagerProvider);
     final myDeviceId = ref.watch(deviceIdProvider);
     final theme = Theme.of(context);
-    final devices = [...raw]..sort((a, b) {
+    final devices = [...raw]
+      ..sort((a, b) {
         if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
         final aSelf = a.deviceId == myDeviceId;
         final bSelf = b.deviceId == myDeviceId;
@@ -98,9 +99,10 @@ class NearbyDeviceGrid extends ConsumerWidget {
                 isSelf: isSelf,
                 onTap: isSelf
                     ? null
-                    : (!device.isOnline && !selectedIds.contains(device.deviceId))
-                        ? null
-                        : () => onToggle(device.deviceId),
+                    : (!device.isOnline &&
+                          !selectedIds.contains(device.deviceId))
+                    ? null
+                    : () => onToggle(device.deviceId),
               );
             }).toList(),
           ),
@@ -124,10 +126,26 @@ class _DeviceAvatar extends StatelessWidget {
 
   static const double _size = 84;
   static const ColorFilter _grayscale = ColorFilter.matrix(<double>[
-    0.2126, 0.7152, 0.0722, 0, 0,
-    0.2126, 0.7152, 0.0722, 0, 0,
-    0.2126, 0.7152, 0.0722, 0, 0,
-    0, 0, 0, 1, 0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
   ]);
 
   String _osLabel(String os) {
@@ -179,9 +197,10 @@ class _DeviceAvatar extends StatelessWidget {
                           color: selected
                               ? AppStyles.primary
                               : dimmed
-                                  ? theme.colorScheme.outlineVariant
-                                      .withValues(alpha: 0.45)
-                                  : theme.colorScheme.outlineVariant,
+                              ? theme.colorScheme.outlineVariant.withValues(
+                                  alpha: 0.45,
+                                )
+                              : theme.colorScheme.outlineVariant,
                           width: selected ? 3 : 2,
                         ),
                       ),
@@ -269,8 +288,8 @@ class _DeviceAvatar extends StatelessWidget {
                 color: dimmed
                     ? theme.colorScheme.onSurface.withValues(alpha: 0.45)
                     : selected
-                        ? AppStyles.primary
-                        : theme.colorScheme.onSurface,
+                    ? AppStyles.primary
+                    : theme.colorScheme.onSurface,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
@@ -282,12 +301,8 @@ class _DeviceAvatar extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: offline
-                    ? theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.45,
-                      )
-                    : theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.6,
-                      ),
+                    ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45)
+                    : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
               maxLines: 1,
               textAlign: TextAlign.center,

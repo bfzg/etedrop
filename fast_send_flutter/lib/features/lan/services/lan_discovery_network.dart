@@ -17,6 +17,15 @@ abstract final class LanDiscoveryNetwork {
     if (n.startsWith('br-') || n.startsWith('veth')) return true;
     if (n.startsWith('virbr')) return true;
     if (n == 'gif0' || n == 'stf0') return true;
+    // Windows：Clash for Windows 等 TAP/TUN，绑定其 IP 常 errno 10049，且不应参与局域网发现
+    if (n.contains('cfw-tap')) return true;
+    if (n.contains('wintun')) return true;
+    if (n.contains('sing-tun')) return true;
+    if (n.contains('zerotier')) return true;
+    if (n.contains('wireguard')) return true;
+    if (n.contains('nordlynx')) return true;
+    if (n.contains('openvpn')) return true;
+    if (n.contains('tap-windows')) return true;
     return false;
   }
 

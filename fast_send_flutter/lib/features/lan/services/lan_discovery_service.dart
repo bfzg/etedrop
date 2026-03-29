@@ -42,6 +42,9 @@ class LanDiscoveryService {
   /// [stop] 时递增，使进行中的 `_recreateBindingsBody` 在 await 后放弃并释放半初始化 socket。
   int _lifecycleEpoch = 0;
 
+  /// 避免启动时 connectivity + start 连续 force 重建时重复打印相同一行。
+  String _lastUdpBindLogKey = '';
+
   final List<_LanDiscoveryBinding> _bindings = [];
   List<NetworkInterface> _lastEligibleIfaces = [];
   String _ifaceFingerprint = '';
@@ -124,31 +127,60 @@ class LanDiscoveryService {
     _disposeBindings();
     if (gen != _lifecycleEpoch) return;
 
-    for (final ni in ifaces) {
+    // macOS（Darwin）上按「网卡 IPv4 + 独立 socket」绑定后，多播/子网广播常被内核投递异常，表现为
+    // 本机能发出发现包、对端可见，但收不到 Windows 等发来的包。统一 bind 0.0.0.0 并对各接口 joinMulticast
+    // 与多数原生实现一致，可恢复双向发现。
+    var usedMacUnifiedBind = false;
+    if (Platform.isMacOS) {
+      await _openFallbackBinding();
+      usedMacUnifiedBind = _bindings.isNotEmpty;
       if (gen != _lifecycleEpoch) return;
-      final b = await _openBindingForInterface(ni);
-      if (b != null) {
-        _bindings.add(b);
-      }
     }
 
-    if (_bindings.isEmpty) {
-      await _openFallbackBinding();
+    if (!usedMacUnifiedBind) {
+      for (final ni in ifaces) {
+        if (gen != _lifecycleEpoch) return;
+        final b = await _openBindingForInterface(ni);
+        if (b != null) {
+          _bindings.add(b);
+        }
+      }
+
+      if (_bindings.isEmpty) {
+        await _openFallbackBinding();
+      }
     }
     if (gen != _lifecycleEpoch) {
       _disposeBindings();
       return;
     }
 
-    if (_bindings.isNotEmpty) {
-      debugPrint(
-        'LAN discovery: UDP bound on ${_bindings.length} path(s), fp=$fp',
-      );
-    } else {
-      debugPrint('LAN discovery: no UDP bindings available');
+    final logKey =
+        '$fp|${_bindings.length}|${_bindings.isNotEmpty}';
+    if (logKey != _lastUdpBindLogKey) {
+      _lastUdpBindLogKey = logKey;
+      if (_bindings.isNotEmpty) {
+        debugPrint(
+          'LAN discovery: UDP bound on ${_bindings.length} path(s), fp=$fp',
+        );
+      } else {
+        debugPrint('LAN discovery: no UDP bindings available');
+      }
     }
 
     _announceAll(includeGlobalBroadcast: true);
+  }
+
+  static void _setBroadcastEnabledBestEffort(RawDatagramSocket socket) {
+    try {
+      socket.broadcastEnabled = true;
+    } catch (e) {
+      if (Platform.isMacOS) {
+        debugPrint('LAN broadcastEnabled skipped on macOS: $e');
+      } else {
+        rethrow;
+      }
+    }
   }
 
   Future<_LanDiscoveryBinding?> _openBindingForInterface(
@@ -162,7 +194,7 @@ class LanDiscoveryService {
           _udpPort,
           reuseAddress: true,
         );
-        socket.broadcastEnabled = true;
+        _setBroadcastEnabledBestEffort(socket);
         try {
           socket.joinMulticast(
             InternetAddress(_multicastGroupIpv4),
@@ -202,7 +234,7 @@ class LanDiscoveryService {
         _udpPort,
         reuseAddress: true,
       );
-      socket.broadcastEnabled = true;
+      _setBroadcastEnabledBestEffort(socket);
       for (final ni in _lastEligibleIfaces) {
         try {
           socket.joinMulticast(
@@ -301,34 +333,58 @@ class LanDiscoveryService {
   }
 
   void _handleMessage(Datagram datagram) {
-    try {
-      final jsonStr = utf8.decode(datagram.data);
-      final map = jsonDecode(jsonStr) as Map<String, dynamic>;
+    final data = datagram.data;
+    if (data.isEmpty) return;
 
-      final id = map['deviceId'] as String?;
-      if (id == null) return;
-
-      final bye = map['bye'];
-      if (bye == true || bye == 1) {
-        _goneController.add(id);
-        return;
-      }
-
-      final device = LanDevice(
-        deviceId: id,
-        deviceName: map['deviceName'] as String? ?? 'Unknown',
-        ip: datagram.address.address,
-        port: _jsonInt(map['port'], fallback: 53318),
-        os: map['os'] as String? ?? 'unknown',
-        lastSeen: DateTime.now().millisecondsSinceEpoch,
-        avatar: _jsonInt(map['avatar'], fallback: 1),
-        isOnline: true,
-      );
-
-      _deviceController.add(device);
-    } catch (e) {
-      debugPrint('LAN discovery parse error: $e');
+    // 53317/多播上可能有其它程序的二进制流量；非 UTF-8 会触发 FormatException，与「本应用发现」无关，直接忽略。
+    var i = 0;
+    while (i < data.length && (data[i] == 0x20 || data[i] == 0x09 || data[i] == 0x0a || data[i] == 0x0d)) {
+      i++;
     }
+    if (i >= data.length || data[i] != 0x7b) {
+      return; // 本协议为 JSON 对象，必须以 `{` 开头
+    }
+
+    final String jsonStr;
+    try {
+      jsonStr = utf8.decode(data.sublist(i));
+    } on FormatException {
+      return;
+    }
+
+    final Map<String, dynamic> map;
+    try {
+      final decoded = jsonDecode(jsonStr);
+      if (decoded is! Map) return;
+      map = Map<String, dynamic>.from(decoded);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('LAN discovery JSON error: $e');
+      }
+      return;
+    }
+
+    final id = map['deviceId'] as String?;
+    if (id == null) return;
+
+    final bye = map['bye'];
+    if (bye == true || bye == 1) {
+      _goneController.add(id);
+      return;
+    }
+
+    final device = LanDevice(
+      deviceId: id,
+      deviceName: map['deviceName'] as String? ?? 'Unknown',
+      ip: datagram.address.address,
+      port: _jsonInt(map['port'], fallback: 53318),
+      os: map['os'] as String? ?? 'unknown',
+      lastSeen: DateTime.now().millisecondsSinceEpoch,
+      avatar: _jsonInt(map['avatar'], fallback: 1),
+      isOnline: true,
+    );
+
+    _deviceController.add(device);
   }
 
   static int _jsonInt(Object? value, {required int fallback}) {
@@ -356,6 +412,7 @@ class LanDiscoveryService {
     }
 
     _lifecycleEpoch++;
+    _lastUdpBindLogKey = '';
 
     _connectivitySub?.cancel();
     _connectivitySub = null;
