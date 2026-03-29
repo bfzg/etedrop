@@ -707,7 +707,9 @@ class LanManager extends _$LanManager {
   }
 
   void _onReceiveUploadError(LanUploadContext ctx, String error) {
-    debugPrint('Receive error: $error');
+    debugPrint(
+      '[LAN /upload][recv-ui] file=${ctx.fileName} shareId=${ctx.shareId} err=$error',
+    );
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
       ref.read(transferReceiveSpeedProvider.notifier).clear(ctx.shareId!);
       final msg = ref

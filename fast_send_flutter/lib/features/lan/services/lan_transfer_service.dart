@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 
 import 'package:dio/dio.dart';
@@ -6,6 +7,20 @@ import 'package:path/path.dart' as p;
 
 import '../../../core/utils/resumable_transfer.dart';
 import '../models/lan_share_payload.dart';
+
+void _lanUploadLog(String message) {
+  developer.log(message, name: 'LAN.upload');
+}
+
+void _lanUploadLogDio(String url, DioException e) {
+  final inner = e.error;
+  _lanUploadLog(
+    '[LAN /upload][send] FAIL url=$url dioType=${e.type} '
+    'status=${e.response?.statusCode} msg=${e.message} '
+    'inner=${inner.runtimeType}: $inner',
+  );
+  _lanUploadLog('[LAN /upload][send] dio stack:\n${e.stackTrace}');
+}
 
 class LanTransferService {
   final Dio _dio;
@@ -214,6 +229,10 @@ class LanTransferService {
       if (shareId != null) {
         headers['X-Share-Id'] = shareId;
       }
+      _lanUploadLog(
+        '[LAN /upload][send] POST $url file=$fileName '
+        'resume=$resumeFromOffset remaining=$remaining fileSize=$fileSize',
+      );
       await _postUploadOctetStream(
         url: url,
         fileStream: fileStream,
@@ -225,7 +244,11 @@ class LanTransferService {
           }
         },
       );
+      _lanUploadLog(
+        '[LAN /upload][send] response OK $url file=$fileName',
+      );
     } on DioException catch (e) {
+      _lanUploadLogDio(url, e);
       if (e.type == DioExceptionType.cancel) {
         throw Exception('传输已取消');
       }
@@ -326,6 +349,10 @@ class LanTransferService {
       }
 
       try {
+        _lanUploadLog(
+          '[LAN /upload][send] POST attempt=${attempt + 1}/$maxAttempts $url '
+          'file=$fileName start=$start remaining=$remaining fileSize=$fileSize',
+        );
         await _postUploadOctetStream(
           url: url,
           fileStream: f.openRead(start),
@@ -337,9 +364,13 @@ class LanTransferService {
             }
           },
         );
+        _lanUploadLog(
+          '[LAN /upload][send] response OK $url file=$fileName',
+        );
         reportOverallBytesInFile(fileSize);
         return;
       } on DioException catch (e) {
+        _lanUploadLogDio(url, e);
         if (e.type == DioExceptionType.cancel) {
           throw Exception('传输已取消');
         }
@@ -352,6 +383,10 @@ class LanTransferService {
           }
           throw Exception('传输失败: ${e.message}');
         }
+        _lanUploadLog(
+          '[LAN /upload][send] will retry after '
+          '${200 + attempt * 100}ms (attempt ${attempt + 1})',
+        );
         await Future<void>.delayed(Duration(milliseconds: 200 + attempt * 100));
       }
     }

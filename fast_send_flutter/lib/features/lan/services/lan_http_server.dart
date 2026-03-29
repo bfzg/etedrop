@@ -249,9 +249,18 @@ class LanHttpServer {
       batchTotalBytes: batchTotalBytes,
     );
 
+    final peer = request.connectionInfo?.remoteAddress.address ?? '?';
+    final expectBody = fileSize > resumeOffset ? fileSize - resumeOffset : 0;
+    debugPrint(
+      '[LAN /upload][recv] start peer=$peer file=$fileName '
+      'size=$fileSize resume=$resumeOffset expectBody=$expectBody '
+      'idx=$fileIndex/$fileCount',
+    );
+
     if (onReceiveUpload != null) {
       final accepted = await onReceiveUpload!(ctx);
       if (accepted != true) {
+        debugPrint('[LAN /upload][recv] rejected by user peer=$peer file=$fileName');
         request.response.statusCode = HttpStatus.forbidden;
         request.response.write('Rejected by user');
         await request.response.close();
@@ -270,6 +279,9 @@ class LanHttpServer {
         declaredTotalSize: fileSize,
       );
     } on ResumableTransferException catch (e) {
+      debugPrint(
+        '[LAN /upload][recv] conflict peer=$peer file=$fileName: ${e.message}',
+      );
       request.response.statusCode = HttpStatus.conflict;
       request.response.write(e.message);
       await request.response.close();
@@ -316,7 +328,17 @@ class LanHttpServer {
       request.response.write('Success');
       await request.response.close();
       responseClosed = true;
-    } catch (e) {
+      debugPrint(
+        '[LAN /upload][recv] ok peer=$peer file=$fileName '
+        'got=$receivedBytes bytes (resume+$receivedBytes vs size $fileSize)',
+      );
+    } catch (e, st) {
+      debugPrint(
+        '[LAN /upload][recv] FAIL peer=$peer file=$fileName '
+        'receivedBytes=$receivedBytes expectBody=$expectBody '
+        'responseClosed=$responseClosed err=$e',
+      );
+      debugPrint('[LAN /upload][recv] stack:\n$st');
       try {
         await sink.close();
       } catch (_) {}
@@ -326,7 +348,9 @@ class LanHttpServer {
           request.response.headers.set(HttpHeaders.connectionHeader, 'close');
           request.response.statusCode = HttpStatus.internalServerError;
           await request.response.close();
-        } catch (_) {}
+        } catch (closeErr) {
+          debugPrint('[LAN /upload][recv] error closing 500 response: $closeErr');
+        }
       }
       return;
     }
