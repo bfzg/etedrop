@@ -25,8 +25,8 @@ final List<NavItemConfig> navItems = [
   ),
   NavItemConfig(
     label: '分享',
-    outlinedIcon: Icons.share_outlined,
-    roundedIcon: Icons.share_rounded,
+    outlinedIcon: Icons.wifi_tethering,
+    roundedIcon: Icons.wifi_tethering,
     path: Routes.send,
   ),
   NavItemConfig(
@@ -53,30 +53,39 @@ final router = GoRouter(
     // 底部导航页面
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
-        return AppLayout(
-          navigationShell: navigationShell,
-          items: navItems,
-        );
+        return AppLayout(navigationShell: navigationShell, items: navItems);
       },
       branches: [
         StatefulShellBranch(
           routes: [
-            GoRoute(path: Routes.cloud, builder: (context, state) => const CloudPage()),
+            GoRoute(
+              path: Routes.cloud,
+              builder: (context, state) => const CloudPage(),
+            ),
           ],
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: Routes.send, builder: (context, state) => const SendPage()),
+            GoRoute(
+              path: Routes.send,
+              builder: (context, state) => const SendPage(),
+            ),
           ],
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: Routes.messages, builder: (context, state) => const MessagePage()),
+            GoRoute(
+              path: Routes.messages,
+              builder: (context, state) => const MessagePage(),
+            ),
           ],
         ),
         StatefulShellBranch(
           routes: [
-            GoRoute(path: Routes.settings, builder: (context, state) => const SettingsPage()),
+            GoRoute(
+              path: Routes.settings,
+              builder: (context, state) => const SettingsPage(),
+            ),
           ],
         ),
       ],

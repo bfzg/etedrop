@@ -52,9 +52,7 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isSelected
-                        ? AppStyles.primary
-                        : Colors.transparent,
+                    color: isSelected ? AppStyles.primary : Colors.transparent,
                     width: 2.5,
                   ),
                 ),
