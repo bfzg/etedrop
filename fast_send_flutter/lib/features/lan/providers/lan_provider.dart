@@ -24,8 +24,8 @@ import '../services/lan_transfer_service.dart';
 part 'lan_provider.g.dart';
 
 /// 超过该时间未收到发现广播则视为离线（仍保留在列表，仅 `isOnline: false`）。
-/// 需大于稳定心跳间隔的数倍（当前 5s），并留 UDP 丢包容忍。
-const int _lanDeviceStaleMs = 35000;
+/// 与发现层约 3s 心跳对齐：约 8 个周期 + 余量，并留 UDP 丢包容忍。
+const int _lanDeviceStaleMs = 24000;
 
 /// 超过该时间无任何发现包则从列表与本地缓存移除，避免无限增长。
 const int _lanDeviceForgetMs = 14 * 24 * 60 * 60 * 1000;
@@ -154,7 +154,7 @@ class LanManager extends _$LanManager {
 
     await _discovery!.start();
 
-    _cleanupTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _cleanupTimer = Timer.periodic(const Duration(seconds: 2), (_) {
       _applyStaleForgetAndOffline();
     });
 

@@ -6,33 +6,19 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/lan_device.dart';
+import 'lan_discovery_network.dart';
 
+/// 局域网 UDP 发现（与 LocalSend 同类方案：每块网卡独立 socket + 多播成员，避免单 socket 上频繁 leave/join 丢包）。
+///
+/// 仍使用既有 JSON 载荷，与旧版客户端互通。
 class LanDiscoveryService {
-  static const int _broadcastPort = 53317;
-  /// 与广播并行发送，缓解部分网络/macOS 上「能发广播但收不到对端子网广播」的不对称发现。
-  /// 选用 IANA 组织本地范围 239.255.x.x（非互联网路由）。
+  static const int _udpPort = 53317;
   static const String _multicastGroupIpv4 = '239.255.88.117';
-  /// 子网广播地址列表缓存 TTL，避免每轮广播都 `NetworkInterface.list`。
-  static const Duration _subnetBcastCacheTtl = Duration(seconds: 45);
-  /// 启动后一段时间内较快发心跳，便于新设备尽快出现在列表。
-  static const Duration _fastHeartbeatPhase = Duration(seconds: 90);
-  static const Duration _fastHeartbeatInterval = Duration(seconds: 2);
-  /// 稳定后降频；离线阈值见 `lan_provider` 的 `_lanDeviceStaleMs`，需明显大于本间隔。
-  static const Duration _steadyHeartbeatInterval = Duration(seconds: 5);
-  /// `connectivity_plus` 在「Wi‑Fi → Wi‑Fi」时常不派发事件（结果仍为 wifi），用网卡 IPv4 指纹轮询补齐。
-  static const Duration _ifaceFingerprintPollInterval = Duration(seconds: 3);
-  /// 正常退出时连发 bye，降低单包丢失导致对端长时间仍显示在线的概率。
-  static const int _byeBurstCount = 5;
 
-  RawDatagramSocket? _socket;
-  Timer? _broadcastTimer;
-  Timer? _ifacePollTimer;
-  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
-  DateTime? _heartbeatPhaseStartedAt;
-  DateTime? _subnetBcastCacheAt;
-  List<String> _subnetBroadcastAddresses = const [];
-  String _ifaceFingerprint = '';
-  final Set<String> _multicastJoinedIfNames = {};
+  /// 与 [LanManager] 中 `_lanDeviceStaleMs` 配合：需明显小于离线阈值、留足丢包容忍。
+  static const Duration _heartbeatInterval = Duration(seconds: 3);
+  static const Duration _networkPollInterval = Duration(seconds: 10);
+  static const int _byeBurstPerSocket = 5;
 
   final String deviceId;
   final int httpPort;
@@ -44,8 +30,21 @@ class LanDiscoveryService {
   Stream<LanDevice> get onDeviceFound => _deviceController.stream;
 
   final _goneController = StreamController<String>.broadcast();
-  /// 对端正常退出时广播 `bye`，此处收到 [deviceId] 后应从列表立即移除。
   Stream<String> get onDeviceGone => _goneController.stream;
+
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  Timer? _heartbeatTimer;
+  Timer? _networkPollTimer;
+
+  /// 避免轮询与 connectivity 同时触发时并发 `_disposeBindings` / bind。
+  Future<void> _recreateChain = Future<void>.value();
+
+  /// [stop] 时递增，使进行中的 `_recreateBindingsBody` 在 await 后放弃并释放半初始化 socket。
+  int _lifecycleEpoch = 0;
+
+  final List<_LanDiscoveryBinding> _bindings = [];
+  List<NetworkInterface> _lastEligibleIfaces = [];
+  String _ifaceFingerprint = '';
 
   LanDiscoveryService({
     required this.deviceId,
@@ -66,77 +65,25 @@ class LanDiscoveryService {
       changed = true;
     }
     if (changed) {
-      unawaited(_broadcastPresence(forceSubnetRefresh: false));
+      _announceAll(includeGlobalBroadcast: true);
     }
   }
 
   Future<void> start() async {
     try {
-      _socket = await RawDatagramSocket.bind(
-        InternetAddress.anyIPv4,
-        _broadcastPort,
-        reuseAddress: true,
-      );
-      _socket!.broadcastEnabled = true;
-
-      _socket!.listen((RawSocketEvent event) {
-        if (event == RawSocketEvent.read) {
-          // 一次 read 事件里可能积压多包，需排空队列，否则会漏更新 lastSeen 导致误判离线
-          while (true) {
-            final datagram = _socket!.receive();
-            if (datagram == null) break;
-            _handleMessage(datagram);
-          }
-        }
-      });
-
-      await _syncMulticastMembership();
-
-      _startBroadcasting();
+      await _recreateBindings(force: true);
       _watchConnectivity();
-      _startIfaceFingerprintPolling();
+      _networkPollTimer?.cancel();
+      _networkPollTimer = Timer.periodic(_networkPollInterval, (_) {
+        unawaited(_recreateBindings(force: false));
+      });
+      _heartbeatTimer?.cancel();
+      _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
+        _announceAll(includeGlobalBroadcast: true);
+      });
+      _announceAll(includeGlobalBroadcast: true);
     } catch (e) {
       debugPrint('LAN Discovery start failed: $e');
-    }
-  }
-
-  /// 在可用 IPv4 网卡上加入多播组；网卡集变化时需重新同步，否则可能收不到对端多播心跳。
-  Future<void> _syncMulticastMembership() async {
-    final socket = _socket;
-    if (socket == null) return;
-    final group = InternetAddress(_multicastGroupIpv4);
-    try {
-      final ifaces = _interfacesForLanDiscovery(
-        await NetworkInterface.list(
-          includeLoopback: false,
-          type: InternetAddressType.IPv4,
-        ),
-      );
-
-      for (final name in _multicastJoinedIfNames.toList()) {
-        try {
-          final ni = ifaces.firstWhere((n) => n.name == name);
-          socket.leaveMulticast(group, ni);
-        } catch (_) {}
-      }
-      _multicastJoinedIfNames.clear();
-
-      socket.multicastHops = 1;
-
-      for (final ni in ifaces) {
-        final hasIpv4 = ni.addresses.any(
-          (a) => a.type == InternetAddressType.IPv4 && !a.isLoopback,
-        );
-        if (!hasIpv4) continue;
-        try {
-          socket.joinMulticast(group, ni);
-          _multicastJoinedIfNames.add(ni.name);
-        } catch (e) {
-          debugPrint('LAN joinMulticast ${ni.name}: $e');
-        }
-      }
-    } catch (e) {
-      debugPrint('LAN multicast sync: $e');
     }
   }
 
@@ -144,13 +91,7 @@ class LanDiscoveryService {
     _connectivitySub?.cancel();
     _connectivitySub = Connectivity().onConnectivityChanged.listen(
       (List<ConnectivityResult> _) {
-        if (_socket == null) return;
-        // Wi‑Fi / 网络切换后子网会变：强制重算定向广播并重发，避免卡在旧缓存
-        _heartbeatPhaseStartedAt = DateTime.now();
-        unawaited(() async {
-          await _syncMulticastMembership();
-          await _broadcastPresence(forceSubnetRefresh: true);
-        }());
+        unawaited(_recreateBindings(force: true));
       },
       onError: (Object e, StackTrace _) {
         debugPrint('LAN connectivity watch error: $e');
@@ -158,196 +99,212 @@ class LanDiscoveryService {
     );
   }
 
-  void _startIfaceFingerprintPolling() {
-    _ifacePollTimer?.cancel();
-    _ifacePollTimer = Timer.periodic(_ifaceFingerprintPollInterval, (_) {
-      unawaited(_pollIfaceFingerprintIfChanged());
+  /// 网卡集合变化时整组关闭再建（对齐 LocalSend `restartListener` 思路，无热插拔 leave/join 风暴）。
+  Future<void> _recreateBindings({required bool force}) {
+    final run = _recreateChain.then((_) => _recreateBindingsBody(force: force));
+    _recreateChain = run.catchError((Object e, StackTrace _) {
+      debugPrint('LAN recreate bindings: $e');
     });
+    return run;
   }
 
-  Future<void> _pollIfaceFingerprintIfChanged() async {
-    if (_socket == null) return;
-    try {
-      final ifaces = _interfacesForLanDiscovery(
-        await NetworkInterface.list(
-          includeLoopback: false,
-          type: InternetAddressType.IPv4,
-        ),
-      );
-      final fp = _fingerprintForIfaces(ifaces);
-      if (fp == _ifaceFingerprint) return;
-      _ifaceFingerprint = fp;
-      _subnetBroadcastAddresses = _subnetBcastsFromIfaces(ifaces);
-      _subnetBcastCacheAt = DateTime.now();
-      _heartbeatPhaseStartedAt = DateTime.now();
-      unawaited(_syncMulticastMembership());
-      _emitPresencePayload();
-    } catch (e) {
-      debugPrint('LAN iface fingerprint poll: $e');
-    }
-  }
+  Future<void> _recreateBindingsBody({required bool force}) async {
+    final gen = _lifecycleEpoch;
+    final ifaces = await LanDiscoveryNetwork.listDiscoveryInterfaces();
+    if (gen != _lifecycleEpoch) return;
 
-  void _startBroadcasting() {
-    _broadcastTimer?.cancel();
-    _heartbeatPhaseStartedAt = DateTime.now();
-    unawaited(_broadcastPresence(forceSubnetRefresh: true));
-    _scheduleNextHeartbeat();
-  }
-
-  void _scheduleNextHeartbeat() {
-    _broadcastTimer?.cancel();
-    final started = _heartbeatPhaseStartedAt;
-    final interval = started != null &&
-            DateTime.now().difference(started) < _fastHeartbeatPhase
-        ? _fastHeartbeatInterval
-        : _steadyHeartbeatInterval;
-    _broadcastTimer = Timer(interval, () {
-      unawaited(_broadcastPresence(forceSubnetRefresh: false));
-      _scheduleNextHeartbeat();
-    });
-  }
-
-  Future<void> _refreshSubnetBroadcastTargets({bool force = false}) async {
-    final now = DateTime.now();
-    if (!force &&
-        _subnetBcastCacheAt != null &&
-        now.difference(_subnetBcastCacheAt!) < _subnetBcastCacheTtl) {
+    final fp = LanDiscoveryNetwork.interfaceSetFingerprint(ifaces);
+    if (!force && fp == _ifaceFingerprint && _bindings.isNotEmpty) {
       return;
     }
+    if (gen != _lifecycleEpoch) return;
+
+    _ifaceFingerprint = fp;
+    _lastEligibleIfaces = ifaces;
+    _disposeBindings();
+    if (gen != _lifecycleEpoch) return;
+
+    for (final ni in ifaces) {
+      if (gen != _lifecycleEpoch) return;
+      final b = await _openBindingForInterface(ni);
+      if (b != null) {
+        _bindings.add(b);
+      }
+    }
+
+    if (_bindings.isEmpty) {
+      await _openFallbackBinding();
+    }
+    if (gen != _lifecycleEpoch) {
+      _disposeBindings();
+      return;
+    }
+
+    if (_bindings.isNotEmpty) {
+      debugPrint(
+        'LAN discovery: UDP bound on ${_bindings.length} path(s), fp=$fp',
+      );
+    } else {
+      debugPrint('LAN discovery: no UDP bindings available');
+    }
+
+    _announceAll(includeGlobalBroadcast: true);
+  }
+
+  Future<_LanDiscoveryBinding?> _openBindingForInterface(
+    NetworkInterface ni,
+  ) async {
+    final ips = LanDiscoveryNetwork.eligibleIpv4On(ni);
+    for (final ip in ips) {
+      try {
+        final socket = await RawDatagramSocket.bind(
+          ip,
+          _udpPort,
+          reuseAddress: true,
+        );
+        socket.broadcastEnabled = true;
+        try {
+          socket.joinMulticast(
+            InternetAddress(_multicastGroupIpv4),
+            ni,
+          );
+        } catch (e) {
+          debugPrint('LAN joinMulticast ${ni.name}: $e');
+        }
+        socket.multicastHops = 1;
+        final sub = socket.listen(
+          (RawSocketEvent event) {
+            if (event != RawSocketEvent.read) return;
+            while (true) {
+              final datagram = socket.receive();
+              if (datagram == null) break;
+              _handleMessage(datagram);
+            }
+          },
+        );
+        return _LanDiscoveryBinding(
+          mode: _LanDiscoveryBindingMode.perInterface,
+          networkInterface: ni,
+          socket: socket,
+          subscription: sub,
+        );
+      } catch (e) {
+        debugPrint('LAN bind ${ip.address} (${ni.name}): $e');
+      }
+    }
+    return null;
+  }
+
+  Future<void> _openFallbackBinding() async {
     try {
-      final ifaces = _interfacesForLanDiscovery(
-        await NetworkInterface.list(
-          includeLoopback: false,
-          type: InternetAddressType.IPv4,
+      final socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        _udpPort,
+        reuseAddress: true,
+      );
+      socket.broadcastEnabled = true;
+      for (final ni in _lastEligibleIfaces) {
+        try {
+          socket.joinMulticast(
+            InternetAddress(_multicastGroupIpv4),
+            ni,
+          );
+        } catch (e) {
+          debugPrint('LAN fallback joinMulticast ${ni.name}: $e');
+        }
+      }
+      socket.multicastHops = 1;
+      final sub = socket.listen(
+        (RawSocketEvent event) {
+          if (event != RawSocketEvent.read) return;
+          while (true) {
+            final datagram = socket.receive();
+            if (datagram == null) break;
+            _handleMessage(datagram);
+          }
+        },
+      );
+      _bindings.add(
+        _LanDiscoveryBinding(
+          mode: _LanDiscoveryBindingMode.fallbackAny,
+          networkInterface: null,
+          socket: socket,
+          subscription: sub,
         ),
       );
-      final newFp = _fingerprintForIfaces(ifaces);
-      final fpChanged = newFp != _ifaceFingerprint;
-      _ifaceFingerprint = newFp;
-      _subnetBroadcastAddresses = _subnetBcastsFromIfaces(ifaces);
-      _subnetBcastCacheAt = now;
-      if (fpChanged) {
-        unawaited(_syncMulticastMembership());
-      }
     } catch (e) {
-      debugPrint('LAN NetworkInterface.list for broadcast: $e');
+      debugPrint('LAN fallback bind: $e');
     }
   }
 
-  Future<void> _broadcastPresence({required bool forceSubnetRefresh}) async {
-    if (_socket == null) return;
-    await _refreshSubnetBroadcastTargets(force: forceSubnetRefresh);
-    _emitPresencePayload();
+  void _disposeBindings() {
+    for (final b in _bindings) {
+      b.subscription.cancel();
+      b.socket.close();
+    }
+    _bindings.clear();
   }
 
-  void _emitPresencePayload() {
-    _sendJsonToLan({
-      'deviceId': deviceId,
-      'deviceName': deviceName,
-      'port': httpPort,
-      'os': os,
-      'avatar': avatar,
-    });
+  Map<String, dynamic> _presenceMap() => {
+        'deviceId': deviceId,
+        'deviceName': deviceName,
+        'port': httpPort,
+        'os': os,
+        'avatar': avatar,
+      };
+
+  void _announceAll({required bool includeGlobalBroadcast}) {
+    final bytes = utf8.encode(jsonEncode(_presenceMap()));
+    var first = true;
+    for (final b in _bindings) {
+      _sendPayload(
+        b,
+        bytes,
+        includeGlobalBroadcast: includeGlobalBroadcast && first,
+      );
+      first = false;
+    }
   }
 
-  void _sendJsonToLan(Map<String, dynamic> map) {
-    final socket = _socket;
-    if (socket == null) return;
-
-    final bytes = utf8.encode(jsonEncode(map));
-
+  void _sendPayload(
+    _LanDiscoveryBinding b,
+    List<int> bytes, {
+    required bool includeGlobalBroadcast,
+  }) {
+    final socket = b.socket;
     void sendTo(InternetAddress addr) {
       try {
-        socket.send(bytes, addr, _broadcastPort);
+        socket.send(bytes, addr, _udpPort);
       } catch (e) {
-        debugPrint('LAN broadcast to ${addr.address} failed: $e');
+        debugPrint('LAN send ${addr.address}: $e');
       }
     }
 
-    // 全局广播（部分路由器/系统会丢弃）
-    sendTo(InternetAddress('255.255.255.255'));
-
-    // 各网卡子网定向广播（/24），显著改善 macOS ↔ Windows 等跨平台发现
-    for (final bcast in _subnetBroadcastAddresses) {
-      try {
-        sendTo(InternetAddress(bcast));
-      } catch (_) {}
+    if (includeGlobalBroadcast) {
+      sendTo(InternetAddress('255.255.255.255'));
     }
+    sendTo(InternetAddress(_multicastGroupIpv4));
 
-    // 多播：与广播同端口，部分环境下 macOS 收对端广播异常时仍可互通
-    try {
-      sendTo(InternetAddress(_multicastGroupIpv4));
-    } catch (e) {
-      debugPrint('LAN multicast send failed: $e');
-    }
-  }
-
-  /// 排除易抖动的隧道/虚拟网卡，避免 macOS 上 utun/awdl 等地址变化触发频繁多播重绑，误判对端离线。
-  static bool _shouldSkipInterfaceForLanDiscovery(String name) {
-    final n = name.toLowerCase();
-    if (n.startsWith('utun')) return true;
-    if (n.contains('awdl')) return true;
-    if (n.startsWith('llw')) return true;
-    if (n.startsWith('bridge')) return true;
-    if (n.startsWith('docker')) return true;
-    if (n.startsWith('br-') || n.startsWith('veth')) return true;
-    if (n.startsWith('virbr')) return true;
-    if (n == 'gif0' || n == 'stf0') return true;
-    return false;
-  }
-
-  static List<NetworkInterface> _interfacesForLanDiscovery(
-    List<NetworkInterface> ifaces,
-  ) {
-    final filtered = ifaces
-        .where((ni) => !_shouldSkipInterfaceForLanDiscovery(ni.name))
-        .toList();
-    return filtered.isNotEmpty ? filtered : ifaces;
-  }
-
-  static String _fingerprintForIfaces(List<NetworkInterface> ifaces) {
-    final ips = <String>[];
+    final seenBcast = <String>{};
+    final ifaces = b.mode == _LanDiscoveryBindingMode.fallbackAny
+        ? _lastEligibleIfaces
+        : [b.networkInterface!];
     for (final ni in ifaces) {
       for (final a in ni.addresses) {
-        if (a.type != InternetAddressType.IPv4 || a.isLoopback) continue;
-        ips.add(a.address);
+        if (!LanDiscoveryNetwork.isEligibleIpv4(a)) continue;
+        final bc = LanDiscoveryNetwork.ipv4SubnetBroadcast24(a.address);
+        if (bc == null || seenBcast.contains(bc)) continue;
+        seenBcast.add(bc);
+        sendTo(InternetAddress(bc));
       }
     }
-    ips.sort();
-    return ips.join('|');
-  }
-
-  static List<String> _subnetBcastsFromIfaces(List<NetworkInterface> ifaces) {
-    final seen = <String>{};
-    final next = <String>[];
-    for (final ni in ifaces) {
-      for (final a in ni.addresses) {
-        if (a.type != InternetAddressType.IPv4 || a.isLoopback) continue;
-        final bcast = _ipv4SubnetBroadcast24(a.address);
-        if (bcast == null || seen.contains(bcast)) continue;
-        seen.add(bcast);
-        next.add(bcast);
-      }
-    }
-    return next;
-  }
-
-  /// 按常见家用局域网 /24 计算定向广播地址（如 192.168.1.10 → 192.168.1.255）
-  static String? _ipv4SubnetBroadcast24(String dotted) {
-    final parts = dotted.split('.');
-    if (parts.length != 4) return null;
-    for (final s in parts) {
-      final n = int.tryParse(s);
-      if (n == null || n < 0 || n > 255) return null;
-    }
-    return '${parts[0]}.${parts[1]}.${parts[2]}.255';
   }
 
   void _handleMessage(Datagram datagram) {
     try {
       final jsonStr = utf8.decode(datagram.data);
       final map = jsonDecode(jsonStr) as Map<String, dynamic>;
-      
+
       final id = map['deviceId'] as String?;
       if (id == null) return;
 
@@ -357,7 +314,6 @@ class LanDiscoveryService {
         return;
       }
 
-      // 不过滤本机：环回/反射的广播会让单机也能在列表里看到自己（网格里用「You」区分）
       final device = LanDevice(
         deviceId: id,
         deviceName: map['deviceName'] as String? ?? 'Unknown',
@@ -383,24 +339,48 @@ class LanDiscoveryService {
   }
 
   void stop() {
-    // 正常退出时通知局域网内其他实例立即摘牌（崩溃/强杀则仍依赖对端超时）
-    final bye = {'deviceId': deviceId, 'bye': true};
-    for (var i = 0; i < _byeBurstCount; i++) {
-      _sendJsonToLan(bye);
+    final snapshot = List<_LanDiscoveryBinding>.from(_bindings);
+    final byeBytes = utf8.encode(
+      jsonEncode({'deviceId': deviceId, 'bye': true}),
+    );
+    var isFirstBinding = true;
+    for (final b in snapshot) {
+      for (var i = 0; i < _byeBurstPerSocket; i++) {
+        _sendPayload(
+          b,
+          byeBytes,
+          includeGlobalBroadcast: isFirstBinding && i == 0,
+        );
+      }
+      isFirstBinding = false;
     }
+
+    _lifecycleEpoch++;
 
     _connectivitySub?.cancel();
     _connectivitySub = null;
-    _ifacePollTimer?.cancel();
-    _ifacePollTimer = null;
-    _broadcastTimer?.cancel();
-    _broadcastTimer = null;
-    _heartbeatPhaseStartedAt = null;
-    _subnetBcastCacheAt = null;
-    _subnetBroadcastAddresses = const [];
+    _heartbeatTimer?.cancel();
+    _heartbeatTimer = null;
+    _networkPollTimer?.cancel();
+    _networkPollTimer = null;
+    _disposeBindings();
     _ifaceFingerprint = '';
-    _multicastJoinedIfNames.clear();
-    _socket?.close();
-    _socket = null;
+    _lastEligibleIfaces = [];
   }
+}
+
+enum _LanDiscoveryBindingMode { perInterface, fallbackAny }
+
+class _LanDiscoveryBinding {
+  _LanDiscoveryBinding({
+    required this.mode,
+    required this.networkInterface,
+    required this.socket,
+    required this.subscription,
+  });
+
+  final _LanDiscoveryBindingMode mode;
+  final NetworkInterface? networkInterface;
+  final RawDatagramSocket socket;
+  final StreamSubscription<RawSocketEvent> subscription;
 }
