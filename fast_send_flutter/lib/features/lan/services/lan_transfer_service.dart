@@ -25,7 +25,16 @@ void _lanUploadLogDio(String url, DioException e) {
 class LanTransferService {
   final Dio _dio;
 
-  LanTransferService({Dio? dio}) : _dio = dio ?? Dio();
+  /// 与 LocalSend「longLiving」客户端类似：长连接/大文件时避免默认 connect 过短；各请求仍可用 Options 覆盖。
+  LanTransferService({Dio? dio})
+      : _dio = dio ??
+            Dio(
+              BaseOptions(
+                connectTimeout: const Duration(minutes: 10),
+                receiveTimeout: null,
+                sendTimeout: null,
+              ),
+            );
 
   Future<bool> ping(String ip, int port) async {
     try {
@@ -163,6 +172,7 @@ class LanTransferService {
     return 0;
   }
 
+  /// 流式 POST；不强制 Connection: close（对齐 LocalSend/reqwest 默认 keep-alive，利于长传稳定）。
   Future<void> _postUploadOctetStream({
     required String url,
     required Stream<List<int>> fileStream,
@@ -170,16 +180,13 @@ class LanTransferService {
     CancelToken? cancelToken,
     ProgressCallback? onSendProgress,
   }) {
-    final uploadHeaders = Map<String, dynamic>.from(headers)
-      ..[HttpHeaders.connectionHeader] = 'close';
     return _dio.post<void>(
       url,
       data: fileStream,
       options: Options(
-        headers: uploadHeaders,
+        headers: headers,
         sendTimeout: null,
         receiveTimeout: null,
-        persistentConnection: false,
       ),
       cancelToken: cancelToken,
       onSendProgress: onSendProgress,

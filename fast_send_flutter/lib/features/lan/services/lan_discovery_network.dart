@@ -21,6 +21,9 @@ abstract final class LanDiscoveryNetwork {
     if (n.contains('cfw-tap')) return true;
     if (n.contains('wintun')) return true;
     if (n.contains('sing-tun')) return true;
+    // sing-box / Clash.Meta 等常见 TUN 名（如 singbox_tun）；参与发现会导致 fp 抖动、1450/errno 59
+    if (n.contains('singbox')) return true;
+    if (n.contains('mihomo')) return true;
     if (n.contains('zerotier')) return true;
     if (n.contains('wireguard')) return true;
     if (n.contains('nordlynx')) return true;

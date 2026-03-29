@@ -112,6 +112,14 @@ class LanDiscoveryService {
   }
 
   Future<void> _recreateBindingsBody({required bool force}) async {
+    try {
+      await _recreateBindingsBodyImpl(force: force);
+    } catch (e, st) {
+      debugPrint('[LAN discovery] recreate bindings failed: $e\n$st');
+    }
+  }
+
+  Future<void> _recreateBindingsBodyImpl({required bool force}) async {
     final gen = _lifecycleEpoch;
     final ifaces = await LanDiscoveryNetwork.listDiscoveryInterfaces();
     if (gen != _lifecycleEpoch) return;
@@ -125,6 +133,10 @@ class LanDiscoveryService {
     _ifaceFingerprint = fp;
     _lastEligibleIfaces = ifaces;
     _disposeBindings();
+    // LocalSend：关闭 listener 后等待资源释放再绑端口（Windows 上可减轻 1450 / 意外断网类错误）
+    if (Platform.isWindows) {
+      await Future<void>.delayed(const Duration(milliseconds: 500));
+    }
     if (gen != _lifecycleEpoch) return;
 
     // macOS：按「每网卡独立 socket」绑定时，多播/子网广播常被内核投递异常；统一 bind 0.0.0.0 + 各接口
@@ -173,6 +185,25 @@ class LanDiscoveryService {
     _announceAll(includeGlobalBroadcast: true);
   }
 
+  /// 避免 RawDatagramSocket 错误进 Zone 未捕获导致进程退出。
+  StreamSubscription<RawSocketEvent> _listenUdpSocket(RawDatagramSocket socket) {
+    return socket.listen(
+      (RawSocketEvent event) {
+        if (event != RawSocketEvent.read) return;
+        while (true) {
+          final datagram = socket.receive();
+          if (datagram == null) break;
+          _handleMessage(datagram);
+        }
+      },
+      onError: (Object e, StackTrace st) {
+        debugPrint('[LAN discovery] UDP socket error: $e\n$st');
+        unawaited(_recreateBindings(force: true));
+      },
+      cancelOnError: false,
+    );
+  }
+
   static void _setBroadcastEnabledBestEffort(RawDatagramSocket socket) {
     try {
       socket.broadcastEnabled = true;
@@ -206,16 +237,7 @@ class LanDiscoveryService {
           debugPrint('LAN joinMulticast ${ni.name}: $e');
         }
         socket.multicastHops = 1;
-        final sub = socket.listen(
-          (RawSocketEvent event) {
-            if (event != RawSocketEvent.read) return;
-            while (true) {
-              final datagram = socket.receive();
-              if (datagram == null) break;
-              _handleMessage(datagram);
-            }
-          },
-        );
+        final sub = _listenUdpSocket(socket);
         return _LanDiscoveryBinding(
           mode: _LanDiscoveryBindingMode.perInterface,
           networkInterface: ni,
@@ -248,16 +270,7 @@ class LanDiscoveryService {
         }
       }
       socket.multicastHops = 1;
-      final sub = socket.listen(
-        (RawSocketEvent event) {
-          if (event != RawSocketEvent.read) return;
-          while (true) {
-            final datagram = socket.receive();
-            if (datagram == null) break;
-            _handleMessage(datagram);
-          }
-        },
-      );
+      final sub = _listenUdpSocket(socket);
       _bindings.add(
         _LanDiscoveryBinding(
           mode: _LanDiscoveryBindingMode.fallbackAny,
