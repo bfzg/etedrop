@@ -376,7 +376,20 @@ class LanHttpServer {
     }
 
     try {
-      onComplete?.call(ctx);
+      onComplete?.call(
+        LanUploadContext(
+          fileName: ctx.fileName,
+          fileSize: ctx.fileSize,
+          senderName: ctx.senderName,
+          senderAvatar: ctx.senderAvatar,
+          senderDeviceId: ctx.senderDeviceId,
+          shareId: ctx.shareId,
+          fileIndex: ctx.fileIndex,
+          fileCount: ctx.fileCount,
+          batchTotalBytes: ctx.batchTotalBytes,
+          savedAbsolutePath: file.absolute.path,
+        ),
+      );
     } catch (e, st) {
       // 文件已落盘且 HTTP 200 已发出；此处失败不应再写 response，也不应把整次接收标为失败。
       debugPrint('LAN upload onComplete error: $e\n$st');

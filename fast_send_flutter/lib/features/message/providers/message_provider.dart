@@ -305,6 +305,64 @@ class MessageList extends _$MessageList {
     updateStatus(id, TransferMessageStatus.completed);
   }
 
+  String _upsertPathAtIndex(
+    String? existingJson,
+    int fileIndex,
+    int fileCount,
+    String absolutePath,
+  ) {
+    var list = <String>[];
+    if (existingJson != null && existingJson.isNotEmpty) {
+      try {
+        list = List<String>.from(jsonDecode(existingJson) as List);
+      } catch (_) {}
+    }
+    final needLen = fileCount > list.length ? fileCount : list.length;
+    if (needLen > list.length) {
+      list = [...list, ...List.filled(needLen - list.length, '')];
+    }
+    if (fileIndex >= 0 && fileIndex < list.length) {
+      list[fileIndex] = absolutePath;
+    }
+    return jsonEncode(list);
+  }
+
+  /// 接收方批量：按 [fileIndex] 写入对应文件的落盘绝对路径（与 batch 列表顺序一致）。
+  void setIncomingShareSavedPath({
+    required String shareId,
+    required int fileIndex,
+    required int fileCount,
+    required String absolutePath,
+  }) {
+    state = [
+      for (final m in state)
+        if (m.shareId == shareId && !m.isOutgoing)
+          m.copyWith(
+            localFilePathsJson: _upsertPathAtIndex(
+              m.localFilePathsJson,
+              fileIndex,
+              fileCount,
+              absolutePath,
+            ),
+          )
+        else
+          m,
+    ];
+    _persist();
+  }
+
+  /// 接收方单条消息（无 shareId）写入落盘路径。
+  void setIncomingSavedPathsById(String messageId, List<String> paths) {
+    state = [
+      for (final m in state)
+        if (m.id == messageId)
+          m.copyWith(localFilePathsJson: jsonEncode(paths))
+        else
+          m,
+    ];
+    _persist();
+  }
+
   void markFailed(String id, String error) {
     state = [
       for (final m in state)

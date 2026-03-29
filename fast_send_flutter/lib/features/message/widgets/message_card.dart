@@ -3,9 +3,12 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../../../core/utils/format_utils.dart';
+import '../../../core/utils/reveal_file_in_explorer.dart';
 import '../../../styles/styles.dart';
+import '../../cloud/providers/cloud_provider.dart';
 import '../../device/models/device_config.dart';
 import '../../lan/models/lan_device.dart';
 import '../../lan/providers/lan_provider.dart';
@@ -31,8 +34,9 @@ class MessageCard extends ConsumerWidget {
   String _outgoingTargetSummary(WidgetRef ref, TransferMessage m) {
     if (!m.isOutgoing || m.targetDeviceIdsJson == null) return '';
     try {
-      final ids =
-          (jsonDecode(m.targetDeviceIdsJson!) as List).map((e) => e as String).toList();
+      final ids = (jsonDecode(m.targetDeviceIdsJson!) as List)
+          .map((e) => e as String)
+          .toList();
       final devices = ref.watch(lanManagerProvider);
       final names = <String>[];
       for (final id in ids) {
@@ -58,11 +62,13 @@ class MessageCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final receiveSpeeds = ref.watch(transferReceiveSpeedProvider);
     final receiveSpeedKey = message.shareId ?? message.id;
-    final receiveBps =
-        !message.isOutgoing ? receiveSpeeds[receiveSpeedKey] : null;
+    final receiveBps = !message.isOutgoing
+        ? receiveSpeeds[receiveSpeedKey]
+        : null;
     final isPending = message.status == TransferMessageStatus.pending;
     final showIncomingActions = isPending && !message.isOutgoing;
     final batch = _batchFiles(message);
+    final canRevealInFolder = message.status == TransferMessageStatus.completed;
 
     return Card(
       elevation: 0,
@@ -121,8 +127,9 @@ class MessageCard extends ConsumerWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.primary
-                                    .withValues(alpha: 0.12),
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.12,
+                                ),
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
@@ -159,57 +166,24 @@ class MessageCard extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             if (batch != null && batch.isNotEmpty) ...[
-              Text(
-                message.fileName,
-                style: AppTextStyles.fileName(context),
-              ),
+              Text(message.fileName, style: AppTextStyles.fileName(context)),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 6,
                 runSpacing: 6,
-                children: batch.map((f) {
-                  final name = f['name'] as String? ?? '';
-                  final size = (f['size'] as num?)?.toInt() ?? 0;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
+                children: [
+                  for (var i = 0; i < batch.length; i++)
+                    _revealableFileChip(
+                      context,
+                      ref,
+                      theme,
+                      canRevealInFolder,
+                      fileIndex: i,
+                      fileName: batch[i]['name'] as String? ?? '',
+                      fileSize: (batch[i]['size'] as num?)?.toInt() ?? 0,
+                      message: message,
                     ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.6),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: theme.colorScheme.outlineVariant,
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.insert_drive_file_outlined,
-                          size: 14,
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 160),
-                          child: Text(
-                            name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          FormatUtils.fileSize(size),
-                          style: AppTextStyles.hint(context),
-                        ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                ],
               ),
               const SizedBox(height: 4),
               Text(
@@ -217,16 +191,12 @@ class MessageCard extends ConsumerWidget {
                 style: AppTextStyles.hint(context),
               ),
             ] else ...[
-              Text(
-                message.fileName,
-                style: AppTextStyles.fileName(context),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${FormatUtils.fileSize(message.fileSize)} · ${FormatUtils.dateTime(message.timestamp)}',
-                style: AppTextStyles.hint(context),
+              _revealableSingleFileBlock(
+                context,
+                ref,
+                theme,
+                canRevealInFolder,
+                message: message,
               ),
             ],
             if (message.status == TransferMessageStatus.receiving) ...[
@@ -271,10 +241,7 @@ class MessageCard extends ConsumerWidget {
             if (message.isOutgoing &&
                 message.status == TransferMessageStatus.pending) ...[
               const SizedBox(height: 8),
-              Text(
-                '等待对方在消息内接受（2 分钟内有效）',
-                style: AppTextStyles.hint(context),
-              ),
+              Text('等待对方在消息内接受（2 分钟内有效）', style: AppTextStyles.hint(context)),
             ],
             if (message.isOutgoing &&
                 message.status == TransferMessageStatus.expired &&
@@ -284,8 +251,7 @@ class MessageCard extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton.icon(
-                  onPressed: () =>
-                      _retryOutgoingShare(context, ref, message),
+                  onPressed: () => _retryOutgoingShare(context, ref, message),
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const Text('重试发送'),
                 ),
@@ -299,7 +265,9 @@ class MessageCard extends ConsumerWidget {
                   OutlinedButton(
                     onPressed: () async {
                       // 在首个 await 前捕获 notifier，避免异步间隙后 MessageCard 已卸载导致 ref 不可用
-                      final msgNotifier = ref.read(messageListProvider.notifier);
+                      final msgNotifier = ref.read(
+                        messageListProvider.notifier,
+                      );
                       final lanNotifier = ref.read(lanManagerProvider.notifier);
                       if (message.isBatch && message.shareId != null) {
                         try {
@@ -323,7 +291,9 @@ class MessageCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: () async {
-                      final msgNotifier = ref.read(messageListProvider.notifier);
+                      final msgNotifier = ref.read(
+                        messageListProvider.notifier,
+                      );
                       final lanNotifier = ref.read(lanManagerProvider.notifier);
                       if (message.isBatch && message.shareId != null) {
                         msgNotifier.updateStatus(
@@ -366,6 +336,171 @@ class MessageCard extends ConsumerWidget {
   }
 }
 
+Widget _revealableFileChip(
+  BuildContext context,
+  WidgetRef ref,
+  ThemeData theme,
+  bool canReveal, {
+  required int fileIndex,
+  required String fileName,
+  required int fileSize,
+  required TransferMessage message,
+}) {
+  final chip = Container(
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    decoration: BoxDecoration(
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: theme.colorScheme.outlineVariant),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          Icons.insert_drive_file_outlined,
+          size: 14,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 4),
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 160),
+          child: Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          FormatUtils.fileSize(fileSize),
+          style: AppTextStyles.secondary(context),
+        ),
+      ],
+    ),
+  );
+  if (!canReveal) return chip;
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: Tooltip(
+      message: '在文件夹中显示',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openMessageFileInExplorer(
+            context,
+            ref,
+            message,
+            batchIndex: fileIndex,
+            batchFileName: fileName,
+          ),
+          borderRadius: BorderRadius.circular(8),
+          child: chip,
+        ),
+      ),
+    ),
+  );
+}
+
+Widget _revealableSingleFileBlock(
+  BuildContext context,
+  WidgetRef ref,
+  ThemeData theme,
+  bool canReveal, {
+  required TransferMessage message,
+}) {
+  final block = Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        message.fileName,
+        style: AppTextStyles.fileName(context),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      const SizedBox(height: 4),
+      Text(
+        '${FormatUtils.fileSize(message.fileSize)} · ${FormatUtils.dateTime(message.timestamp)}',
+        style: AppTextStyles.hint(context),
+      ),
+    ],
+  );
+  if (!canReveal) return block;
+  return MouseRegion(
+    cursor: SystemMouseCursors.click,
+    child: Tooltip(
+      message: '在文件夹中显示',
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openMessageFileInExplorer(context, ref, message),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: block,
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _openMessageFileInExplorer(
+  BuildContext context,
+  WidgetRef ref,
+  TransferMessage message, {
+  int? batchIndex,
+  String? batchFileName,
+}) async {
+  final path = await _resolveMessageLocalPath(
+    ref,
+    message,
+    batchIndex: batchIndex,
+    batchFileName: batchFileName,
+  );
+  if (path == null) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('找不到本地文件，可能已移动或删除')));
+    }
+    return;
+  }
+  final ok = await revealFileInExplorer(path);
+  if (!ok && context.mounted) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('当前平台无法在文件夹中定位文件')));
+  }
+}
+
+Future<String?> _resolveMessageLocalPath(
+  WidgetRef ref,
+  TransferMessage message, {
+  int? batchIndex,
+  String? batchFileName,
+}) async {
+  final raw = message.localFilePathsJson;
+  if (raw != null && raw.isNotEmpty) {
+    try {
+      final list = List<String>.from(jsonDecode(raw) as List);
+      if (batchIndex != null) {
+        if (batchIndex >= 0 && batchIndex < list.length) {
+          final s = list[batchIndex];
+          if (s.isNotEmpty && await File(s).exists()) return s;
+        }
+      } else if (list.isNotEmpty) {
+        for (final s in list) {
+          if (s.isNotEmpty && await File(s).exists()) return s;
+        }
+      }
+    } catch (_) {}
+  }
+  final name = batchFileName ?? message.fileName;
+  try {
+    final dir = await ref.read(downloadDirProvider.future);
+    if (dir.isEmpty) return null;
+    final guess = p.join(dir, name);
+    if (await File(guess).exists()) return guess;
+  } catch (_) {}
+  return null;
+}
+
 Future<void> _retryOutgoingShare(
   BuildContext context,
   WidgetRef ref,
@@ -376,10 +511,10 @@ Future<void> _retryOutgoingShare(
   if (pathsRaw == null || idsRaw == null) return;
   final lanNotifier = ref.read(lanManagerProvider.notifier);
   try {
-    final paths =
-        (jsonDecode(pathsRaw) as List).map((e) => e as String).toList();
-    final ids =
-        (jsonDecode(idsRaw) as List).map((e) => e as String).toList();
+    final paths = (jsonDecode(pathsRaw) as List)
+        .map((e) => e as String)
+        .toList();
+    final ids = (jsonDecode(idsRaw) as List).map((e) => e as String).toList();
     final existing = <String>[];
     for (final p in paths) {
       if (await File(p).exists()) {
@@ -388,27 +523,27 @@ Future<void> _retryOutgoingShare(
     }
     if (existing.isEmpty) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('本地文件已不存在或已移动，无法重试')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('本地文件已不存在或已移动，无法重试')));
       }
       return;
     }
     if (ids.isEmpty) return;
     await lanNotifier.startBatchShare(
-          absoluteFilePaths: existing,
-          targetDeviceIds: ids,
-        );
+      absoluteFilePaths: existing,
+      targetDeviceIds: ids,
+    );
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('已重新发起分享')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已重新发起分享')));
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('重试失败: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('重试失败: $e')));
     }
   }
 }

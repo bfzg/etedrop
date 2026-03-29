@@ -37,7 +37,7 @@ abstract class TransferMessage with _$TransferMessage {
     int? senderHttpPort,
     /// 本机发出的批量分享（消息列表中展示「发送」侧）
     @Default(false) bool isOutgoing,
-    /// JSON 数组：本机绝对路径，用于发送方过期后重试
+    /// JSON 数组：本机绝对路径。发送方用于过期重试；接收方在传输完成后写入落盘路径，供在文件夹中定位。
     String? localFilePathsJson,
     /// JSON 数组：目标 deviceId，用于重试
     String? targetDeviceIdsJson,

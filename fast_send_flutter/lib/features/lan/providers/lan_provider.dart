@@ -671,14 +671,23 @@ class LanManager extends _$LanManager {
   }
 
   void _onReceiveUploadComplete(LanUploadContext ctx) {
+    final msgNotifier = ref.read(messageListProvider.notifier);
+    final savedPath = ctx.savedAbsolutePath;
+
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
+      if (savedPath != null) {
+        msgNotifier.setIncomingShareSavedPath(
+          shareId: ctx.shareId!,
+          fileIndex: ctx.fileIndex,
+          fileCount: ctx.fileCount,
+          absolutePath: savedPath,
+        );
+      }
       if (ctx.fileIndex == ctx.fileCount - 1) {
         ref.read(transferReceiveSpeedProvider.notifier).clear(ctx.shareId!);
-        final msg = ref
-            .read(messageListProvider.notifier)
-            .findIncomingByShareId(ctx.shareId!);
+        final msg = msgNotifier.findIncomingByShareId(ctx.shareId!);
         if (msg != null) {
-          ref.read(messageListProvider.notifier).markCompleted(msg.id);
+          msgNotifier.markCompleted(msg.id);
           NotificationService.instance.showTransferCompleted(
             senderName: msg.senderName,
             fileName: msg.fileName,
@@ -695,8 +704,11 @@ class LanManager extends _$LanManager {
         orElse: () => null,
       );
       if (msg != null) {
+        if (savedPath != null) {
+          msgNotifier.setIncomingSavedPathsById(msg.id, [savedPath]);
+        }
         ref.read(transferReceiveSpeedProvider.notifier).clear(msg.id);
-        ref.read(messageListProvider.notifier).markCompleted(msg.id);
+        msgNotifier.markCompleted(msg.id);
         NotificationService.instance.showTransferCompleted(
           senderName: msg.senderName,
           fileName: ctx.fileName,
