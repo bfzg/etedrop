@@ -2,38 +2,15 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/utils/resumable_transfer.dart';
 import '../models/lan_share_payload.dart';
 
-/// 与 [LocalSend](https://github.com/localsend/localsend) 类似：大文件上传需禁用 `HttpClient` 默认空闲超时（否则易在背压/慢盘时出现 Connection closed）。
-Dio _createLanTransferDio() {
-  final dio = Dio(
-    BaseOptions(
-      connectTimeout: const Duration(minutes: 2),
-      receiveTimeout: const Duration(days: 1),
-      sendTimeout: null,
-    ),
-  );
-  dio.httpClientAdapter = IOHttpClientAdapter(
-    createHttpClient: () {
-      final client = HttpClient();
-      // SDK 部分版本上为 Duration 非空，用超长间隔等价于「大文件传输不因空闲被掐断」
-      client.idleTimeout = const Duration(days: 365);
-      client.connectionTimeout = const Duration(minutes: 2);
-      client.autoUncompress = true;
-      return client;
-    },
-  );
-  return dio;
-}
-
 class LanTransferService {
   final Dio _dio;
 
-  LanTransferService({Dio? dio}) : _dio = dio ?? _createLanTransferDio();
+  LanTransferService({Dio? dio}) : _dio = dio ?? Dio();
 
   Future<bool> ping(String ip, int port) async {
     try {
