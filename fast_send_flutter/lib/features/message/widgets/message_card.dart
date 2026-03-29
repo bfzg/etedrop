@@ -298,17 +298,21 @@ class MessageCard extends ConsumerWidget {
                 children: [
                   OutlinedButton(
                     onPressed: () async {
+                      // 在首个 await 前捕获 notifier，避免异步间隙后 MessageCard 已卸载导致 ref 不可用
+                      final msgNotifier = ref.read(messageListProvider.notifier);
+                      final lanNotifier = ref.read(lanManagerProvider.notifier);
                       if (message.isBatch && message.shareId != null) {
                         try {
-                          await ref
-                              .read(lanManagerProvider.notifier)
-                              .receiverRespondToShare(message, false);
+                          await lanNotifier.receiverRespondToShare(
+                            message,
+                            false,
+                          );
                         } catch (_) {}
                       }
-                      ref.read(messageListProvider.notifier).updateStatus(
-                            message.id,
-                            TransferMessageStatus.rejected,
-                          );
+                      msgNotifier.updateStatus(
+                        message.id,
+                        TransferMessageStatus.rejected,
+                      );
                     },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: theme.colorScheme.error,
@@ -319,20 +323,23 @@ class MessageCard extends ConsumerWidget {
                   const SizedBox(width: 8),
                   FilledButton.icon(
                     onPressed: () async {
+                      final msgNotifier = ref.read(messageListProvider.notifier);
+                      final lanNotifier = ref.read(lanManagerProvider.notifier);
                       if (message.isBatch && message.shareId != null) {
-                        ref.read(messageListProvider.notifier).updateStatus(
-                              message.id,
-                              TransferMessageStatus.accepted,
-                            );
+                        msgNotifier.updateStatus(
+                          message.id,
+                          TransferMessageStatus.accepted,
+                        );
                         try {
-                          await ref
-                              .read(lanManagerProvider.notifier)
-                              .receiverRespondToShare(message, true);
+                          await lanNotifier.receiverRespondToShare(
+                            message,
+                            true,
+                          );
                         } catch (e) {
-                          ref.read(messageListProvider.notifier).updateStatus(
-                                message.id,
-                                TransferMessageStatus.pending,
-                              );
+                          msgNotifier.updateStatus(
+                            message.id,
+                            TransferMessageStatus.pending,
+                          );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('无法通知发送方: $e')),
@@ -340,10 +347,10 @@ class MessageCard extends ConsumerWidget {
                           }
                         }
                       } else {
-                        ref.read(messageListProvider.notifier).updateStatus(
-                              message.id,
-                              TransferMessageStatus.accepted,
-                            );
+                        msgNotifier.updateStatus(
+                          message.id,
+                          TransferMessageStatus.accepted,
+                        );
                       }
                     },
                     icon: const Icon(Icons.download, size: 18),
@@ -367,6 +374,7 @@ Future<void> _retryOutgoingShare(
   final pathsRaw = message.localFilePathsJson;
   final idsRaw = message.targetDeviceIdsJson;
   if (pathsRaw == null || idsRaw == null) return;
+  final lanNotifier = ref.read(lanManagerProvider.notifier);
   try {
     final paths =
         (jsonDecode(pathsRaw) as List).map((e) => e as String).toList();
@@ -387,7 +395,7 @@ Future<void> _retryOutgoingShare(
       return;
     }
     if (ids.isEmpty) return;
-    await ref.read(lanManagerProvider.notifier).startBatchShare(
+    await lanNotifier.startBatchShare(
           absoluteFilePaths: existing,
           targetDeviceIds: ids,
         );
