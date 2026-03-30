@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:path/path.dart' as p;
 
+import '../../../core/utils/file_type_icon.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/utils/reveal_file_in_explorer.dart';
 import '../../../styles/styles.dart';
@@ -36,6 +37,24 @@ class MessageCard extends ConsumerWidget {
       case '.webp':
       case '.bmp':
       case '.heic':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /// 可在卡片内直接展示正文的纯文本类附件（与 [fileTypePngForFileName] 中文本类一致）。
+  static bool _isPlainTextPreviewFileName(String name) {
+    switch (p.extension(name).toLowerCase()) {
+      case '.txt':
+      case '.md':
+      case '.log':
+      case '.json':
+      case '.xml':
+      case '.yaml':
+      case '.yml':
+      case '.toml':
+      case '.csv':
         return true;
       default:
         return false;
@@ -235,12 +254,28 @@ class MessageCard extends ConsumerWidget {
                     ),
                 ],
               ),
+              if (batch.length == 1 &&
+                  canRevealInFolder &&
+                  _isPlainTextPreviewFileName(
+                    batch.first['name'] as String? ?? '',
+                  )) ...[
+                Builder(
+                  builder: (ctx) {
+                    final pth = _pathAt(_decodedLocalPaths(message), 0);
+                    if (pth == null) return const SizedBox.shrink();
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: _TextFilePreviewBox(path: pth),
+                    );
+                  },
+                ),
+              ],
               const SizedBox(height: 4),
               Text(
                 '合计 ${FormatUtils.fileSize(message.fileSize)}',
                 style: AppTextStyles.hint(context),
               ),
-            ] else ...[
+            ] else if (!message.isBatch) ...[
               _revealableSingleFileBlock(
                 context,
                 ref,
@@ -360,6 +395,17 @@ class MessageCard extends ConsumerWidget {
                             message,
                             true,
                           );
+                          var textOnlyOffer = false;
+                          final raw = message.batchFilesJson;
+                          if (raw != null && raw.isNotEmpty) {
+                            try {
+                              final list = jsonDecode(raw) as List<dynamic>;
+                              textOnlyOffer = list.isEmpty;
+                            } catch (_) {}
+                          }
+                          if (textOnlyOffer) {
+                            msgNotifier.markCompleted(message.id);
+                          }
                         } catch (e) {
                           msgNotifier.updateStatus(
                             message.id,
@@ -387,6 +433,100 @@ class MessageCard extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+Future<String?> _readUtf8TextPreview(String path, {int maxBytes = 32768}) async {
+  try {
+    final f = File(path);
+    if (!await f.exists()) return null;
+    final len = await f.length();
+    if (len <= maxBytes) {
+      return utf8.decode(await f.readAsBytes(), allowMalformed: true);
+    }
+    final raf = await f.open();
+    try {
+      final bytes = await raf.read(maxBytes);
+      return '${utf8.decode(bytes, allowMalformed: true)}\n…';
+    } finally {
+      await raf.close();
+    }
+  } catch (_) {
+    return null;
+  }
+}
+
+Widget _messageFileTypeAssetIcon(
+  BuildContext context,
+  String fileName, {
+  double boxSide = 40,
+}) {
+  final theme = Theme.of(context);
+  final pad = boxSide * 0.15;
+  return SizedBox(
+    width: boxSide,
+    height: boxSide,
+    child: Padding(
+      padding: EdgeInsets.all(pad),
+      child: Image.asset(
+        fileTypePngForFileName(fileName),
+        fit: BoxFit.contain,
+        errorBuilder: (_, _, _) => Icon(
+          Icons.insert_drive_file_outlined,
+          size: boxSide * 0.45,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+    ),
+  );
+}
+
+class _TextFilePreviewBox extends StatefulWidget {
+  final String path;
+
+  const _TextFilePreviewBox({required this.path});
+
+  @override
+  State<_TextFilePreviewBox> createState() => _TextFilePreviewBoxState();
+}
+
+class _TextFilePreviewBoxState extends State<_TextFilePreviewBox> {
+  late final Future<String?> _future = _readUtf8TextPreview(widget.path);
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return FutureBuilder<String?>(
+      future: _future,
+      builder: (context, snap) {
+        if (snap.connectionState != ConnectionState.done) {
+          return const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(),
+          );
+        }
+        final t = snap.data;
+        if (t == null || t.isEmpty) return const SizedBox.shrink();
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest.withValues(
+              alpha: 0.55,
+            ),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+          ),
+          constraints: const BoxConstraints(maxHeight: 240),
+          child: SingleChildScrollView(
+            child: SelectableText(
+              t,
+              style: theme.textTheme.bodyMedium,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -424,19 +564,15 @@ Widget _revealableFileChip(
               height: 40,
               fit: BoxFit.cover,
               cacheWidth: 80,
-              errorBuilder: (_, _, _) => Icon(
-                Icons.insert_drive_file_outlined,
-                size: 14,
-                color: theme.colorScheme.onSurfaceVariant,
+              errorBuilder: (_, _, _) => _messageFileTypeAssetIcon(
+                context,
+                fileName,
+                boxSide: 40,
               ),
             ),
           )
         else
-          Icon(
-            Icons.insert_drive_file_outlined,
-            size: 14,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+          _messageFileTypeAssetIcon(context, fileName, boxSide: 40),
         const SizedBox(width: 4),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 160),
@@ -484,6 +620,7 @@ Widget _revealableSingleFileBlock(
 }) {
   final path = localPreviewPath;
   final thumbOk = path != null && isImage && File(path).existsSync();
+
   final block = Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -501,17 +638,52 @@ Widget _revealableSingleFileBlock(
         ),
         const SizedBox(height: 8),
       ],
-      Text(
-        message.fileName,
-        style: AppTextStyles.fileName(context),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      const SizedBox(height: 4),
-      Text(
-        '${FormatUtils.fileSize(message.fileSize)} · ${FormatUtils.dateTime(message.timestamp)}',
-        style: AppTextStyles.hint(context),
-      ),
+      if (!thumbOk)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _messageFileTypeAssetIcon(context, message.fileName, boxSide: 44),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message.fileName,
+                    style: AppTextStyles.fileName(context),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${FormatUtils.fileSize(message.fileSize)} · ${FormatUtils.dateTime(message.timestamp)}',
+                    style: AppTextStyles.hint(context),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        )
+      else ...[
+        Text(
+          message.fileName,
+          style: AppTextStyles.fileName(context),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '${FormatUtils.fileSize(message.fileSize)} · ${FormatUtils.dateTime(message.timestamp)}',
+          style: AppTextStyles.hint(context),
+        ),
+      ],
+      if (canReveal &&
+          path != null &&
+          File(path).existsSync() &&
+          MessageCard._isPlainTextPreviewFileName(message.fileName)) ...[
+        const SizedBox(height: 10),
+        _TextFilePreviewBox(path: path),
+      ],
     ],
   );
   if (!canReveal) return block;
@@ -616,6 +788,22 @@ Future<void> _retryOutgoingShare(
       }
     }
     if (existing.isEmpty) {
+      final capOnly = message.caption?.trim();
+      if (capOnly != null &&
+          capOnly.isNotEmpty &&
+          ids.isNotEmpty) {
+        await lanNotifier.startBatchShare(
+          absoluteFilePaths: const [],
+          targetDeviceIds: ids,
+          caption: capOnly,
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('已重新发起分享')));
+        }
+        return;
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,

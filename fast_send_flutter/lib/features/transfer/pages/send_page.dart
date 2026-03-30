@@ -79,7 +79,8 @@ class _SendPageState extends ConsumerState<SendPage> {
         unique.add(p);
       }
     }
-    if (unique.isEmpty) return;
+    final capTrim = caption?.trim();
+    if (unique.isEmpty && (capTrim == null || capTrim.isEmpty)) return;
 
     final devices = ref.read(lanManagerProvider);
     final targets = devices
@@ -108,7 +109,7 @@ class _SendPageState extends ConsumerState<SendPage> {
         .startBatchShare(
           absoluteFilePaths: unique,
           targetDeviceIds: targets.map((d) => d.deviceId).toList(),
-          caption: caption,
+          caption: capTrim != null && capTrim.isNotEmpty ? capTrim : null,
         );
     if (!mounted) return;
     setState(() {

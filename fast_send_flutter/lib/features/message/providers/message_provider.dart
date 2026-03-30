@@ -101,9 +101,11 @@ class MessageList extends _$MessageList {
       shareId: shareId,
       isBatch: true,
       batchFilesJson: batchJson,
-      fileName: files.length == 1
-          ? (files.first['name'] as String? ?? '文件')
-          : '共 ${files.length} 个文件',
+      fileName: files.isEmpty
+          ? '文字消息'
+          : files.length == 1
+              ? (files.first['name'] as String? ?? '文件')
+              : '共 ${files.length} 个文件',
       fileSize: totalSize,
       senderName: senderName,
       senderDeviceId: senderDeviceId,
@@ -142,9 +144,11 @@ class MessageList extends _$MessageList {
       batchFilesJson: batchJson,
       localFilePathsJson: jsonEncode(absoluteFilePaths),
       targetDeviceIdsJson: jsonEncode(targetDeviceIds),
-      fileName: files.length == 1
-          ? (files.first['name'] as String? ?? '文件')
-          : '共 ${files.length} 个文件',
+      fileName: files.isEmpty
+          ? '文字消息'
+          : files.length == 1
+              ? (files.first['name'] as String? ?? '文件')
+              : '共 ${files.length} 个文件',
       fileSize: totalSize,
       senderName: senderName,
       senderDeviceId: senderDeviceId,

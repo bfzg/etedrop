@@ -8,10 +8,9 @@ import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/utils/clipboard_image.dart'
-    show
-        readClipboardImageBytes,
-        saveClipboardImageBytesToTempFile,
-        saveOutgoingTextMessageToTempFile;
+    show readClipboardImageBytes, saveClipboardImageBytesToTempFile;
+import '../../../core/config/styles.dart';
+import '../../../core/utils/file_type_icon.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
 import '../../../styles/styles.dart';
 import 'dashed_border_painter.dart';
@@ -180,15 +179,10 @@ class _FileDropCardState extends State<FileDropCard> {
 
     setState(() => _sending = true);
     try {
-      if (paths.isEmpty && cap.isNotEmpty) {
-        final fp = await saveOutgoingTextMessageToTempFile(cap);
-        await widget.onSend(absoluteFilePaths: [fp], caption: null);
-      } else {
-        await widget.onSend(
-          absoluteFilePaths: paths,
-          caption: cap.isNotEmpty ? cap : null,
-        );
-      }
+      await widget.onSend(
+        absoluteFilePaths: paths,
+        caption: cap.isNotEmpty ? cap : null,
+      );
       if (!mounted) return;
       setState(() {
         _textController.clear();
@@ -285,19 +279,37 @@ class _FileDropCardState extends State<FileDropCard> {
               const SizedBox(height: Spacing.sm),
               Row(
                 children: [
-                  IconButton.filledTonal(
+                  IconButton(
                     onPressed: _pickFiles,
                     icon: const Icon(Icons.add),
                     tooltip: '添加文件',
+                    style: IconButton.styleFrom(
+                      backgroundColor: AppStyles.primary,
+                      foregroundColor: Colors.white,
+                      hoverColor: Colors.white.withValues(alpha: 0.12),
+                    ),
                   ),
                   const Spacer(),
                   FilledButton.icon(
                     onPressed: _sending ? null : _send,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: AppStyles.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppStyles.primary.withValues(
+                        alpha: 0.38,
+                      ),
+                      disabledForegroundColor: Colors.white.withValues(
+                        alpha: 0.7,
+                      ),
+                    ),
                     icon: _sending
                         ? const SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
                           )
                         : const Icon(Icons.send_rounded, size: 18),
                     label: Text(_sending ? '发送中…' : '发送'),
@@ -357,12 +369,20 @@ class _AttachmentChip extends StatelessWidget {
                 ),
               )
             else
-              Padding(
-                padding: const EdgeInsets.all(12),
-                child: Icon(
-                  Icons.insert_drive_file_outlined,
-                  size: 28,
-                  color: theme.colorScheme.onSurfaceVariant,
+              SizedBox(
+                width: 52,
+                height: 52,
+                child: Padding(
+                  padding: const EdgeInsets.all(8),
+                  child: Image.asset(
+                    fileTypePngForFileName(name),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, _, _) => Icon(
+                      Icons.insert_drive_file_outlined,
+                      size: 28,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 ),
               ),
             Expanded(

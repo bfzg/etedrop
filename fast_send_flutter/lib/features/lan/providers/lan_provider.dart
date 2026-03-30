@@ -281,9 +281,11 @@ class LanManager extends _$LanManager {
       });
     }
 
-    final summary = files.length == 1
-        ? (files.first['name'] as String? ?? '文件')
-        : '${files.length} 个文件';
+    final summary = files.isEmpty
+        ? '文字消息'
+        : files.length == 1
+            ? (files.first['name'] as String? ?? '文件')
+            : '${files.length} 个文件';
     NotificationService.instance.showIncomingTransfer(
       senderName: offer.senderName,
       fileName: summary,
@@ -429,58 +431,63 @@ class LanManager extends _$LanManager {
             .updateOutgoingProgressByShareId(session.shareId, clamped);
       }
 
-      for (var i = 0; i < n; i++) {
-        final path = session.filePaths[i];
-        final f = File(path);
-        if (!await f.exists()) continue;
-        expected++;
-        if (session.cancelled) break;
-
-        final fileSize = fileSizes[i];
-        var fileSent = false;
-
-        for (var outer = 0; outer < _lanUploadOuterRetries; outer++) {
+      if (n == 0) {
+        pushOutgoingProgress(1.0);
+        batchOk = true;
+      } else {
+        for (var i = 0; i < n; i++) {
+          final path = session.filePaths[i];
+          final f = File(path);
+          if (!await f.exists()) continue;
+          expected++;
           if (session.cancelled) break;
-          try {
-            await transfer.sendLocalFileWithResume(
-              ip: device.ip,
-              port: device.port,
-              filePath: path,
-              senderName: senderName,
-              senderAvatar: senderAvatar,
-              senderDeviceId: senderDeviceId,
-              shareId: session.shareId,
-              fileIndex: i,
-              fileCount: n,
-              batchTotalBytes: totalBytes,
-              batchBaseBytes: cumulativeBase,
-              onProgress: pushOutgoingProgress,
-              cancelToken: session.uploadCancelToken,
-            );
-            fileSent = true;
-            uploaded++;
-            break;
-          } catch (e) {
-            final es = e.toString();
-            debugPrint(
-              'Upload attempt ${outer + 1}/$_lanUploadOuterRetries: $e',
-            );
-            if (es.contains('已取消') || es.contains('拒绝')) {
-              break;
-            }
-            if (outer >= _lanUploadOuterRetries - 1) {
-              break;
-            }
-            await Future<void>.delayed(
-              Duration(milliseconds: 350 * (outer + 1)),
-            );
-          }
-        }
 
-        if (!fileSent) break;
-        cumulativeBase += fileSize;
+          final fileSize = fileSizes[i];
+          var fileSent = false;
+
+          for (var outer = 0; outer < _lanUploadOuterRetries; outer++) {
+            if (session.cancelled) break;
+            try {
+              await transfer.sendLocalFileWithResume(
+                ip: device.ip,
+                port: device.port,
+                filePath: path,
+                senderName: senderName,
+                senderAvatar: senderAvatar,
+                senderDeviceId: senderDeviceId,
+                shareId: session.shareId,
+                fileIndex: i,
+                fileCount: n,
+                batchTotalBytes: totalBytes,
+                batchBaseBytes: cumulativeBase,
+                onProgress: pushOutgoingProgress,
+                cancelToken: session.uploadCancelToken,
+              );
+              fileSent = true;
+              uploaded++;
+              break;
+            } catch (e) {
+              final es = e.toString();
+              debugPrint(
+                'Upload attempt ${outer + 1}/$_lanUploadOuterRetries: $e',
+              );
+              if (es.contains('已取消') || es.contains('拒绝')) {
+                break;
+              }
+              if (outer >= _lanUploadOuterRetries - 1) {
+                break;
+              }
+              await Future<void>.delayed(
+                Duration(milliseconds: 350 * (outer + 1)),
+              );
+            }
+          }
+
+          if (!fileSent) break;
+          cumulativeBase += fileSize;
+        }
+        batchOk = expected > 0 && uploaded == expected;
       }
-      batchOk = expected > 0 && uploaded == expected;
     } finally {
       _onOutboundUploadFinished(session.shareId, batchOk);
     }
@@ -493,8 +500,10 @@ class LanManager extends _$LanManager {
     required List<String> targetDeviceIds,
     String? caption,
   }) async {
-    if (absoluteFilePaths.isEmpty) {
-      throw Exception('请选择至少一个文件');
+    final trimmedCaption = caption?.trim();
+    if (absoluteFilePaths.isEmpty &&
+        (trimmedCaption == null || trimmedCaption.isEmpty)) {
+      throw Exception('请输入文字或选择至少一个文件');
     }
     if (targetDeviceIds.isEmpty) {
       throw Exception('请选择至少一台设备');
@@ -523,7 +532,9 @@ class LanManager extends _$LanManager {
         LanShareFileMeta(name: p.basename(path), size: await f.length()),
       );
     }
-    if (files.isEmpty) throw Exception('无法读取所选文件');
+    if (absoluteFilePaths.isNotEmpty && files.isEmpty) {
+      throw Exception('无法读取所选文件');
+    }
 
     final targets = state
         .where((d) => targetDeviceIds.contains(d.deviceId) && d.isOnline)
@@ -532,7 +543,6 @@ class LanManager extends _$LanManager {
       throw Exception('所选设备不在线或已离线，请等待设备上线后再试');
     }
 
-    final trimmedCaption = caption?.trim();
     final payload = LanShareOfferPayload(
       shareId: shareId,
       senderDeviceId: senderDeviceId,

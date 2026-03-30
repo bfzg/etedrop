@@ -6,9 +6,6 @@ import 'package:path_provider/path_provider.dart';
 /// 剪贴板粘贴图片写入的子目录名（位于应用 Caches 下）。
 const kTransferClipboardPasteDir = 'clipboard_paste';
 
-/// 纯文字临时 .txt 写入的子目录名。
-const kTransferOutgoingTextDir = 'outgoing_text';
-
 Future<Directory> _applicationCacheOrSystemTemp() async {
   try {
     return await getApplicationCacheDirectory();
@@ -32,15 +29,14 @@ bool _isUnderPrefix(String filePath, String dirPath) {
   return f == d || f.startsWith(prefix);
 }
 
-/// 是否为我们在 Caches 下管理的临时路径（仅 [kTransferClipboardPasteDir] / [kTransferOutgoingTextDir]）。
+/// 是否为我们在 Caches 下管理的临时路径（仅 [kTransferClipboardPasteDir]）。
 Future<bool> isManagedTransferTempPath(String absolutePath) async {
   final base = await _applicationCacheOrSystemTemp();
   final root = p.normalize(base.absolute.path);
   return _isUnderPrefix(
-        absolutePath,
-        p.join(root, kTransferClipboardPasteDir),
-      ) ||
-      _isUnderPrefix(absolutePath, p.join(root, kTransferOutgoingTextDir));
+    absolutePath,
+    p.join(root, kTransferClipboardPasteDir),
+  );
 }
 
 /// 删除由本模块写入的临时文件；非管理路径（用户自选文件等）会跳过。
@@ -54,14 +50,11 @@ Future<void> deleteManagedTransferTempPaths(Iterable<String> paths) async {
   }
 }
 
-/// 删除 [kTransferClipboardPasteDir]、[kTransferOutgoingTextDir] 内修改时间早于 [maxAge] 的文件。
+/// 删除 [kTransferClipboardPasteDir] 内修改时间早于 [maxAge] 的文件。
 Future<void> pruneTransferTempCacheOlderThan(Duration maxAge) async {
   final cutoff = DateTime.now().subtract(maxAge);
   final base = await _applicationCacheOrSystemTemp();
-  for (final segment in [
-    kTransferClipboardPasteDir,
-    kTransferOutgoingTextDir,
-  ]) {
+  for (final segment in [kTransferClipboardPasteDir]) {
     final dir = Directory(p.join(base.path, segment));
     if (!await dir.exists()) continue;
     await for (final entity in dir.list(followLinks: false)) {
