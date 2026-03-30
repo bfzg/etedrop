@@ -4,6 +4,21 @@ import { useSharePage } from '../hooks/useSharePage'
 import { formatBytes } from '../utils/format'
 import { FileIconSvg } from '../components/fileIconSvgComponent'
 
+const VIDEO_EXTS = new Set([
+  'mp4',
+  'm4v',
+  'mov',
+  'webm',
+  'ogv',
+])
+
+function isLikelyVideo(fileName: string) {
+  const i = fileName.lastIndexOf('.')
+  if (i < 0) return false
+  const ext = fileName.slice(i + 1).toLowerCase()
+  return VIDEO_EXTS.has(ext)
+}
+
 const STATUS_CLASSES = {
   pending: {
     el: 'flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-amber-50 text-amber-800',
@@ -48,6 +63,7 @@ export function SharePageView() {
     sendDownloadStart,
     reconnect,
     resumeHintBytes,
+    playUrl,
   } = useSharePage(deviceId, shareCode)
 
   const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error
@@ -89,6 +105,17 @@ export function SharePageView() {
           </div>
         )}
 
+        {playUrl && (
+          <div className="mb-4">
+            <video
+              className="w-full rounded-xl bg-black"
+              src={playUrl}
+              controls
+              playsInline
+            />
+          </div>
+        )}
+
         {showPassword && (
           <div className="mb-4">
             <label className="block text-[13px] text-slate-600 mb-1.5 font-medium">
@@ -122,17 +149,31 @@ export function SharePageView() {
         )}
 
         {showDownloadBtn && (
-          <button
-            type="button"
-            onClick={() => {
-              void sendDownloadStart()
-            }}
-            className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {resumeHintBytes > 0
-              ? `继续下载（已保存 ${formatBytes(resumeHintBytes)}）`
-              : '下载文件'}
-          </button>
+          <div className="flex flex-col gap-2">
+            {fileInfo && isLikelyVideo(fileInfo.fileName) && (
+              <button
+                type="button"
+                onClick={() => {
+                  void sendDownloadStart({ intent: 'play', remuxFmp4: true })
+                }}
+                className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                在线播放（浏览器兼容时）
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                void sendDownloadStart({ intent: 'download', remuxFmp4: false })
+              }}
+              className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-slate-900 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {resumeHintBytes > 0
+                ? `继续下载（已保存 ${formatBytes(resumeHintBytes)}）`
+                : '下载文件'}
+            </button>
+          </div>
         )}
 
         {showProgress && (

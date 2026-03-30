@@ -96,13 +96,9 @@ class _SendPageState extends ConsumerState<SendPage> {
       return;
     }
 
-    final prevId = _activeShareId;
-    if (prevId != null) {
-      ref
-          .read(lanManagerProvider.notifier)
-          .cancelOutgoingShare(prevId, userCancelled: true);
-      _clearActiveShareState();
-    }
+    // 不在“连发下一条分享”时自动取消上一条待处理分享。
+    // 否则会触发对端 `share-cancel`，进而让接收方将上一条消息显示为“已拒绝”。
+    // 本 UI 只展示最新的一条记录；旧分享仍会在 2 分钟后超时或完成。
 
     final id = await ref
         .read(lanManagerProvider.notifier)

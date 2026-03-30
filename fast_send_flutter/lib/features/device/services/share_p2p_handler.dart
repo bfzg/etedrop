@@ -8,6 +8,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/config/constants.dart';
+import '../../../core/utils/ffmpeg_runner.dart';
 import '../../../services/local_storage_service.dart';
 import '../../cloud/cloud_storage_prefs.dart';
 import '../../share/services/share_service.dart';
@@ -242,8 +243,9 @@ class ShareP2PHandler {
       return;
     }
 
-    final filePath = p.join(storageDir, info.path);
-    final file = File(filePath);
+    var filePath = p.join(storageDir, info.path);
+    var fileName = info.fileName;
+    var file = File(filePath);
 
     if (!await file.exists()) {
       _sendJson({
@@ -252,6 +254,25 @@ class ShareP2PHandler {
         'message': '文件不存在',
       });
       return;
+    }
+
+    // 可选：按需 remux 为浏览器/MSE 更友好的 fMP4（不转码，性能开销很低）。
+    // 前端需显式请求，避免对所有文件默认增加一次磁盘 IO。
+    final remux = msg['remuxFmp4'] == true;
+    if (remux) {
+      try {
+        final outName = '${p.basenameWithoutExtension(fileName)}.mp4';
+        final out = await FfmpegRunner().remuxToFragmentedMp4(
+          inputPath: filePath,
+          outputFileName: outName,
+        );
+        filePath = out.path;
+        fileName = outName;
+        file = File(filePath);
+        resumeFrom = 0;
+      } catch (_) {
+        // remux 失败时降级为原文件直传
+      }
     }
 
     final fileSize = await file.length();
@@ -263,7 +284,7 @@ class ShareP2PHandler {
 
     _sendJson({
       'type': 'file-meta',
-      'fileName': info.fileName,
+      'fileName': fileName,
       'fileSize': fileSize,
       if (!useSmallFileFastPath) 'chunkPrefixBytes': 8,
       'resumeFrom': useSmallFileFastPath ? 0 : resumeFrom,

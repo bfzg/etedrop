@@ -137,9 +137,6 @@ class _FileDropCardState extends State<FileDropCard> {
     final bytes = await readClipboardImageBytes();
     if (!mounted) return;
     if (bytes == null || bytes.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('剪贴板中没有可用的图片')));
       return;
     }
     try {

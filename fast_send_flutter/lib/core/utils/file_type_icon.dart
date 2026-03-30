@@ -4,8 +4,9 @@ const String _base = 'assets/images/fileType';
 
 /// 根据文件条目返回对应的 PNG 图标资源路径（assets/fileType）。
 String fileTypePngForEntry(FsEntry entry) {
-  if (entry.isDirectory)
+  if (entry.isDirectory) {
     return '$_base/wenjianleixing-biaozhuntu-wenjianjia.png';
+  }
   return fileTypePngForFileName(entry.name);
 }
 

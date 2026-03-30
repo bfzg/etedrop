@@ -6,7 +6,7 @@
 |------|------|
 | 关联能力 | 公网分享页在浏览器内**可拖动进度条**的在线播放；桌面/移动端作为分享发起端 |
 | 传输层 | 沿用现有 **WebRTC DataChannel**（信令不经视频字节） |
-| 媒体处理 | 发起端使用 **FFmpegKit**（`ffmpeg_kit_flutter`）以**代码调用**执行 FFmpeg 能力 |
+| 媒体处理 | 发起端优先使用 **裁剪版 FFmpeg**（随桌面端打包，`Process` 调用）或 **FFmpegKit**（移动端/部分桌面端）执行 **remux→fMP4**；尽量 **copy**，不默认转码 |
 | 修订依据 | 产品结论：H.265 **不强制**转 H.264；以**浏览器能否解码**为准；**容器**需调整为 Web / MSE 友好形态（如 **fMP4**）时再处理 |
 
 ---
@@ -53,6 +53,42 @@ FFmpegKit.executeAsync('-i <input> ... <output>', ...);
 | **调用方式** | 采用 **FFmpegKit 的 Dart API**（`execute` / `executeAsync` / `cancel`），不在此方案中再引入「用户本机安装 FFmpeg」。 |
 
 ---
+
+## 二点五、当前仓库落地状态（2026-03）
+
+### 2.5.1 已有裁剪产物与放置位置
+
+仓库已存在裁剪产物目录：
+
+- `ffmpeg_build/mac/ffmpeg`、`ffmpeg_build/mac/ffprobe`
+- `ffmpeg_build/windows/ffmpeg.exe`、`ffmpeg_build/windows/ffprobe.exe`
+
+已将产物复制到 Flutter 工程 assets（用于随桌面端打包与运行时解包）：
+
+- `fast_send_flutter/assets/ffmpeg/macos/ffmpeg`
+- `fast_send_flutter/assets/ffmpeg/macos/ffprobe`
+- `fast_send_flutter/assets/ffmpeg/windows/ffmpeg.exe`
+- `fast_send_flutter/assets/ffmpeg/windows/ffprobe.exe`
+
+并在 `fast_send_flutter/pubspec.yaml` 增加了 `assets/ffmpeg/` 资源路径。
+
+### 2.5.2 运行时封装
+
+Flutter 侧已新增封装（桌面端）：
+
+- `fast_send_flutter/lib/core/utils/ffmpeg_bundle.dart`：从 assets 解包到 `ApplicationSupport/ffmpeg`，macOS 下设置可执行权限
+- `fast_send_flutter/lib/core/utils/ffmpeg_runner.dart`：提供 `remuxToFragmentedMp4()`（`-c copy` + `movflags` 输出 fMP4 文件）
+
+并在 `ShareP2PHandler` 增加可选 remux 开关：当 DataChannel 收到 `download-start` 且 `remuxFmp4: true` 时，优先 remux 输出 `.mp4`（fMP4）再按现有文件下载协议发送；失败则自动降级为原文件直传。
+
+### 2.5.3 Web 端配合（share-page-app）
+
+已在分享页增加“**在线播放**”能力（仍走 DataChannel 拉取文件，但下载完成后在页面内播放）：  
+
+- `share-page-app/src/pages/SharePageView.tsx`：当文件扩展名推断为视频时展示“在线播放（浏览器兼容时）”按钮与 `<video controls>` 播放区
+- `share-page-app/src/hooks/useSharePage.ts`：`sendDownloadStart({ intent: 'play', remuxFmp4: true })` 会在 `download-start` 消息中附带 `remuxFmp4: true`，并在收完 `Blob` 后生成 `blob:` URL 注入播放器，而不是触发保存下载
+
+注意：该实现当前是“**先传完再播（Blob 播放）**”，不是 MSE 的分段边下边播；但它验证了“Web 端需要与 desktop 端 remux 协作才能更稳播放”的联动链路（尤其是需要 fMP4 的情况）。
 
 ## 三、总体架构
 

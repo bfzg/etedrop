@@ -15,6 +15,8 @@ type StatusKind = "pending" | "online" | "error";
 
 type BinaryMode = "legacy" | "prefixed-opfs" | "prefixed-memory";
 
+type DownloadIntent = "download" | "play";
+
 export function useSharePage(deviceId: string, shareCode: string) {
   const [status, setStatus] = useState<{ kind: StatusKind; text: string }>({
     kind: "pending",
@@ -35,6 +37,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
   const [showDone, setShowDone] = useState(false);
   const [showReconnect, setShowReconnect] = useState(false);
   const [resumeHintBytes, setResumeHintBytes] = useState(0);
+  const [playUrl, setPlayUrl] = useState<string>("");
 
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
@@ -48,13 +51,17 @@ export function useSharePage(deviceId: string, shareCode: string) {
   const opfsGateRef = useRef(Promise.resolve());
   const writeChainRef = useRef(Promise.resolve());
   const downloadCompletedRef = useRef(false);
+  const downloadIntentRef = useRef<DownloadIntent>("download");
   const fileInfoRef = useRef<{
     fileName: string;
     fileSize: number;
     hasPassword: boolean;
   } | null>(null);
+  const playUrlRef = useRef<string>("");
+  const statusKindRef = useRef<StatusKind>("pending");
 
   const setStatusState = useCallback((kind: StatusKind, text: string) => {
+    statusKindRef.current = kind;
     setStatus({ kind, text });
     setShowStatusBar(true);
   }, []);
@@ -91,6 +98,17 @@ export function useSharePage(deviceId: string, shareCode: string) {
     expectedNextOffsetRef.current = 0;
     binaryModeRef.current = "legacy";
     downloadCompletedRef.current = false;
+    downloadIntentRef.current = "download";
+
+    if (playUrlRef.current) {
+      try {
+        URL.revokeObjectURL(playUrlRef.current);
+      } catch {
+        /* ignore */
+      }
+    }
+    playUrlRef.current = "";
+    setPlayUrl("");
   }, [closeOpfsWriter]);
 
   const finishDownload = useCallback(async () => {
@@ -98,6 +116,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
     await opfsGateRef.current.catch(() => {});
     const fi = fileInfoRef.current;
     const mode = binaryModeRef.current;
+    const intent = downloadIntentRef.current;
 
     try {
       const triggerSave = (blob: Blob) => {
@@ -112,23 +131,40 @@ export function useSharePage(deviceId: string, shareCode: string) {
         setTimeout(() => URL.revokeObjectURL(url), 5000);
       };
 
+      const triggerPlay = (blob: Blob) => {
+        if (blob.size === 0) return;
+        const url = URL.createObjectURL(blob);
+        if (playUrlRef.current) {
+          try {
+            URL.revokeObjectURL(playUrlRef.current);
+          } catch {
+            /* ignore */
+          }
+        }
+        playUrlRef.current = url;
+        setPlayUrl(url);
+      };
+
       if (mode === "prefixed-opfs" && opfsWriterRef.current && hasOpfs()) {
         const w = opfsWriterRef.current;
         opfsWriterRef.current = null;
         await w.close();
         const blob = await w.getBlob();
-        triggerSave(blob);
+        if (intent === "play") triggerPlay(blob);
+        else triggerSave(blob);
         await clearPartialFile(deviceId, shareCode);
         clearSessionMeta(deviceId, shareCode);
       } else if (mode === "prefixed-opfs" || mode === "prefixed-memory") {
         const blob = new Blob(memoryDataChunksRef.current);
-        triggerSave(blob);
+        if (intent === "play") triggerPlay(blob);
+        else triggerSave(blob);
         memoryDataChunksRef.current = [];
       } else {
         const parts = chunksRef.current;
         if (parts.length === 0) return;
         const blob = new Blob(parts);
-        triggerSave(blob);
+        if (intent === "play") triggerPlay(blob);
+        else triggerSave(blob);
         chunksRef.current = [];
       }
     } finally {
@@ -136,69 +172,6 @@ export function useSharePage(deviceId: string, shareCode: string) {
       setShowDone(true);
     }
   }, [deviceId, shareCode]);
-
-  const connect = useCallback(() => {
-    reset();
-    setStatusState("pending", "正在连接设备…");
-
-    const proto = location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(proto + "//" + location.host + "/api/share");
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      ws.send(JSON.stringify({ type: "connect", deviceId }));
-    };
-
-    ws.onmessage = (ev) => {
-      try {
-        const m = JSON.parse(ev.data as string);
-        switch (m.type) {
-          case "device-online":
-            setStatusState("online", "设备在线，正在建立 P2P 连接…");
-            startRTC(ws);
-            break;
-          case "answer":
-            if (pcRef.current && m.data) {
-              pcRef.current.setRemoteDescription(
-                new RTCSessionDescription(m.data),
-              );
-            }
-            break;
-          case "ice-candidate":
-            if (pcRef.current && m.data) {
-              pcRef.current
-                .addIceCandidate(new RTCIceCandidate(m.data))
-                .catch(() => {});
-            }
-            break;
-          case "err":
-            setStatusState(
-              "error",
-              m.code === "OFFLINE"
-                ? "分享者设备离线，请稍后再试"
-                : m.msg || "连接异常",
-            );
-            setShowReconnect(true);
-            break;
-        }
-      } catch {
-        setStatusState("error", "消息解析失败");
-        setShowReconnect(true);
-      }
-    };
-
-    ws.onerror = () => {
-      setStatusState("error", "网络连接失败");
-      setShowReconnect(true);
-    };
-
-    ws.onclose = () => {
-      if (status.kind === "pending") {
-        setStatusState("error", "连接已关闭");
-        setShowReconnect(true);
-      }
-    };
-  }, [deviceId, reset, setStatusState, status.kind]);
 
   const startRTC = useCallback(
     (ws: WebSocket) => {
@@ -454,6 +427,69 @@ export function useSharePage(deviceId: string, shareCode: string) {
     [shareCode, setStatusState, finishDownload, deviceId, closeOpfsWriter],
   );
 
+  const connect = useCallback(() => {
+    reset();
+    setStatusState("pending", "正在连接设备…");
+
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(proto + "//" + location.host + "/api/share");
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(JSON.stringify({ type: "connect", deviceId }));
+    };
+
+    ws.onmessage = (ev) => {
+      try {
+        const m = JSON.parse(ev.data as string);
+        switch (m.type) {
+          case "device-online":
+            setStatusState("online", "设备在线，正在建立 P2P 连接…");
+            startRTC(ws);
+            break;
+          case "answer":
+            if (pcRef.current && m.data) {
+              pcRef.current.setRemoteDescription(
+                new RTCSessionDescription(m.data),
+              );
+            }
+            break;
+          case "ice-candidate":
+            if (pcRef.current && m.data) {
+              pcRef.current
+                .addIceCandidate(new RTCIceCandidate(m.data))
+                .catch(() => {});
+            }
+            break;
+          case "err":
+            setStatusState(
+              "error",
+              m.code === "OFFLINE"
+                ? "分享者设备离线，请稍后再试"
+                : m.msg || "连接异常",
+            );
+            setShowReconnect(true);
+            break;
+        }
+      } catch {
+        setStatusState("error", "消息解析失败");
+        setShowReconnect(true);
+      }
+    };
+
+    ws.onerror = () => {
+      setStatusState("error", "网络连接失败");
+      setShowReconnect(true);
+    };
+
+    ws.onclose = () => {
+      if (statusKindRef.current === "pending") {
+        setStatusState("error", "连接已关闭");
+        setShowReconnect(true);
+      }
+    };
+  }, [deviceId, reset, setStatusState, startRTC]);
+
   useEffect(() => {
     connect();
     return () => {
@@ -483,7 +519,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
         wsRef.current = null;
       }
     };
-  }, [deviceId, shareCode]);
+  }, [connect, closeOpfsWriter]);
 
   const sendVerify = useCallback((password: string) => {
     const dc = dcRef.current;
@@ -493,9 +529,13 @@ export function useSharePage(deviceId: string, shareCode: string) {
     dc.send(JSON.stringify({ type: "share-verify", password }));
   }, []);
 
-  const sendDownloadStart = useCallback(async () => {
+  const sendDownloadStart = useCallback(async (opts?: {
+    intent?: DownloadIntent;
+    remuxFmp4?: boolean;
+  }) => {
     const dc = dcRef.current;
     if (!dc || dc.readyState !== "open") return;
+    downloadIntentRef.current = opts?.intent ?? "download";
     let resume = 0;
     const fi = fileInfoRef.current;
     if (fi && hasOpfs()) {
@@ -510,7 +550,11 @@ export function useSharePage(deviceId: string, shareCode: string) {
       }
     }
     dc.send(
-      JSON.stringify({ type: "download-start", resumeFrom: resume }),
+      JSON.stringify({
+        type: "download-start",
+        resumeFrom: resume,
+        remuxFmp4: !!opts?.remuxFmp4,
+      }),
     );
   }, [deviceId, shareCode]);
 
@@ -555,6 +599,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
     showDone,
     showReconnect,
     resumeHintBytes,
+    playUrl,
     sendVerify,
     sendDownloadStart,
     reconnect,
