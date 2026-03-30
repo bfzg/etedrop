@@ -363,7 +363,7 @@ class ShareP2PHandler {
       Future<void> sendBin(int kind, Uint8List payload) async {
         if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
         if (payload.isEmpty) return;
-        const maxChunk = 256 * 1024;
+        const maxChunk = 60 * 1024;
         var off = 0;
         while (off < payload.length) {
           if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
@@ -372,7 +372,7 @@ class ShareP2PHandler {
           _dc!.send(RTCDataChannelMessage.fromBinary(_wrapBin(kind, slice)));
           totalBytesSent += slice.length;
           off = end;
-          while ((_dc?.bufferedAmount ?? 0) > maxChunk * 8) {
+          while ((_dc?.bufferedAmount ?? 0) > 512 * 1024) {
             await Future.delayed(const Duration(milliseconds: 2));
           }
         }
