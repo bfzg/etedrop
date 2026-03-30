@@ -259,6 +259,7 @@ class LanManager extends _$LanManager {
           files: files,
           senderHttpHost: offer.senderHost,
           senderHttpPort: offer.senderPort,
+          caption: offer.caption,
         );
 
     final waitMs = offer.expiresAtMs - DateTime.now().millisecondsSinceEpoch;
@@ -479,6 +480,7 @@ class LanManager extends _$LanManager {
   Future<String> startBatchShare({
     required List<String> absoluteFilePaths,
     required List<String> targetDeviceIds,
+    String? caption,
   }) async {
     if (absoluteFilePaths.isEmpty) {
       throw Exception('请选择至少一个文件');
@@ -519,6 +521,7 @@ class LanManager extends _$LanManager {
       throw Exception('所选设备不在线或已离线，请等待设备上线后再试');
     }
 
+    final trimmedCaption = caption?.trim();
     final payload = LanShareOfferPayload(
       shareId: shareId,
       senderDeviceId: senderDeviceId,
@@ -528,6 +531,9 @@ class LanManager extends _$LanManager {
       senderPort: _listenPort,
       files: files,
       expiresAtMs: expiresAt,
+      caption: trimmedCaption != null && trimmedCaption.isNotEmpty
+          ? trimmedCaption
+          : null,
     );
 
     final transfer = LanTransferService();
@@ -559,6 +565,9 @@ class LanManager extends _$LanManager {
           senderDeviceId: senderDeviceId,
           senderAvatar: senderAvatar,
           files: fileMaps,
+          caption: trimmedCaption != null && trimmedCaption.isNotEmpty
+              ? trimmedCaption
+              : null,
         );
     return shareId;
   }

@@ -28,6 +28,7 @@ _TransferMessage _$TransferMessageFromJson(Map<String, dynamic> json) =>
       isOutgoing: json['isOutgoing'] as bool? ?? false,
       localFilePathsJson: json['localFilePathsJson'] as String?,
       targetDeviceIdsJson: json['targetDeviceIdsJson'] as String?,
+      caption: json['caption'] as String?,
     );
 
 Map<String, dynamic> _$TransferMessageToJson(_TransferMessage instance) =>
@@ -50,6 +51,7 @@ Map<String, dynamic> _$TransferMessageToJson(_TransferMessage instance) =>
       'isOutgoing': instance.isOutgoing,
       'localFilePathsJson': instance.localFilePathsJson,
       'targetDeviceIdsJson': instance.targetDeviceIdsJson,
+      'caption': instance.caption,
     };
 
 const _$TransferMessageStatusEnumMap = {

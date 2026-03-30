@@ -21,6 +21,45 @@ class MessageCard extends ConsumerWidget {
 
   const MessageCard({super.key, required this.message});
 
+  static String? _trimCaption(TransferMessage m) {
+    final s = m.caption?.trim();
+    if (s == null || s.isEmpty) return null;
+    return s;
+  }
+
+  static bool _isLikelyImageFileName(String name) {
+    switch (p.extension(name).toLowerCase()) {
+      case '.png':
+      case '.jpg':
+      case '.jpeg':
+      case '.gif':
+      case '.webp':
+      case '.bmp':
+      case '.heic':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  static List<String>? _decodedLocalPaths(TransferMessage m) {
+    final raw = m.localFilePathsJson;
+    if (raw == null || raw.isEmpty) return null;
+    try {
+      return List<String>.from(jsonDecode(raw) as List);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static String? _pathAt(List<String>? list, int index) {
+    if (list == null || index < 0 || index >= list.length) return null;
+    final s = list[index];
+    if (s.isEmpty) return null;
+    if (File(s).existsSync()) return s;
+    return null;
+  }
+
   List<Map<String, dynamic>>? _batchFiles(TransferMessage m) {
     if (!m.isBatch || m.batchFilesJson == null) return null;
     try {
@@ -165,6 +204,13 @@ class MessageCard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 12),
+            if (_trimCaption(message) != null) ...[
+              SelectableText(
+                _trimCaption(message)!,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 10),
+            ],
             if (batch != null && batch.isNotEmpty) ...[
               Text(message.fileName, style: AppTextStyles.fileName(context)),
               const SizedBox(height: 8),
@@ -182,6 +228,10 @@ class MessageCard extends ConsumerWidget {
                       fileName: batch[i]['name'] as String? ?? '',
                       fileSize: (batch[i]['size'] as num?)?.toInt() ?? 0,
                       message: message,
+                      localPreviewPath: _pathAt(_decodedLocalPaths(message), i),
+                      isImage: _isLikelyImageFileName(
+                        batch[i]['name'] as String? ?? '',
+                      ),
                     ),
                 ],
               ),
@@ -197,6 +247,11 @@ class MessageCard extends ConsumerWidget {
                 theme,
                 canRevealInFolder,
                 message: message,
+                localPreviewPath: MessageCard._pathAt(
+                  MessageCard._decodedLocalPaths(message),
+                  0,
+                ),
+                isImage: MessageCard._isLikelyImageFileName(message.fileName),
               ),
             ],
             if (message.status == TransferMessageStatus.receiving) ...[
@@ -345,7 +400,11 @@ Widget _revealableFileChip(
   required String fileName,
   required int fileSize,
   required TransferMessage message,
+  String? localPreviewPath,
+  bool isImage = false,
 }) {
+  final path = localPreviewPath;
+  final thumbOk = path != null && isImage && File(path).existsSync();
   final chip = Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     decoration: BoxDecoration(
@@ -356,11 +415,28 @@ Widget _revealableFileChip(
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          Icons.insert_drive_file_outlined,
-          size: 14,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+        if (thumbOk)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: Image.file(
+              File(path),
+              width: 40,
+              height: 40,
+              fit: BoxFit.cover,
+              cacheWidth: 80,
+              errorBuilder: (_, _, _) => Icon(
+                Icons.insert_drive_file_outlined,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          )
+        else
+          Icon(
+            Icons.insert_drive_file_outlined,
+            size: 14,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
         const SizedBox(width: 4),
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 160),
@@ -403,10 +479,28 @@ Widget _revealableSingleFileBlock(
   ThemeData theme,
   bool canReveal, {
   required TransferMessage message,
+  String? localPreviewPath,
+  bool isImage = false,
 }) {
+  final path = localPreviewPath;
+  final thumbOk = path != null && isImage && File(path).existsSync();
   final block = Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      if (thumbOk) ...[
+        ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.file(
+            File(path),
+            width: 160,
+            height: 160,
+            fit: BoxFit.cover,
+            cacheWidth: 320,
+            errorBuilder: (_, _, _) => const SizedBox.shrink(),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
       Text(
         message.fileName,
         style: AppTextStyles.fileName(context),
@@ -530,9 +624,11 @@ Future<void> _retryOutgoingShare(
       return;
     }
     if (ids.isEmpty) return;
+    final cap = message.caption?.trim();
     await lanNotifier.startBatchShare(
       absoluteFilePaths: existing,
       targetDeviceIds: ids,
+      caption: cap != null && cap.isNotEmpty ? cap : null,
     );
     if (context.mounted) {
       ScaffoldMessenger.of(

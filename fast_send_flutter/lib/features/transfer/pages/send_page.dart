@@ -1,5 +1,3 @@
-import 'package:desktop_drop/desktop_drop.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -18,7 +16,6 @@ class SendPage extends ConsumerStatefulWidget {
 }
 
 class _SendPageState extends ConsumerState<SendPage> {
-  bool _isPageDragging = false;
   final Set<String> _selectedDeviceIds = {};
 
   String? _activeShareId;
@@ -71,8 +68,11 @@ class _SendPageState extends ConsumerState<SendPage> {
     _clearActiveShareState();
   }
 
-  /// 多选/拖入完成后立即发起批量分享（需已选设备）
-  Future<void> _startShareWithPaths(List<String> paths) async {
+  /// 发起批量分享（路径已在外部整理好）
+  Future<void> _startShare({
+    required List<String> paths,
+    String? caption,
+  }) async {
     final unique = <String>[];
     for (final p in paths) {
       if (p.isNotEmpty && !unique.contains(p)) {
@@ -103,58 +103,24 @@ class _SendPageState extends ConsumerState<SendPage> {
       _clearActiveShareState();
     }
 
-    try {
-      final id = await ref
-          .read(lanManagerProvider.notifier)
-          .startBatchShare(
-            absoluteFilePaths: unique,
-            targetDeviceIds: targets.map((d) => d.deviceId).toList(),
-          );
-      if (!mounted) return;
-      setState(() {
-        _activeShareId = id;
-        _activeExpiresAt = DateTime.now().add(const Duration(minutes: 2));
-        _activeRecipients = List<LanDevice>.from(targets);
-      });
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('已发送分享邀请，对方在消息里接受后开始传输')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('发起失败: $e')));
-      }
+    final id = await ref
+        .read(lanManagerProvider.notifier)
+        .startBatchShare(
+          absoluteFilePaths: unique,
+          targetDeviceIds: targets.map((d) => d.deviceId).toList(),
+          caption: caption,
+        );
+    if (!mounted) return;
+    setState(() {
+      _activeShareId = id;
+      _activeExpiresAt = DateTime.now().add(const Duration(minutes: 2));
+      _activeRecipients = List<LanDevice>.from(targets);
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('已发送分享邀请，对方在消息里接受后开始传输')));
     }
-  }
-
-  Future<void> _pickFiles() async {
-    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
-    if (result == null || result.files.isEmpty) return;
-
-    final paths = <String>[];
-    for (final f in result.files) {
-      if (f.path == null) continue;
-      final filePath = _cleanPath(f.path!);
-      if (filePath.isNotEmpty) {
-        paths.add(filePath);
-      }
-    }
-    await _startShareWithPaths(paths);
-  }
-
-  Future<void> _handleDropFile(DropDoneDetails details) async {
-    if (details.files.isEmpty) return;
-    final paths = <String>[];
-    for (final dropped in details.files) {
-      final path = _cleanPath(dropped.path);
-      if (path.isNotEmpty) {
-        paths.add(path);
-      }
-    }
-    await _startShareWithPaths(paths);
   }
 
   @override
@@ -168,15 +134,7 @@ class _SendPageState extends ConsumerState<SendPage> {
 
     return Scaffold(
       appBar: isDesktopLayout ? null : AppBar(title: const Text('分享')),
-      body: DropTarget(
-        onDragEntered: (_) => setState(() => _isPageDragging = true),
-        onDragExited: (_) => setState(() => _isPageDragging = false),
-        onDragDone: (details) async {
-          setState(() => _isPageDragging = false);
-          await _handleDropFile(details);
-        },
-        child: _buildBody(context),
-      ),
+      body: _buildBody(context),
     );
   }
 
@@ -200,15 +158,17 @@ class _SendPageState extends ConsumerState<SendPage> {
               onToggle: _toggleDevice,
             ),
           ),
-          const SizedBox(height: Spacing.md),
+          const SizedBox(height: Spacing.xl),
           FileDropCard(
-            isDragging: _isPageDragging,
             hasSelectedDevices: hasOnlineTarget,
             selectionOfflineOnly: hasSelection && !hasOnlineTarget,
-            onPickRequested: _pickFiles,
+            onSend: ({required absoluteFilePaths, caption}) async {
+              final cleaned = absoluteFilePaths.map(_cleanPath).toList();
+              await _startShare(paths: cleaned, caption: caption);
+            },
           ),
           if (hasActive) ...[
-            const SizedBox(height: Spacing.md),
+            const SizedBox(height: Spacing.xl),
             LanSharePanel(
               shareId: _activeShareId!,
               expiresAt: _activeExpiresAt!,

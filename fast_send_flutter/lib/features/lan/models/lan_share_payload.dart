@@ -23,11 +23,15 @@ class LanShareOfferPayload {
   final String senderDeviceId;
   final String senderName;
   final int senderAvatar;
+
   /// 发送方 HTTP 服务地址（供接收方回调「接受」）
   final String senderHost;
   final int senderPort;
   final List<LanShareFileMeta> files;
   final int expiresAtMs;
+
+  /// 可选附言（旧版客户端忽略）
+  final String? caption;
 
   const LanShareOfferPayload({
     required this.shareId,
@@ -38,18 +42,20 @@ class LanShareOfferPayload {
     required this.senderPort,
     required this.files,
     required this.expiresAtMs,
+    this.caption,
   });
 
   Map<String, dynamic> toJson() => {
-        'shareId': shareId,
-        'senderDeviceId': senderDeviceId,
-        'senderName': senderName,
-        'senderAvatar': senderAvatar,
-        'senderHost': senderHost,
-        'senderPort': senderPort,
-        'files': files.map((e) => e.toJson()).toList(),
-        'expiresAtMs': expiresAtMs,
-      };
+    'shareId': shareId,
+    'senderDeviceId': senderDeviceId,
+    'senderName': senderName,
+    'senderAvatar': senderAvatar,
+    'senderHost': senderHost,
+    'senderPort': senderPort,
+    'files': files.map((e) => e.toJson()).toList(),
+    'expiresAtMs': expiresAtMs,
+    if (caption != null && caption!.isNotEmpty) 'caption': caption,
+  };
 
   static LanShareOfferPayload fromJson(Map<String, dynamic> json) {
     final list = json['files'] as List<dynamic>? ?? [];
@@ -64,6 +70,7 @@ class LanShareOfferPayload {
           .map((e) => LanShareFileMeta.fromJson(e as Map<String, dynamic>))
           .toList(),
       expiresAtMs: (json['expiresAtMs'] as num).toInt(),
+      caption: json['caption'] as String?,
     );
   }
 
@@ -86,10 +93,10 @@ class LanShareAcceptPayload {
   });
 
   Map<String, dynamic> toJson() => {
-        'shareId': shareId,
-        'receiverDeviceId': receiverDeviceId,
-        'accepted': accepted,
-      };
+    'shareId': shareId,
+    'receiverDeviceId': receiverDeviceId,
+    'accepted': accepted,
+  };
 
   static LanShareAcceptPayload fromJson(Map<String, dynamic> json) {
     return LanShareAcceptPayload(

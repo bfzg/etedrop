@@ -89,6 +89,7 @@ class MessageList extends _$MessageList {
     required List<Map<String, dynamic>> files,
     required String senderHttpHost,
     required int senderHttpPort,
+    String? caption,
   }) {
     final totalSize = files.fold<int>(
       0,
@@ -110,6 +111,7 @@ class MessageList extends _$MessageList {
       senderHttpHost: senderHttpHost,
       senderHttpPort: senderHttpPort,
       timestamp: DateTime.now().millisecondsSinceEpoch,
+      caption: caption,
     );
     state = _trimToLimit([msg, ...state]);
     _persist();
@@ -125,6 +127,7 @@ class MessageList extends _$MessageList {
     required String senderDeviceId,
     required int senderAvatar,
     required List<Map<String, dynamic>> files,
+    String? caption,
   }) {
     final totalSize = files.fold<int>(
       0,
@@ -147,6 +150,7 @@ class MessageList extends _$MessageList {
       senderDeviceId: senderDeviceId,
       senderAvatar: senderAvatar,
       timestamp: DateTime.now().millisecondsSinceEpoch,
+      caption: caption,
     );
     state = _trimToLimit([msg, ...state]);
     _persist();

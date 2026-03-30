@@ -1,83 +1,385 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'dart:io';
 
-import 'package:eddy/styles/styles.dart';
+import 'package:desktop_drop/desktop_drop.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:path/path.dart' as p;
+
+import '../../../core/utils/clipboard_image.dart'
+    show
+        readClipboardImageBytes,
+        saveClipboardImageBytesToTempFile,
+        saveOutgoingTextMessageToTempFile;
+import '../../../styles/styles.dart';
 import 'dashed_border_painter.dart';
 
-class FileDropCard extends StatelessWidget {
-  final bool isDragging;
+typedef TransferSendCallback =
+    Future<void> Function({
+      required List<String> absoluteFilePaths,
+      String? caption,
+    });
+
+/// 发送页输入区：多行文字、附件列表、剪贴板图片、拖放与多选文件，确认后由 [onSend] 发起分享。
+class FileDropCard extends StatefulWidget {
   final bool hasSelectedDevices;
-  /// 已选设备但均为离线（与 [hasSelectedDevices] 互斥：后者为真时表示至少有一台在线已选）
+
+  /// 已选设备但均为离线
   final bool selectionOfflineOnly;
-  final VoidCallback onPickRequested;
+  final TransferSendCallback onSend;
 
   const FileDropCard({
     super.key,
-    required this.isDragging,
     required this.hasSelectedDevices,
     this.selectionOfflineOnly = false,
-    required this.onPickRequested,
+    required this.onSend,
+  });
+
+  @override
+  State<FileDropCard> createState() => _FileDropCardState();
+}
+
+class _FileDropCardState extends State<FileDropCard> {
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  final List<String> _attachments = [];
+  bool _dragging = false;
+  bool _sending = false;
+
+  static bool _isImagePath(String path) {
+    switch (p.extension(path).toLowerCase()) {
+      case '.png':
+      case '.jpg':
+      case '.jpeg':
+      case '.gif':
+      case '.webp':
+      case '.bmp':
+      case '.heic':
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_hardwareKeyHandler);
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_hardwareKeyHandler);
+    _textController.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  /// 与 TextField 不可共用同一 [FocusNode] 包一层 [Focus]，否则触发 focus_manager 断言。
+  bool _hardwareKeyHandler(KeyEvent event) {
+    if (!_focusNode.hasFocus) return false;
+    if (event is! KeyDownEvent) return false;
+    if (event.logicalKey != LogicalKeyboardKey.keyV) return false;
+    if (!HardwareKeyboard.instance.isMetaPressed &&
+        !HardwareKeyboard.instance.isControlPressed) {
+      return false;
+    }
+    unawaited(_pasteImageFromClipboard());
+    return false;
+  }
+
+  String _cleanPath(String raw) {
+    var s = raw.trim();
+    if (s.length >= 2) {
+      final first = s[0];
+      final last = s[s.length - 1];
+      if ((first == '\'' && last == '\'') || (first == '"' && last == '"')) {
+        s = s.substring(1, s.length - 1).trim();
+      }
+    }
+    while (s.isNotEmpty && (s.startsWith('\'') || s.startsWith('"'))) {
+      s = s.substring(1).trimLeft();
+    }
+    while (s.isNotEmpty && (s.endsWith('\'') || s.endsWith('"'))) {
+      s = s.substring(0, s.length - 1).trimRight();
+    }
+    return s;
+  }
+
+  void _addPaths(Iterable<String> rawPaths) {
+    final next = <String>[..._attachments];
+    for (final raw in rawPaths) {
+      final path = _cleanPath(raw);
+      if (path.isEmpty) continue;
+      if (!next.contains(path)) next.add(path);
+    }
+    setState(() {
+      _attachments
+        ..clear()
+        ..addAll(next);
+    });
+  }
+
+  Future<void> _pickFiles() async {
+    final result = await FilePicker.platform.pickFiles(allowMultiple: true);
+    if (result == null || result.files.isEmpty) return;
+    final paths = <String>[];
+    for (final f in result.files) {
+      if (f.path == null) continue;
+      paths.add(_cleanPath(f.path!));
+    }
+    _addPaths(paths);
+  }
+
+  Future<void> _pasteImageFromClipboard() async {
+    final bytes = await readClipboardImageBytes();
+    if (!mounted) return;
+    if (bytes == null || bytes.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('剪贴板中没有可用的图片')));
+      return;
+    }
+    try {
+      final fp = await saveClipboardImageBytesToTempFile(bytes);
+      _addPaths([fp]);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('保存剪贴板图片失败: $e')));
+      }
+    }
+  }
+
+  Future<void> _send() async {
+    if (_sending) return;
+    final cap = _textController.text.trim();
+    var paths = List<String>.from(_attachments);
+
+    if (paths.isEmpty && cap.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请输入文字或添加至少一个文件')));
+      }
+      return;
+    }
+
+    if (!widget.hasSelectedDevices) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('请先在上方选择在线的接收设备')));
+      }
+      return;
+    }
+
+    setState(() => _sending = true);
+    try {
+      if (paths.isEmpty && cap.isNotEmpty) {
+        final fp = await saveOutgoingTextMessageToTempFile(cap);
+        await widget.onSend(absoluteFilePaths: [fp], caption: null);
+      } else {
+        await widget.onSend(
+          absoluteFilePaths: paths,
+          caption: cap.isNotEmpty ? cap : null,
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _textController.clear();
+        _attachments.clear();
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('发送失败: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final borderColor = _dragging
+        ? theme.colorScheme.primary
+        : theme.colorScheme.outlineVariant;
+
+    return DropTarget(
+      onDragEntered: (_) => setState(() => _dragging = true),
+      onDragExited: (_) => setState(() => _dragging = false),
+      onDragDone: (details) async {
+        setState(() => _dragging = false);
+        if (details.files.isEmpty) return;
+        final paths = <String>[];
+        for (final dropped in details.files) {
+          paths.add(_cleanPath(dropped.path));
+        }
+        _addPaths(paths);
+      },
+      child: CustomPaint(
+        painter: DashedBorderPainter(
+          color: borderColor,
+          strokeWidth: _dragging ? 2.0 : 1.5,
+          dashWidth: 6,
+          dashGap: 4,
+          radius: 14,
+        ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          constraints: const BoxConstraints(minHeight: 200),
+          padding: const EdgeInsets.fromLTRB(
+            Spacing.md,
+            Spacing.md,
+            Spacing.md,
+            Spacing.sm,
+          ),
+          decoration: BoxDecoration(
+            color: _dragging
+                ? theme.colorScheme.primary.withValues(alpha: 0.04)
+                : null,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_attachments.isNotEmpty) ...[
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (var i = 0; i < _attachments.length; i++)
+                      _AttachmentChip(
+                        path: _attachments[i],
+                        isImage: _isImagePath(_attachments[i]),
+                        onRemove: () =>
+                            setState(() => _attachments.removeAt(i)),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: Spacing.sm),
+              ],
+              TextField(
+                controller: _textController,
+                focusNode: _focusNode,
+                minLines: 3,
+                maxLines: 8,
+                textInputAction: TextInputAction.newline,
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: '输入文字，⌘V 粘贴截图，或拖入文件…',
+                  hintStyle: AppTextStyles.hint(context),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: Spacing.sm),
+              Row(
+                children: [
+                  IconButton.filledTonal(
+                    onPressed: _pickFiles,
+                    icon: const Icon(Icons.add),
+                    tooltip: '添加文件',
+                  ),
+                  const Spacer(),
+                  FilledButton.icon(
+                    onPressed: _sending ? null : _send,
+                    icon: _sending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.send_rounded, size: 18),
+                    label: Text(_sending ? '发送中…' : '发送'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AttachmentChip extends StatelessWidget {
+  final String path;
+  final bool isImage;
+  final VoidCallback onRemove;
+
+  const _AttachmentChip({
+    required this.path,
+    required this.isImage,
+    required this.onRemove,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final borderColor = isDragging
-        ? theme.colorScheme.primary
-        : theme.colorScheme.outlineVariant;
-
-    return GestureDetector(
-      onTap: onPickRequested,
-      child: MouseRegion(
-        cursor: SystemMouseCursors.click,
-        child: CustomPaint(
-          painter: DashedBorderPainter(
-            color: borderColor,
-            strokeWidth: isDragging ? 2.0 : 1.5,
-            dashWidth: 6,
-            dashGap: 4,
-            radius: 14,
-          ),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            constraints: const BoxConstraints(minHeight: 200),
-            padding: const EdgeInsets.all(Spacing.xl),
-            decoration: BoxDecoration(
-              color: isDragging
-                  ? theme.colorScheme.primary.withValues(alpha: 0.04)
-                  : null,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isDragging ? Icons.file_download : Icons.upload_file_outlined,
-                  size: 48,
-                  color: isDragging
-                      ? theme.colorScheme.primary
-                      : theme.colorScheme.onSurfaceVariant.withValues(
-                          alpha: 0.4,
-                        ),
+    final name = p.basename(path);
+    return Material(
+      color: theme.colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(10),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 200),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isImage && File(path).existsSync())
+              ClipRRect(
+                borderRadius: const BorderRadius.horizontal(
+                  left: Radius.circular(10),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  isDragging ? '释放以发送分享' : '拖入或点击选择文件',
-                  style: AppTextStyles.title(context).copyWith(
-                    color: isDragging ? theme.colorScheme.primary : null,
+                child: Image.file(
+                  File(path),
+                  width: 52,
+                  height: 52,
+                  fit: BoxFit.cover,
+                  cacheWidth: 104,
+                  errorBuilder: (_, _, _) => SizedBox(
+                    width: 52,
+                    height: 52,
+                    child: Icon(
+                      Icons.broken_image_outlined,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  selectionOfflineOnly
-                      ? '所选设备当前离线，请等待上线后再发送，或点击头像取消选择'
-                      : hasSelectedDevices
-                          ? '多选或拖入多个文件后将立即发出分享邀请'
-                          : '请先在上方选择接收设备，再选择或拖入文件',
-                  style: AppTextStyles.hint(context),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Icon(
+                  Icons.insert_drive_file_outlined,
+                  size: 28,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-              ],
+              ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: Text(
+                  name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.secondary(context),
+                ),
+              ),
             ),
-          ),
+            IconButton(
+              onPressed: onRemove,
+              icon: const Icon(Icons.close, size: 18),
+              tooltip: '移除',
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
         ),
       ),
     );
