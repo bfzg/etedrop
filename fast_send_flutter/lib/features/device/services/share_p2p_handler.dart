@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 
 import '../../../core/config/constants.dart';
 import '../../../core/utils/ffmpeg_runner.dart';
+import '../../../core/utils/ffmpeg_bundle.dart';
 import '../../../services/local_storage_service.dart';
 import '../../cloud/cloud_storage_prefs.dart';
 import '../../share/services/share_service.dart';
@@ -144,6 +145,398 @@ class ShareP2PHandler {
       case 'download-start':
         unawaited(_onDownloadStart(msg));
         break;
+      case 'stream-start':
+        unawaited(_onStreamStart(msg));
+        break;
+      case 'stream-seek':
+        unawaited(_onStreamSeek(msg));
+        break;
+    }
+  }
+
+  Future<void> _onStreamStart(Map<String, dynamic> msg) async {
+    if (_currentShareCode == null) return;
+    final info = _shareService.getShareMeta(_currentShareCode!);
+    if (info == null) {
+      _sendJson({'type': 'error', 'code': 'NOT_FOUND', 'message': '分享不存在'});
+      return;
+    }
+    if (info.hasPassword && !_passwordVerified) {
+      _sendJson({
+        'type': 'error',
+        'code': 'AUTH_REQUIRED',
+        'message': '需要密码验证',
+      });
+      return;
+    }
+    if (!FfmpegBundle.isSupportedPlatform) {
+      _sendJson({
+        'type': 'error',
+        'code': 'UNSUPPORTED',
+        'message': '当前设备不支持在线播放',
+      });
+      return;
+    }
+
+    final storageDir = _storageDir;
+    if (storageDir.isEmpty) {
+      _sendJson({'type': 'error', 'code': 'NO_STORAGE', 'message': '存储目录未设置'});
+      return;
+    }
+
+    final filePath = p.join(storageDir, info.path);
+    final file = File(filePath);
+    if (!await file.exists()) {
+      _sendJson({
+        'type': 'error',
+        'code': 'FILE_NOT_FOUND',
+        'message': '文件不存在',
+      });
+      return;
+    }
+
+    // 先做最小可播约束：仅允许 H.264（+ 可选 AAC）走在线播放，避免浏览器端 MSE 静默失败。
+    // 未来可扩展为 stream-meta 携带 codec/mime 并在 web 端协商。
+    final bins = await FfmpegBundle.ensureExtracted();
+    final vCodec = await _probeCodec(
+      bins.ffprobePath,
+      filePath,
+      streamSelector: 'v:0',
+    );
+    final aCodec = await _probeCodec(
+      bins.ffprobePath,
+      filePath,
+      streamSelector: 'a:0',
+    );
+    final vOk = vCodec == null || vCodec == 'h264' || vCodec == 'hevc';
+    final aOk = aCodec == null || aCodec == 'aac';
+    if (!vOk || !aOk) {
+      _sendJson({
+        'type': 'error',
+        'code': 'UNSUPPORTED_CODEC',
+        'message': '该视频编码不支持在线播放，请点击“下载”后用本地播放器打开',
+      });
+      return;
+    }
+
+    final duration = await _probeDuration(bins.ffprobePath, filePath);
+
+    print(
+      '[ShareP2P] stream probe: vCodec=$vCodec aCodec=$aCodec duration=$duration',
+    );
+
+    final videoCodecStr = vCodec == 'hevc' ? 'hev1.1.6.L93.B0' : 'avc1.42E01E';
+    final codecParts = <String>[videoCodecStr];
+    if (aCodec == 'aac') codecParts.add('mp4a.40.2');
+    final mime = 'video/mp4; codecs="${codecParts.join(', ')}"';
+
+    _sendJson({
+      'type': 'stream-meta',
+      'mime': mime,
+      'codecs': codecParts.join(', '),
+      if (duration != null) 'duration': duration,
+      'binaryMode': 'init-segment-v1',
+    });
+
+    await _runStreamPipeline(bins.ffmpegPath, filePath);
+  }
+
+  Process? _activeStreamProc;
+  String? _activeStreamFile;
+  String? _activeStreamFfmpeg;
+  bool? _ffmpegPipeSupported;
+
+  Future<bool> _ffmpegSupportsPipe(String ffmpegPath) async {
+    if (_ffmpegPipeSupported != null) return _ffmpegPipeSupported!;
+    try {
+      final res = await Process.run(ffmpegPath, [
+        '-protocols',
+      ], stdoutEncoding: const SystemEncoding());
+      final stdout = res.stdout as String;
+      _ffmpegPipeSupported = stdout.contains('pipe');
+    } catch (_) {
+      _ffmpegPipeSupported = false;
+    }
+    print('[ShareP2P] ffmpeg pipe protocol supported: $_ffmpegPipeSupported');
+    return _ffmpegPipeSupported!;
+  }
+
+  Future<void> _runStreamPipeline(
+    String ffmpegPath,
+    String filePath, {
+    double? seekTime,
+  }) async {
+    _activeStreamFile = filePath;
+    _activeStreamFfmpeg = ffmpegPath;
+
+    final usePipe = await _ffmpegSupportsPipe(ffmpegPath);
+    final tempFile = usePipe
+        ? null
+        : File(
+            p.join(
+              Directory.systemTemp.path,
+              'fastsend_stream_${DateTime.now().millisecondsSinceEpoch}.mp4',
+            ),
+          );
+
+    final args = <String>[
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      if (seekTime != null) ...['-ss', seekTime.toStringAsFixed(3)],
+      '-i',
+      filePath,
+      '-map',
+      '0',
+      '-c',
+      'copy',
+      '-movflags',
+      '+frag_keyframe+empty_moov+default_base_moof',
+      '-f',
+      'mp4',
+      if (usePipe) 'pipe:1' else ...['-y', tempFile!.path],
+    ];
+
+    const int kBinInit = 0;
+    const int kBinSeg = 1;
+
+    Uint8List _wrapBin(int kind, Uint8List payload) {
+      final out = Uint8List(1 + payload.length);
+      out[0] = kind;
+      out.setRange(1, out.length, payload);
+      return out;
+    }
+
+    ({List<Uint8List> boxes, Uint8List rest}) _splitBoxes(Uint8List buf) {
+      final boxes = <Uint8List>[];
+      var off = 0;
+      while (buf.length - off >= 8) {
+        final bd = ByteData.sublistView(buf, off);
+        final size32 = bd.getUint32(0, Endian.big);
+        int header = 8;
+        int? size;
+        if (size32 == 0) break;
+        if (size32 == 1) {
+          if (buf.length - off < 16) break;
+          final size64 = bd.getUint64(8, Endian.big);
+          header = 16;
+          if (size64 > 0x7fffffff) break;
+          size = size64;
+        } else {
+          size = size32;
+        }
+        if (size < header) break;
+        if (buf.length - off < size) break;
+        boxes.add(buf.sublist(off, off + size));
+        off += size;
+      }
+      return (boxes: boxes, rest: buf.sublist(off));
+    }
+
+    bool _isType(Uint8List box, String t) {
+      if (box.length < 8) return false;
+      final s = String.fromCharCodes(box.sublist(4, 8));
+      return s == t;
+    }
+
+    var totalBytesSent = 0;
+    try {
+      print(
+        '[ShareP2P] ffmpeg start (pipe=$usePipe): $ffmpegPath ${args.join(' ')}',
+      );
+      final proc = await Process.start(ffmpegPath, args);
+      _activeStreamProc = proc;
+
+      final stderrBuf = StringBuffer();
+      proc.stderr.transform(const Utf8Decoder(allowMalformed: true)).listen((
+        s,
+      ) {
+        stderrBuf.write(s);
+      });
+
+      var buf = Uint8List(0);
+      var init = Uint8List(0);
+      var sawMoov = false;
+      var initSent = false;
+      var pending = Uint8List(0);
+
+      Future<void> sendBin(int kind, Uint8List payload) async {
+        if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
+        if (payload.isEmpty) return;
+        const maxChunk = 256 * 1024;
+        var off = 0;
+        while (off < payload.length) {
+          if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
+          final end = math.min(off + maxChunk, payload.length);
+          final slice = payload.sublist(off, end);
+          _dc!.send(RTCDataChannelMessage.fromBinary(_wrapBin(kind, slice)));
+          totalBytesSent += slice.length;
+          off = end;
+          while ((_dc?.bufferedAmount ?? 0) > maxChunk * 8) {
+            await Future.delayed(const Duration(milliseconds: 2));
+          }
+        }
+      }
+
+      Future<void> processChunks(Stream<List<int>> source) async {
+        await for (final chunk in source) {
+          if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) {
+            try {
+              proc.kill(ProcessSignal.sigkill);
+            } catch (_) {}
+            return;
+          }
+          if (chunk.isEmpty) continue;
+          final incoming = Uint8List.fromList(chunk);
+          if (buf.isEmpty) {
+            buf = incoming;
+          } else {
+            final merged = Uint8List(buf.length + incoming.length);
+            merged.setRange(0, buf.length, buf);
+            merged.setRange(buf.length, merged.length, incoming);
+            buf = merged;
+          }
+
+          final split = _splitBoxes(buf);
+          buf = split.rest;
+
+          for (final box in split.boxes) {
+            if (!initSent) {
+              if (_isType(box, 'moov')) sawMoov = true;
+              if (_isType(box, 'moof')) {
+                if (!sawMoov) {
+                  _sendJson({
+                    'type': 'error',
+                    'code': 'STREAM_INIT_INVALID',
+                    'message': '视频在线播放初始化失败（缺少 moov）',
+                  });
+                  return;
+                }
+                print('[ShareP2P] sending init segment: ${init.length} bytes');
+                await sendBin(kBinInit, init);
+                initSent = true;
+                init = Uint8List(0);
+                pending = box;
+                continue;
+              }
+              final merged = Uint8List(init.length + box.length);
+              merged.setRange(0, init.length, init);
+              merged.setRange(init.length, merged.length, box);
+              init = merged;
+              continue;
+            }
+
+            if (_isType(box, 'moof')) {
+              await sendBin(kBinSeg, pending);
+              pending = box;
+            } else {
+              final merged = Uint8List(pending.length + box.length);
+              merged.setRange(0, pending.length, pending);
+              merged.setRange(pending.length, merged.length, box);
+              pending = merged;
+            }
+          }
+        }
+      }
+
+      if (usePipe) {
+        await processChunks(proc.stdout);
+      } else {
+        final code = await proc.exitCode;
+        _activeStreamProc = null;
+        final stderr = stderrBuf.toString().trim();
+        print('[ShareP2P] ffmpeg exited: code=$code');
+        if (stderr.isNotEmpty) print('[ShareP2P] ffmpeg stderr: $stderr');
+        if (code != 0 || !tempFile!.existsSync()) {
+          print('[ShareP2P] ffmpeg failed or no output file');
+          return;
+        }
+        print('[ShareP2P] temp fMP4 size: ${tempFile.lengthSync()} bytes');
+        await processChunks(tempFile.openRead());
+      }
+
+      if (initSent && pending.isNotEmpty) {
+        await sendBin(kBinSeg, pending);
+      }
+      print('[ShareP2P] stream done, totalBytesSent=$totalBytesSent');
+    } finally {
+      _activeStreamProc = null;
+      if (tempFile != null) {
+        try {
+          if (tempFile.existsSync()) await tempFile.delete();
+        } catch (_) {}
+      }
+    }
+
+    print('[ShareP2P] sending stream-done');
+    if (_dc?.state == RTCDataChannelState.RTCDataChannelOpen) {
+      _sendJson({'type': 'stream-done'});
+    }
+  }
+
+  void _killActiveStream() {
+    try {
+      _activeStreamProc?.kill(ProcessSignal.sigkill);
+    } catch (_) {}
+    _activeStreamProc = null;
+  }
+
+  Future<void> _onStreamSeek(Map<String, dynamic> msg) async {
+    final targetTime = (msg['targetTime'] as num?)?.toDouble() ?? 0.0;
+    final ffmpegPath = _activeStreamFfmpeg;
+    final filePath = _activeStreamFile;
+    if (ffmpegPath == null || filePath == null) return;
+
+    _killActiveStream();
+
+    _sendJson({'type': 'stream-seeked', 'actualTime': targetTime});
+
+    await _runStreamPipeline(ffmpegPath, filePath, seekTime: targetTime);
+  }
+
+  Future<double?> _probeDuration(String ffprobePath, String inputPath) async {
+    try {
+      final res = await Process.run(ffprobePath, [
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=nw=1:nk=1',
+        inputPath,
+      ]);
+      if (res.exitCode != 0) return null;
+      final out = (res.stdout ?? '').toString().trim();
+      if (out.isEmpty || out == 'N/A') return null;
+      return double.tryParse(out.split(RegExp(r'\r?\n')).first.trim());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String?> _probeCodec(
+    String ffprobePath,
+    String inputPath, {
+    required String streamSelector,
+  }) async {
+    try {
+      final res = await Process.run(ffprobePath, [
+        '-v',
+        'error',
+        '-select_streams',
+        streamSelector,
+        '-show_entries',
+        'stream=codec_name',
+        '-of',
+        'default=nw=1:nk=1',
+        inputPath,
+      ]);
+      if (res.exitCode != 0) return null;
+      final out = (res.stdout ?? '').toString().trim();
+      if (out.isEmpty) return null;
+      return out.split(RegExp(r'\r?\n')).first.trim();
+    } catch (_) {
+      return null;
     }
   }
 
@@ -342,6 +735,7 @@ class ShareP2PHandler {
   }
 
   Future<void> dispose() async {
+    _killActiveStream();
     _dc?.close();
     await _pc?.close();
     _dc = null;

@@ -90,6 +90,26 @@ Flutter 侧已新增封装（桌面端）：
 
 注意：该实现当前是“**先传完再播（Blob 播放）**”，不是 MSE 的分段边下边播；但它验证了“Web 端需要与 desktop 端 remux 协作才能更稳播放”的联动链路（尤其是需要 fMP4 的情况）。
 
+### 2.5.4 边推边播（MSE）实现（P0+）
+
+已新增一条“**stream 模式**”用于边推边播（不依赖完整下载）：  
+
+- Web 端：点击“播放”会发送 `stream-start`，并初始化 `MediaSource + SourceBuffer`，将 DataChannel 二进制帧按到达顺序 `appendBuffer`
+- Desktop 端：收到 `stream-start` 后使用裁剪版 FFmpeg 执行 `-c copy` + `movflags`，将 fragmented MP4 输出到 `pipe:1`，再经 DataChannel 持续发送二进制数据；结束时发送 `stream-done`
+
+当前限制：SourceBuffer MIME 固定为 `video/mp4; codecs=\"avc1.42E01E, mp4a.40.2\"`，因此只保证 **H.264/AAC** 场景可靠；后续可通过 `stream-meta` 携带 codec 信息做动态协商。
+
+### 2.5.5 最稳定分段协议（init-segment-v1）
+
+为避免浏览器对 MP4 分段边界敏感导致的 `DEMUXER_ERROR_COULD_NOT_OPEN`，引入**显式分段二进制协议**：  
+
+- 控制消息：`stream-meta.binaryMode = \"init-segment-v1\"`
+- 二进制帧：`[kind:1byte][payload...]`
+  - `kind=0`：init segment（应包含 `ftyp+moov` 及 moof 前所有 header box），web 端必须先 append
+  - `kind=1`：media segment（以 `moof` 起头，包含随后 `mdat` 等）
+
+发送端（Flutter/desktop）从 FFmpeg `pipe:1` 输出中按 MP4 box 切分，确保 init/segment 边界正确；接收端（web）按 kind 直接追加，无需再猜测 box 边界，稳定性最高。
+
 ## 三、总体架构
 
 ### 3.1 数据路径（逻辑）
@@ -205,6 +225,77 @@ Flutter 侧已新增封装（桌面端）：
 
 ---
 
+## 七点五、WebRTC 视频轨方案调研结论（2026-03，不可行）
+
+曾评估过将 FFmpeg 产出的视频码流直接注入 WebRTC **video track（RTP）** 在浏览器端用 `<video srcObject>` 播放。经调研后明确放弃，原因：
+
+1. **flutter_webrtc 无外部视频注入 API**：Dart 层面只有 `getUserMedia` / `getDisplayMedia` 两类采集源，没有 "从 FFmpeg pipe / raw H.264 创建 `MediaStreamTrack`" 的公开 API。实现需在 macOS/Windows 分别写 C++ / ObjC 原生层 fork 插件，工作量极大且长期维护成本高。
+2. **浏览器 live `MediaStream` 无 VOD 交互**：`<video srcObject={stream}>` 播放实时流时，`duration` 为 `Infinity`，`currentTime` 不可任意设置，`playbackRate` 被忽略或 clamp——无法实现进度条拖拽、快进、倍速等 VOD 特性。
+3. **项目零基础**：仓库 WebRTC 层面只有 DataChannel + 信令，没有任何 audio/video track 使用先例。
+
+**最终方案**：沿用 **DataChannel + MSE（fMP4）**，在此基础上增强 seek / 倍速 / H.265 动态检测。
+
+---
+
+## 七点六、Seek 协议（stream-seek / stream-seeked）
+
+### 消息定义
+
+| 方向 | 消息类型 | 字段 | 说明 |
+|------|----------|------|------|
+| Web → Desktop | `stream-seek` | `targetTime: number`（秒） | 用户拖动进度条或点击到未缓冲的时间点 |
+| Desktop → Web | `stream-seeked` | `actualTime: number`（秒） | FFmpeg 实际定位到的关键帧时间 |
+
+### 全链路流程
+
+1. **Web 端**：`<video>` 触发 `seeking` 事件 → 检查 `targetTime` 是否在已缓冲 (`buffered`) 范围内 → 不在则通过 DataChannel 发送 `stream-seek`
+2. **Desktop 端**：收到 `stream-seek` → kill 当前 FFmpeg 进程 → 用 `-ss <targetTime>` 重启 FFmpeg（input seeking，快速定位最近关键帧）→ 发送 `stream-seeked` → 重发 init segment（kind=0）+ 后续 media segment（kind=1）→ 最终 `stream-done`
+3. **Web 端**：收到 `stream-seeked` → `sourceBuffer.abort()` + `sourceBuffer.remove(0, Infinity)` 清空旧缓冲 → 重置 init/segment 解析状态 → 接收新 init + media segment 恢复播放
+
+### FFmpeg `-ss` 放在输入侧
+
+```
+ffmpeg -ss 45.000 -i input.mp4 -c copy -movflags +frag_keyframe+empty_moov+default_base_moof -f mp4 pipe:1
+```
+
+`-ss` 在 `-i` 前面为 **input seeking**，FFmpeg 直接跳到最近的关键帧，速度极快（不需解码跳过的帧）。
+
+---
+
+## 七点七、倍速播放
+
+**纯前端实现**，无需 Desktop 配合。
+
+Web 端通过 `videoElement.playbackRate = rate` 设置倍速（0.5x / 1x / 1.5x / 2x）。MSE 的 `SourceBuffer` 在高倍速下会更快消耗缓冲区，当播放位置接近缓冲尾部时可能触发 seeking → 走上述 seek 协议补充数据。
+
+UI 在视频播放器下方以按钮组形式提供倍速选择。
+
+---
+
+## 七点八、H.265 动态检测
+
+### Desktop 端
+
+- `ffprobe` 检测视频 codec：允许 `h264` 和 `hevc`（不再仅限 H.264）
+- `stream-meta` 携带精确 `codecs` 字符串（H.264 → `avc1.42E01E`，H.265 → `hev1.1.6.L93.B0`）和 `duration`（秒）
+
+### Web 端
+
+- `pickSupportedMp4Mime` 候选列表包含 H.265 MIME（`hev1.*`、`hvc1.*`）和 H.264 MIME
+- 根据 `stream-meta.mime` 优先匹配，`MediaSource.isTypeSupported` 动态判断
+- 不支持时显示提示"该浏览器不支持 HEVC 编码，请下载播放"
+
+### stream-meta 增强字段
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `mime` | `string` | 完整 MIME（如 `video/mp4; codecs="hev1.1.6.L93.B0, mp4a.40.2"`） |
+| `codecs` | `string` | codec 部分（如 `hev1.1.6.L93.B0, mp4a.40.2`） |
+| `duration` | `number` | 视频时长（秒），用于设置 `MediaSource.duration` |
+| `binaryMode` | `string` | 二进制帧编码（`init-segment-v1`） |
+
+---
+
 ## 八、风险与测试要点
 
 | 风险 | 缓解 |
@@ -214,6 +305,7 @@ Flutter 侧已新增封装（桌面端）：
 | seek 卡顿 | FFmpeg `-ss` 放在 **输入侧**（较快关键帧）与 **输出 fragment 对齐**策略需在 PoC 验证 |
 | DC 背压 | 与现有 **bufferedAmount** 节流一致；流媒体模式可能需更小 chunk |
 | 多平台行为不一致 | **抽象层 + CI** 对 Android/iOS/macOS/Win/Linux 各跑一段 **固定样例文件** |
+| macOS 沙盒禁止执行解包二进制 | **开发期**可关闭 `com.apple.security.app-sandbox` 验证链路；**正式版**建议将 `ffmpeg` 作为 app bundle 内置 helper（签名后执行），避免从 Application Support 动态解包执行 |
 
 **测试样例建议**：H.264+AAC MP4、HEVC+AAC MP4（若需）、MKV 封装 H.264（remux）、音轨异常/无音轨。
 
@@ -221,12 +313,12 @@ Flutter 侧已新增封装（桌面端）：
 
 ## 九、交付物拆分（建议迭代）
 
-| 阶段 | 内容 |
-|------|------|
-| **P0** | 发起端 **copy → fMP4** 输出 + Web **MSE 顺序播放**（无 seek 或仅轻量 seek） |
-| **P1** | **seek** 全链路 + `remove`/timeline 策略 |
-| **P2** | Windows/Linux **统一 MediaPipeline** + 裁剪 FFmpeg 体积优化 |
-| **P3** | 可选 **失败自动转码**（非 HEVC→H264 强制的其它编码兜底） |
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| **P0** | 发起端 **copy → fMP4** 输出 + Web **MSE 顺序播放** + init-segment-v1 协议 + H.265 动态检测 + duration 传递 | **已实现** |
+| **P1** | **seek 全链路**（stream-seek / stream-seeked / SourceBuffer reset）+ **倍速**（playbackRate UI）| **已实现** |
+| **P2** | Windows/Linux **统一 MediaPipeline** + 裁剪 FFmpeg 体积优化 | 待做 |
+| **P3** | 可选 **失败自动转码**（非 HEVC→H264 强制的其它编码兜底） | 待做 |
 
 ---
 

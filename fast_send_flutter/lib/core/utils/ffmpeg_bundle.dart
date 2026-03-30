@@ -8,8 +8,7 @@ import 'package:path_provider/path_provider.dart';
 class FfmpegBundle {
   static const _assetBase = 'assets/ffmpeg';
 
-  static bool get isSupportedPlatform =>
-      Platform.isWindows || Platform.isMacOS;
+  static bool get isSupportedPlatform => Platform.isWindows || Platform.isMacOS;
 
   static String _platformSegment() {
     if (Platform.isWindows) return 'windows';
@@ -57,7 +56,7 @@ class FfmpegBundle {
   }
 
   static Future<({String ffmpegPath, String ffprobePath})>
-      ensureExtracted() async {
+  ensureExtracted() async {
     if (!isSupportedPlatform) {
       throw UnsupportedError('FFmpeg bundle is not available on this platform');
     }
@@ -85,4 +84,3 @@ class FfmpegBundle {
     return (ffmpegPath: ffmpeg.path, ffprobePath: ffprobe.path);
   }
 }
-

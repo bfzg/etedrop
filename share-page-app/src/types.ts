@@ -35,9 +35,41 @@ export interface DcError {
   message?: string
 }
 
+/** 流媒体开始（DataChannel stream-start 的应答/附加信息可后续扩展） */
+export interface StreamMeta {
+  type: 'stream-meta'
+  mime?: string
+  codecs?: string
+  duration?: number
+  binaryMode?: 'raw-mp4' | 'init-segment-v1'
+  /** seek 应答时携带，表明本次是从 seek 后的新位置开始 */
+  seeked?: boolean
+  actualTime?: number
+}
+
+/** 流媒体结束 */
+export interface StreamDone {
+  type: 'stream-done'
+}
+
+/** Web -> Desktop: 请求跳转到指定时间 */
+export interface StreamSeek {
+  type: 'stream-seek'
+  targetTime: number
+}
+
+/** Desktop -> Web: seek 完成确认 */
+export interface StreamSeeked {
+  type: 'stream-seeked'
+  actualTime: number
+}
+
 export type DataChannelMessage =
   | ShareInfo
   | VerifyResult
   | FileMeta
   | FileDone
+  | StreamMeta
+  | StreamDone
+  | StreamSeeked
   | DcError

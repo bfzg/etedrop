@@ -105,7 +105,11 @@ flutter:
     - assets/images/fileType/
     - assets/images/system/
     - assets/images/memoji/
-    - assets/ffmpeg/
+    # 显式列出二进制资源，避免目录模式在部分桌面构建中漏打包
+    - assets/ffmpeg/macos/ffmpeg
+    - assets/ffmpeg/macos/ffprobe
+    - assets/ffmpeg/windows/ffmpeg.exe
+    - assets/ffmpeg/windows/ffprobe.exe
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useSharePage } from '../hooks/useSharePage'
 import { formatBytes } from '../utils/format'
@@ -38,6 +38,7 @@ export function SharePageView() {
   const { deviceId, shareCode } = useParams<{ deviceId: string; shareCode: string }>()
   const [password, setPassword] = useState('')
   const [emptyPwdError, setEmptyPwdError] = useState(false)
+  const [playbackRate, setPlaybackRate] = useState(1)
 
   if (!deviceId || !shareCode) {
     return (
@@ -58,13 +59,54 @@ export function SharePageView() {
     showProgress,
     progress,
     showDone,
+    doneKind,
     showReconnect,
     sendVerify,
     sendDownloadStart,
+    sendSeek,
     reconnect,
     resumeHintBytes,
     playUrl,
+    mseUrl,
+    streaming,
   } = useSharePage(deviceId, shareCode)
+
+  const videoRef = useRef<HTMLVideoElement | null>(null)
+
+  useEffect(() => {
+    const v = videoRef.current
+    if (!v) return
+    if (!mseUrl && !playUrl) return
+    const tryPlay = () => { void v.play().catch(() => {}) }
+    v.addEventListener('canplay', tryPlay, { once: true })
+    return () => { v.removeEventListener('canplay', tryPlay) }
+  }, [mseUrl, playUrl])
+
+  const handleSeeking = () => {
+    if (!streaming) return
+    const v = videoRef.current
+    if (!v) return
+    const target = v.currentTime
+    const buffered = v.buffered
+    let inBuffer = false
+    for (let i = 0; i < buffered.length; i++) {
+      if (target >= buffered.start(i) - 0.5 && target <= buffered.end(i) + 0.5) {
+        inBuffer = true
+        break
+      }
+    }
+    if (!inBuffer) {
+      sendSeek(target)
+    }
+  }
+
+  const SPEED_OPTIONS = [0.5, 1, 1.5, 2] as const
+
+  const changeSpeed = useCallback((rate: number) => {
+    setPlaybackRate(rate)
+    const v = videoRef.current
+    if (v) v.playbackRate = rate
+  }, [])
 
   const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error
 
@@ -105,14 +147,37 @@ export function SharePageView() {
           </div>
         )}
 
-        {playUrl && (
+        {(mseUrl || playUrl) && (
           <div className="mb-4">
             <video
+              ref={videoRef}
               className="w-full rounded-xl bg-black"
-              src={playUrl}
+              src={mseUrl || playUrl}
               controls
               playsInline
+              onSeeking={handleSeeking}
+              onError={() => {
+                const v = videoRef.current
+                console.error('[fastsend] video error', v?.error)
+              }}
             />
+            <div className="flex items-center gap-1.5 mt-2">
+              <span className="text-xs text-slate-500 mr-1">倍速</span>
+              {SPEED_OPTIONS.map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  onClick={() => changeSpeed(rate)}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                    playbackRate === rate
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {rate}x
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
@@ -149,29 +214,28 @@ export function SharePageView() {
         )}
 
         {showDownloadBtn && (
-          <div className="flex flex-col gap-2">
-            {fileInfo && isLikelyVideo(fileInfo.fileName) && (
-              <button
-                type="button"
-                onClick={() => {
-                  void sendDownloadStart({ intent: 'play', remuxFmp4: true })
-                }}
-                className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                在线播放（浏览器兼容时）
-              </button>
-            )}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={!fileInfo || !isLikelyVideo(fileInfo.fileName)}
+              onClick={() => {
+                void sendDownloadStart({ intent: 'play', remuxFmp4: true, stream: true })
+              }}
+              className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              播放
+            </button>
 
             <button
               type="button"
               onClick={() => {
-                void sendDownloadStart({ intent: 'download', remuxFmp4: false })
+                void sendDownloadStart({ intent: 'download', remuxFmp4: false, stream: false })
               }}
               className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-slate-900 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {resumeHintBytes > 0
                 ? `继续下载（已保存 ${formatBytes(resumeHintBytes)}）`
-                : '下载文件'}
+                : '下载'}
             </button>
           </div>
         )}
@@ -188,10 +252,12 @@ export function SharePageView() {
           </div>
         )}
 
-        {showDone && (
+        {showDone && !streaming && (
           <div className="text-center py-5">
             <div className="text-4xl mb-2">✅</div>
-            <p className="text-green-600 font-medium">下载完成</p>
+            <p className="text-green-600 font-medium">
+              {doneKind === 'stream' ? '播放结束' : '下载完成'}
+            </p>
           </div>
         )}
 
