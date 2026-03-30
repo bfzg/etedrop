@@ -5,8 +5,8 @@ import '../services/share_service.dart';
 
 part 'share_provider.g.dart';
 
-/// ShareService 单例 Provider
-@riverpod
+/// ShareService 单例 Provider（keepAlive：避免 autoDispose 后新实例与磁盘状态竞态，且保证分享查找与列表共用同一内存态）
+@Riverpod(keepAlive: true)
 class ShareServiceNotifier extends _$ShareServiceNotifier {
   final ShareService _service = ShareService();
   bool _initialized = false;

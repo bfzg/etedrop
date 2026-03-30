@@ -19,7 +19,7 @@ mixin _$TransferMessage {
  String? get shareId; bool get isBatch;/// JSON 数组：[{"name":"a","size":1},...]
  String? get batchFilesJson;/// 发送方 HTTP 地址（接收方接受/拒绝时回调）
  String? get senderHttpHost; int? get senderHttpPort;/// 本机发出的批量分享（消息列表中展示「发送」侧）
- bool get isOutgoing;/// JSON 数组：本机绝对路径，用于发送方过期后重试
+ bool get isOutgoing;/// JSON 数组：本机绝对路径。发送方用于过期重试；接收方在传输完成后写入落盘路径，供在文件夹中定位。
  String? get localFilePathsJson;/// JSON 数组：目标 deviceId，用于重试
  String? get targetDeviceIdsJson;
 /// Create a copy of TransferMessage
@@ -255,7 +255,7 @@ class _TransferMessage implements TransferMessage {
 @override final  int? senderHttpPort;
 /// 本机发出的批量分享（消息列表中展示「发送」侧）
 @override@JsonKey() final  bool isOutgoing;
-/// JSON 数组：本机绝对路径，用于发送方过期后重试
+/// JSON 数组：本机绝对路径。发送方用于过期重试；接收方在传输完成后写入落盘路径，供在文件夹中定位。
 @override final  String? localFilePathsJson;
 /// JSON 数组：目标 deviceId，用于重试
 @override final  String? targetDeviceIdsJson;

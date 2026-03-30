@@ -13,8 +13,20 @@ import '../../../services/logger_service.dart';
 /// 文件分享服务
 /// 对应 Electron: src/ipc/share/handlers.ts
 class ShareService {
+  ShareService._();
+
+  factory ShareService() => _singleton;
+  static final ShareService _singleton = ShareService._();
+
   final Map<String, ShareRecord> _shares = {};
   String? _sharesFilePath;
+
+  /// 网盘相对路径规范化：统一 `/`、去冗余，用于「同一网盘对象」匹配（与平台分隔符无关）。
+  static String canonicalCloudRelPath(String raw) {
+    final trimmed = raw.replaceAll('\\', '/').trim();
+    if (trimmed.isEmpty) return trimmed;
+    return p.Context(style: p.Style.posix).normalize(trimmed);
+  }
 
   /// 初始化，加载本地分享记录
   Future<void> init() async {
@@ -48,6 +60,50 @@ class ShareService {
     await File(_sharesFilePath!).writeAsString(jsonEncode(arr));
   }
 
+  bool _sameFileLocation(String pathA, String fileNameA, ShareRecord b) {
+    final a = canonicalCloudRelPath(pathA);
+    final bp = canonicalCloudRelPath(b.path);
+    final na = fileNameA.trim();
+    final nb = b.fileName.trim();
+    return a == bp && na == nb;
+  }
+
+  /// 当前未过期的、与该网盘文件对应的分享（每个文件最多视为一条有效分享）。
+  ShareInfo? findActiveShareForFile(String relativePath, String fileName) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final record in _shares.values) {
+      if (record.expiresAt != null && now > record.expiresAt!) continue;
+      if (_sameFileLocation(relativePath, fileName, record)) {
+        return ShareInfo(
+          code: record.code,
+          path: record.path,
+          fileName: record.fileName,
+          size: record.size,
+          hasPassword: record.passwordHash != null,
+          createdAt: record.createdAt,
+          expiresAt: record.expiresAt,
+        );
+      }
+    }
+    return null;
+  }
+
+  /// 删除同一网盘路径+文件名的所有分享（创建新分享前调用，避免历史重复条目）。
+  Future<void> _removeSharesForSameFile(
+    String relativePath,
+    String fileName,
+  ) async {
+    final toRemove = _shares.entries
+        .where((e) => _sameFileLocation(relativePath, fileName, e.value))
+        .map((e) => e.key)
+        .toList();
+    if (toRemove.isEmpty) return;
+    for (final code in toRemove) {
+      _shares.remove(code);
+    }
+    await _saveShares();
+  }
+
   /// 生成 8 位十六进制分享码
   /// 对应 Electron: generateCode() → crypto.randomBytes(4).toString('hex').toUpperCase()
   String _generateCode() {
@@ -77,11 +133,14 @@ class ShareService {
     if (_sharesFilePath == null) {
       await init();
     }
+    await _removeSharesForSameFile(relativePath, fileName);
     final code = _generateCode();
+    final pathStored = canonicalCloudRelPath(relativePath);
+    final nameStored = fileName.trim();
     final record = ShareRecord(
       code: code,
-      path: relativePath,
-      fileName: fileName,
+      path: pathStored,
+      fileName: nameStored,
       size: fileSize,
       passwordHash: password != null ? _hashPassword(password) : null,
       createdAt: DateTime.now().millisecondsSinceEpoch,

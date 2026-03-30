@@ -8,22 +8,22 @@ part of 'share_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// ShareService 单例 Provider
+/// ShareService 单例 Provider（keepAlive：避免 autoDispose 后新实例与磁盘状态竞态，且保证分享查找与列表共用同一内存态）
 
 @ProviderFor(ShareServiceNotifier)
 final shareServiceProvider = ShareServiceNotifierProvider._();
 
-/// ShareService 单例 Provider
+/// ShareService 单例 Provider（keepAlive：避免 autoDispose 后新实例与磁盘状态竞态，且保证分享查找与列表共用同一内存态）
 final class ShareServiceNotifierProvider
     extends $NotifierProvider<ShareServiceNotifier, ShareService> {
-  /// ShareService 单例 Provider
+  /// ShareService 单例 Provider（keepAlive：避免 autoDispose 后新实例与磁盘状态竞态，且保证分享查找与列表共用同一内存态）
   ShareServiceNotifierProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'shareServiceProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -45,9 +45,9 @@ final class ShareServiceNotifierProvider
 }
 
 String _$shareServiceNotifierHash() =>
-    r'777a010bca386d8fbf19228dce41ff98ca2dfdea';
+    r'2329cc0570caa099899d7ca2e0bce8691734f300';
 
-/// ShareService 单例 Provider
+/// ShareService 单例 Provider（keepAlive：避免 autoDispose 后新实例与磁盘状态竞态，且保证分享查找与列表共用同一内存态）
 
 abstract class _$ShareServiceNotifier extends $Notifier<ShareService> {
   ShareService build();
