@@ -12,6 +12,7 @@ import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/message_provider.dart';
 import '../../../core/http/cancel_token.dart';
+import '../../../core/utils/transfer_temp_cache.dart';
 import '../../../services/local_storage_service.dart';
 import '../../../services/notification_service.dart';
 import '../models/lan_device.dart';
@@ -51,11 +52,15 @@ class _OutgoingShare {
   final LanCancelToken uploadCancelToken = LanCancelToken();
   bool cancelled = false;
 
+  /// 发送成功后删除（粘贴图 / 临时 txt）；须在对方接受并完成上传后再删。
+  final List<String> managedTempPathsToDeleteAfterDelivery;
+
   _OutgoingShare({
     required this.shareId,
     required this.filePaths,
     required this.targets,
     required this.expiryTimer,
+    this.managedTempPathsToDeleteAfterDelivery = const [],
   });
 }
 
@@ -351,10 +356,7 @@ class LanManager extends _$LanManager {
       } else {
         ref
             .read(messageListProvider.notifier)
-            .markOutgoingShareFailedByShareId(
-              shareId,
-              '传输中断或接收失败，可让对方重试接收',
-            );
+            .markOutgoingShareFailedByShareId(shareId, '传输中断或接收失败，可让对方重试接收');
         final session = _outgoingShares.remove(shareId);
         if (session != null) {
           session.cancelled = true;
@@ -368,9 +370,16 @@ class LanManager extends _$LanManager {
 
   void _finalizeOutboundShareDelivery(String shareId) {
     final session = _outgoingShares.remove(shareId);
-    if (session != null && !session.cancelled) {
-      session.cancelled = true;
-      session.expiryTimer.cancel();
+    if (session != null) {
+      if (!session.cancelled) {
+        session.cancelled = true;
+        session.expiryTimer.cancel();
+      }
+      unawaited(
+        deleteManagedTransferTempPaths(
+          session.managedTempPathsToDeleteAfterDelivery,
+        ),
+      );
     }
     ref
         .read(messageListProvider.notifier)
@@ -453,7 +462,9 @@ class LanManager extends _$LanManager {
             break;
           } catch (e) {
             final es = e.toString();
-            debugPrint('Upload attempt ${outer + 1}/$_lanUploadOuterRetries: $e');
+            debugPrint(
+              'Upload attempt ${outer + 1}/$_lanUploadOuterRetries: $e',
+            );
             if (es.contains('已取消') || es.contains('拒绝')) {
               break;
             }
@@ -547,11 +558,20 @@ class LanManager extends _$LanManager {
       cancelOutgoingShare(shareId);
     });
 
+    final managedTemp = <String>[];
+    for (final path in absoluteFilePaths) {
+      if (await isManagedTransferTempPath(path) &&
+          !managedTemp.contains(path)) {
+        managedTemp.add(path);
+      }
+    }
+
     _outgoingShares[shareId] = _OutgoingShare(
       shareId: shareId,
       filePaths: List<String>.from(absoluteFilePaths),
       targets: targets,
       expiryTimer: timer,
+      managedTempPathsToDeleteAfterDelivery: managedTemp,
     );
 
     final fileMaps = files.map((e) => e.toJson()).toList();
@@ -654,8 +674,7 @@ class LanManager extends _$LanManager {
     double batchProgress,
   ) {
     final speed = ref.read(transferReceiveSpeedProvider.notifier);
-    final basis =
-        ctx.batchTotalBytes > 0 ? ctx.batchTotalBytes : ctx.fileSize;
+    final basis = ctx.batchTotalBytes > 0 ? ctx.batchTotalBytes : ctx.fileSize;
 
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
       speed.tick(ctx.shareId!, batchProgress, basis);

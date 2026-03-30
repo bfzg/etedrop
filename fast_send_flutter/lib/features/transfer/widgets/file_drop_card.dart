@@ -12,6 +12,7 @@ import '../../../core/utils/clipboard_image.dart'
         readClipboardImageBytes,
         saveClipboardImageBytesToTempFile,
         saveOutgoingTextMessageToTempFile;
+import '../../../core/utils/transfer_temp_cache.dart';
 import '../../../styles/styles.dart';
 import 'dashed_border_painter.dart';
 
@@ -66,6 +67,7 @@ class _FileDropCardState extends State<FileDropCard> {
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_hardwareKeyHandler);
+    unawaited(pruneTransferTempCacheOlderThan(const Duration(days: 2)));
   }
 
   @override
@@ -247,6 +249,7 @@ class _FileDropCardState extends State<FileDropCard> {
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               if (_attachments.isNotEmpty) ...[
                 Wrap(
