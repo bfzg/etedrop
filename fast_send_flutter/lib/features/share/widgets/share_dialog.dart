@@ -301,44 +301,6 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
             ] else
               Text('文件: ${widget.fileName}', style: theme.textTheme.bodyMedium),
             if (!isExistingFlow) const SizedBox(height: 16),
-            Text('分享码', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SelectableText(
-                      info.code,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.copy),
-                    tooltip: '复制分享码',
-                    onPressed: () {
-                      Clipboard.setData(ClipboardData(text: info.code));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('已复制分享码'),
-                          duration: Duration(seconds: 1),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text('分享链接', style: theme.textTheme.labelMedium),
-            const SizedBox(height: 4),
             if (shareLink != null)
               Container(
                 padding: const EdgeInsets.symmetric(
