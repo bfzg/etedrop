@@ -144,16 +144,26 @@ flutter build linux --release
 1. 先构建 release：
 
 ```bash
-flutter build macos --release
+flutter build macos --release --tree-shake-icons
 ```
 
 2. 构建产物位置：
 
 - `build/macos/Build/Products/Release/<你的App名>.app`
 
-3. 本地分发（不公证）可直接压缩 `.app` 给内部测试。
+3. 可选：开启混淆 + 分离符号（对包体积帮助有限，但能降低可逆性；也便于崩溃符号化）。
 
-4. 对外分发建议做 Apple 签名 + 公证（notarization）：
+```bash
+# 将符号信息输出到本地目录（注意：此目录请妥善保存，线上崩溃需要用它符号化）
+flutter build macos --release --tree-shake-icons \
+  --obfuscate --split-debug-info=build/macos/symbols
+```
+
+4. 本地分发（不公证）可直接压缩 `.app` 给内部测试。
+
+说明：打包/压缩时 **不要** 把 `.dSYM` 一起打进去，否则体积会明显变大。
+
+5. 对外分发建议做 Apple 签名 + 公证（notarization）：
 
 ```bash
 # 1) 对 .app 签名（请替换证书名称）
@@ -172,7 +182,14 @@ xcrun notarytool submit <你的App名>.zip --wait --keychain-profile "notary-pro
 xcrun stapler staple build/macos/Build/Products/Release/<你的App名>.app
 ```
 
-5. 如果你需要 `.dmg` 安装包，可在签名/公证后再制作 DMG（常见做法是使用 `create-dmg` 等工具）。
+6. 如果你需要 `.dmg` 安装包，可在签名/公证后再制作 DMG（常见做法是使用 `create-dmg` 等工具）。
+
+7. 包体积优化建议（macOS 上 80~150MB 很常见）：
+
+- **最有效的手段通常不是 Flutter 参数**：macOS 桌面端会自带 Flutter Engine/ICU 等运行时，基础体积就不小。
+- **检查是否把不需要的平台二进制作为 assets 一起打包**：例如仅 macOS 运行却把 `assets/ffmpeg/windows/*.exe` 也打进包，会直接增大包体。
+  - 建议做法：将 FFmpeg 资源按平台拆分为“按需下载/首次运行下载”，或在构建前脚本仅拷贝当前平台需要的资源到 `assets/ffmpeg/<platform>/` 再构建。
+- **避免 Universal（arm64+x86_64）构建**：如果你只分发给 Apple Silicon，可在 Xcode 里将架构限制为 arm64（Universal 会更大）。
 
 ---
 
