@@ -9,4 +9,5 @@ export default defineConfig({
     outDir: "share",
     emptyOutDir: true,
   },
+  publicDir: "public",
 });

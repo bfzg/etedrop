@@ -10,7 +10,7 @@ const SHARE_INDEX_PATH = join(process.cwd(), 'public', 'share', 'index.html');
  * 分享页：/share/:deviceId/:shareCode 返回 SPA；/share/assets/*、/share/svg/* 放行给静态中间件，
  * 否则会被误匹配导致返回 HTML（JS/CSS/SVG 需正确 MIME）。
  */
-const STATIC_SEGMENTS = new Set(['assets', 'svg']);
+const STATIC_SEGMENTS = new Set(['assets', 'svg', 'img']);
 
 @Controller('share')
 export class SharePageController {

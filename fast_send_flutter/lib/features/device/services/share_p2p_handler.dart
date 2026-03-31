@@ -43,6 +43,7 @@ class ShareP2PHandler {
   /// Flow control: the web client can pause/resume the stream to avoid
   /// overwhelming its SourceBuffer / JS memory queue.
   Completer<void>? _streamFlowGate;
+  Completer<void>? _downloadFlowGate;
 
   /// Debounce rapid seek requests — only act on the latest one.
   Timer? _seekDebounceTimer;
@@ -176,6 +177,17 @@ class ShareP2PHandler {
           _streamFlowGate!.complete();
         }
         _streamFlowGate = null;
+        break;
+      case 'download-pause':
+        if (_downloadFlowGate == null || _downloadFlowGate!.isCompleted) {
+          _downloadFlowGate = Completer<void>();
+        }
+        break;
+      case 'download-resume':
+        if (_downloadFlowGate != null && !_downloadFlowGate!.isCompleted) {
+          _downloadFlowGate!.complete();
+        }
+        _downloadFlowGate = null;
         break;
     }
   }
@@ -773,6 +785,11 @@ class ShareP2PHandler {
       final chunkCap = _dataChunkSize;
 
       while (pos < fileSize) {
+        if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
+        final gate = _downloadFlowGate;
+        if (gate != null && !gate.isCompleted) {
+          await gate.future;
+        }
         if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
 
         final toRead = math.min(chunkCap, fileSize - pos);

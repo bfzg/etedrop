@@ -13,7 +13,14 @@ import {
 export type DownloadIntent = "download" | "play";
 type BinaryMode = "legacy" | "prefixed-opfs" | "prefixed-memory";
 
-export function useDownload(deviceId: string, shareCode: string) {
+const FLOW_PAUSE_PENDING_BYTES = 8 * 1024 * 1024;
+const FLOW_RESUME_PENDING_BYTES = 2 * 1024 * 1024;
+
+export function useDownload(
+  deviceId: string,
+  shareCode: string,
+  sendJson: (data: unknown) => void,
+) {
   const [showProgress, setShowProgress] = useState(false);
   const [progress, setProgress] = useState({ received: 0, total: 0 });
   const [showDone, setShowDone] = useState(false);
@@ -29,6 +36,8 @@ export function useDownload(deviceId: string, shareCode: string) {
   const opfsWriterRef = useRef<OpfsChunkWriter | null>(null);
   const opfsGateRef = useRef(Promise.resolve());
   const writeChainRef = useRef(Promise.resolve());
+  const pendingWriteBytesRef = useRef(0);
+  const downloadPausedRef = useRef(false);
   const downloadCompletedRef = useRef(false);
   const downloadIntentRef = useRef<DownloadIntent>("download");
   const fileInfoRef = useRef<{
@@ -46,10 +55,23 @@ export function useDownload(deviceId: string, shareCode: string) {
     }
   }, []);
 
+  const updateFlowControl = useCallback(() => {
+    const pending = pendingWriteBytesRef.current;
+    if (!downloadPausedRef.current && pending > FLOW_PAUSE_PENDING_BYTES) {
+      downloadPausedRef.current = true;
+      sendJson({ type: "download-pause" });
+    } else if (downloadPausedRef.current && pending < FLOW_RESUME_PENDING_BYTES) {
+      downloadPausedRef.current = false;
+      sendJson({ type: "download-resume" });
+    }
+  }, [sendJson]);
+
   const resetDownload = useCallback(() => {
     void closeOpfsWriter();
     writeChainRef.current = Promise.resolve();
     opfsGateRef.current = Promise.resolve();
+    pendingWriteBytesRef.current = 0;
+    downloadPausedRef.current = false;
     setShowProgress(false);
     setProgress({ received: 0, total: 0 });
     setShowDone(false);
@@ -150,6 +172,8 @@ export function useDownload(deviceId: string, shareCode: string) {
       return;
     }
 
+    pendingWriteBytesRef.current += buf.byteLength;
+    updateFlowControl();
     writeChainRef.current = writeChainRef.current
       .then(async () => {
         await opfsGateRef.current;
@@ -174,8 +198,13 @@ export function useDownload(deviceId: string, shareCode: string) {
       })
       .catch((e) => {
         console.error("[fastsend] write chunk", e);
+      })
+      .finally(() => {
+        pendingWriteBytesRef.current -= buf.byteLength;
+        if (pendingWriteBytesRef.current < 0) pendingWriteBytesRef.current = 0;
+        updateFlowControl();
       });
-  }, []);
+  }, [updateFlowControl]);
 
   const finishDownload = useCallback(async () => {
     await writeChainRef.current.catch(() => {});

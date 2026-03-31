@@ -18,7 +18,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
 
   const signaling = useSignaling(deviceId, shareCode);
 
-  const download = useDownload(deviceId, shareCode);
+  const download = useDownload(deviceId, shareCode, signaling.sendJson);
 
   const onStreamEnd = useCallback(() => {
     download.setShowProgress(false);
@@ -132,6 +132,9 @@ export function useSharePage(deviceId: string, shareCode: string) {
     remuxFmp4?: boolean;
     stream?: boolean;
   }) => {
+    // Reset download state on each user action so mobile browsers don't get stuck
+    // due to leftover queues/writers/paused state from the previous attempt.
+    download.resetDownload();
     download.downloadIntentRef.current = opts?.intent ?? "download";
 
     if (opts?.stream) {
