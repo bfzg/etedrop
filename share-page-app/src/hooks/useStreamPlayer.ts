@@ -5,6 +5,13 @@ import { concatU8, splitMp4Boxes } from "../utils/mp4Utils";
 export type StreamMode = "none" | "mse-fmp4";
 export type StreamBinaryMode = "raw-mp4" | "init-segment-v1";
 
+const EVICT_KEEP_BEHIND_S = 10;
+const EVICT_ROUTINE_AHEAD_S = 20;
+const MAX_BUFFER_AHEAD_S = 60;
+const FLOW_PAUSE_QUEUE_BYTES = 8 * 1024 * 1024;
+const FLOW_RESUME_QUEUE_BYTES = 2 * 1024 * 1024;
+const MSE_QUEUE_MAX_BYTES = 64 * 1024 * 1024;
+
 export interface StreamPlayerApi {
   mseUrl: string;
   streaming: boolean;
@@ -21,7 +28,7 @@ export interface StreamPlayerApi {
   }) => void;
   handleStreamBinary: (buf: ArrayBuffer) => void;
   handleStreamDone: () => void;
-  handleStreamSeeked: () => void;
+  handleStreamSeeked: (actualTime?: number) => void;
   sendSeek: (targetTime: number) => void;
   resetStream: () => void;
   streamModeRef: React.RefObject<StreamMode>;
@@ -55,14 +62,36 @@ export function useStreamPlayer(
   const mseUrlRef = useRef<string>("");
   const streamDurationRef = useRef<number>(0);
   const seekingRef = useRef(false);
+  const seekTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingSeekTimeRef = useRef<number | null>(null);
   const playbackTimeRef = useRef<number>(0);
 
-  const EVICT_KEEP_BEHIND_S = 10;
-  const EVICT_ROUTINE_AHEAD_S = 20;
-  const MAX_BUFFER_AHEAD_S = 60;
-  const MSE_QUEUE_MAX_BYTES = useRef(64 * 1024 * 1024);
   const mseQueueBytesRef = useRef(0);
   const quotaRetryCountRef = useRef(0);
+  const streamPausedRef = useRef(false);
+
+  /** Send stream-pause or stream-resume to the Flutter sender based on queue depth
+   *  and SourceBuffer ahead distance. */
+  const updateFlowControl = useCallback(() => {
+    const qBytes = mseQueueBytesRef.current;
+    const sb = sourceBufferRef.current;
+    const t = playbackTimeRef.current;
+    let bufferAheadFull = false;
+    if (sb && Number.isFinite(t) && t >= 0) {
+      const b = sb.buffered;
+      if (b.length > 0) {
+        bufferAheadFull = b.end(b.length - 1) - t > MAX_BUFFER_AHEAD_S;
+      }
+    }
+
+    if (!streamPausedRef.current && (qBytes > FLOW_PAUSE_QUEUE_BYTES || bufferAheadFull)) {
+      streamPausedRef.current = true;
+      sendJson({ type: "stream-pause" });
+    } else if (streamPausedRef.current && qBytes < FLOW_RESUME_QUEUE_BYTES && !bufferAheadFull) {
+      streamPausedRef.current = false;
+      sendJson({ type: "stream-resume" });
+    }
+  }, [sendJson]);
 
   /** Try to remove already-played data from the SourceBuffer.
    *  `force`: skip the "enough buffered ahead" check (used on QuotaExceededError).
@@ -116,12 +145,26 @@ export function useStreamPlayer(
     // far enough ahead of the playback position. Data stays in the JS queue
     // and will be appended as playback advances (driven by setPlaybackTime).
     const t = playbackTimeRef.current;
-    if (Number.isFinite(t) && t > 1) {
-      const b = sb.buffered;
-      if (b.length > 0) {
-        const bufferedEnd = b.end(b.length - 1);
-        if (bufferedEnd - t > MAX_BUFFER_AHEAD_S) return;
+    const b = sb.buffered;
+    if (b.length > 0) {
+      const bufferedEnd = b.end(b.length - 1);
+      if (bufferedEnd - t > MAX_BUFFER_AHEAD_S) {
+        updateFlowControl();
+        return;
       }
+    }
+
+    // Apply timestampOffset after seek (before any new data is appended).
+    if (pendingSeekTimeRef.current !== null) {
+      const offset = pendingSeekTimeRef.current;
+      pendingSeekTimeRef.current = null;
+      try {
+        sb.timestampOffset = offset;
+        console.log("[fastsend] set timestampOffset =", offset);
+      } catch (e) {
+        console.warn("[fastsend] failed to set timestampOffset", e);
+      }
+      if (sb.updating) return;
     }
 
     const q = mseQueueRef.current;
@@ -153,6 +196,7 @@ export function useStreamPlayer(
       }
       sb.appendBuffer(merged);
       quotaRetryCountRef.current = 0;
+      updateFlowControl();
     } catch (e) {
       if (e instanceof DOMException && e.name === "QuotaExceededError") {
         for (const it of items) mseQueueBytesRef.current += it.byteLength;
@@ -179,13 +223,14 @@ export function useStreamPlayer(
         );
       }
     }
-  }, [evictSourceBuffer, onStreamEnd]);
+  }, [evictSourceBuffer, updateFlowControl, onStreamEnd]);
 
   const setPlaybackTime = useCallback((t: number) => {
     if (!Number.isFinite(t) || t < 0) return;
     playbackTimeRef.current = t;
+    updateFlowControl();
     pumpMse();
-  }, [pumpMse]);
+  }, [updateFlowControl, pumpMse]);
 
   const ensureSourceBuffer = useCallback(
     (ms: MediaSource, mime: string) => {
@@ -277,7 +322,7 @@ export function useStreamPlayer(
         msePendingMoofRef.current = new Uint8Array(0);
       }
 
-      if (mseQueueBytesRef.current > MSE_QUEUE_MAX_BYTES.current) {
+      if (mseQueueBytesRef.current > MSE_QUEUE_MAX_BYTES) {
         console.error(
           "[fastsend] mse queue overflow",
           mseQueueBytesRef.current,
@@ -410,12 +455,12 @@ export function useStreamPlayer(
         if (u8.byteLength >= 2) {
           const kind = u8[0];
           const payload = u8.subarray(1);
-          if (kind === 0 || kind === 1) {
-            if (kind === 0) {
-              console.log("[fastsend] init bytes", payload.byteLength);
-            } else {
-              console.log("[fastsend] seg bytes", payload.byteLength);
-            }
+          if (kind === 0) {
+            mseInitDoneRef.current = true;
+            mseQueueRef.current.push(payload);
+            mseQueueBytesRef.current += payload.byteLength;
+          } else if (kind === 1) {
+            if (!mseInitDoneRef.current) return; // drop stale data from old pipeline
             mseQueueRef.current.push(payload);
             mseQueueBytesRef.current += payload.byteLength;
           }
@@ -423,9 +468,10 @@ export function useStreamPlayer(
       } else {
         ingestMp4StreamBytes(u8);
       }
+      updateFlowControl();
       pumpMse();
     },
-    [ingestMp4StreamBytes, pumpMse],
+    [ingestMp4StreamBytes, updateFlowControl, pumpMse],
   );
 
   const handleStreamDone = useCallback(() => {
@@ -442,8 +488,9 @@ export function useStreamPlayer(
     pumpMse();
   }, [pumpMse]);
 
-  const handleStreamSeeked = useCallback(() => {
+  const handleStreamSeeked = useCallback((actualTime?: number) => {
     seekingRef.current = false;
+    streamPausedRef.current = false;
     mseQueueRef.current = [];
     mseQueueBytesRef.current = 0;
     mseBufRef.current = new Uint8Array(0);
@@ -452,6 +499,7 @@ export function useStreamPlayer(
     msePendingMoofRef.current = new Uint8Array(0);
     mseSawMoovRef.current = false;
     streamEndedRef.current = false;
+    pendingSeekTimeRef.current = actualTime ?? null;
     const sb = sourceBufferRef.current;
     if (sb) {
       try {
@@ -464,10 +512,15 @@ export function useStreamPlayer(
 
   const sendSeek = useCallback(
     (targetTime: number) => {
-      if (seekingRef.current) return;
-      seekingRef.current = true;
       streamEndedRef.current = false;
-      sendJson({ type: "stream-seek", targetTime });
+      // Debounce: only send the seek after the user stops dragging for 500ms.
+      // This prevents dozens of ffmpeg start/kill cycles from rapid seeking events.
+      if (seekTimerRef.current) clearTimeout(seekTimerRef.current);
+      seekTimerRef.current = setTimeout(() => {
+        seekTimerRef.current = null;
+        seekingRef.current = true;
+        sendJson({ type: "stream-seek", targetTime });
+      }, 500);
     },
     [sendJson],
   );
@@ -486,6 +539,8 @@ export function useStreamPlayer(
 
     streamModeRef.current = "none";
     streamEndedRef.current = false;
+    streamPausedRef.current = false;
+    if (seekTimerRef.current) { clearTimeout(seekTimerRef.current); seekTimerRef.current = null; }
     mseQueueRef.current = [];
     mseQueueBytesRef.current = 0;
     mseBufRef.current = new Uint8Array(0);
@@ -501,6 +556,7 @@ export function useStreamPlayer(
     streamDurationRef.current = 0;
     setStreamDuration(0);
     seekingRef.current = false;
+    pendingSeekTimeRef.current = null;
   }, []);
 
   return {

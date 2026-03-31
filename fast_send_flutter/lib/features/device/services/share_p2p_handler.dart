@@ -40,6 +40,14 @@ class ShareP2PHandler {
   bool _passwordVerified = false;
   bool _initialized = false;
 
+  /// Flow control: the web client can pause/resume the stream to avoid
+  /// overwhelming its SourceBuffer / JS memory queue.
+  Completer<void>? _streamFlowGate;
+
+  /// Debounce rapid seek requests — only act on the latest one.
+  Timer? _seekDebounceTimer;
+  Map<String, dynamic>? _pendingSeekMsg;
+
   ShareP2PHandler({required this.sendSignaling});
 
   String get _storageDir =>
@@ -149,7 +157,25 @@ class ShareP2PHandler {
         unawaited(_onStreamStart(msg));
         break;
       case 'stream-seek':
-        unawaited(_onStreamSeek(msg));
+        _seekDebounceTimer?.cancel();
+        _pendingSeekMsg = msg;
+        _seekDebounceTimer = Timer(const Duration(milliseconds: 300), () {
+          final m = _pendingSeekMsg;
+          _pendingSeekMsg = null;
+          _seekDebounceTimer = null;
+          if (m != null) unawaited(_onStreamSeek(m));
+        });
+        break;
+      case 'stream-pause':
+        if (_streamFlowGate == null || _streamFlowGate!.isCompleted) {
+          _streamFlowGate = Completer<void>();
+        }
+        break;
+      case 'stream-resume':
+        if (_streamFlowGate != null && !_streamFlowGate!.isCompleted) {
+          _streamFlowGate!.complete();
+        }
+        _streamFlowGate = null;
         break;
     }
   }
@@ -230,6 +256,14 @@ class ShareP2PHandler {
     if (aCodec == 'aac') codecParts.add('mp4a.40.2');
     final mime = 'video/mp4; codecs="${codecParts.join(', ')}"';
 
+    // Invalidate any previous pipeline and reset flow control.
+    _streamGeneration++;
+    _killActiveStream();
+    if (_streamFlowGate != null && !_streamFlowGate!.isCompleted) {
+      _streamFlowGate!.complete();
+    }
+    _streamFlowGate = null;
+
     _sendJson({
       'type': 'stream-meta',
       'mime': mime,
@@ -245,6 +279,9 @@ class ShareP2PHandler {
   String? _activeStreamFile;
   String? _activeStreamFfmpeg;
   bool? _ffmpegPipeSupported;
+
+  /// Incremented on each new stream / seek; old pipelines check this and bail out.
+  int _streamGeneration = 0;
 
   Future<bool> _ffmpegSupportsPipe(String ffmpegPath) async {
     if (_ffmpegPipeSupported != null) return _ffmpegPipeSupported!;
@@ -266,6 +303,7 @@ class ShareP2PHandler {
     String filePath, {
     double? seekTime,
   }) async {
+    final gen = _streamGeneration;
     _activeStreamFile = filePath;
     _activeStreamFfmpeg = ffmpegPath;
 
@@ -361,25 +399,41 @@ class ShareP2PHandler {
       var pending = Uint8List(0);
 
       Future<void> sendBin(int kind, Uint8List payload) async {
+        if (_streamGeneration != gen) return;
         if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
         if (payload.isEmpty) return;
         const maxChunk = 60 * 1024;
         var off = 0;
+        var chunksSent = 0;
         while (off < payload.length) {
+          if (_streamGeneration != gen) return;
+          if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
+          final gate = _streamFlowGate;
+          if (gate != null && !gate.isCompleted) {
+            print('[ShareP2P] flow-control: paused (gen=$gen, sent=$totalBytesSent)');
+            await gate.future;
+            print('[ShareP2P] flow-control: resumed (gen=$gen)');
+            if (_streamGeneration != gen) return;
+          }
           if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
           final end = math.min(off + maxChunk, payload.length);
           final slice = payload.sublist(off, end);
           _dc!.send(RTCDataChannelMessage.fromBinary(_wrapBin(kind, slice)));
           totalBytesSent += slice.length;
           off = end;
+          chunksSent++;
           while ((_dc?.bufferedAmount ?? 0) > 512 * 1024) {
             await Future.delayed(const Duration(milliseconds: 2));
+          }
+          if (chunksSent % 8 == 0) {
+            await Future.delayed(Duration.zero);
           }
         }
       }
 
       Future<void> processChunks(Stream<List<int>> source) async {
         await for (final chunk in source) {
+          if (_streamGeneration != gen) return;
           if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) {
             try {
               proc.kill(ProcessSignal.sigkill);
@@ -455,10 +509,10 @@ class ShareP2PHandler {
         await processChunks(tempFile.openRead());
       }
 
-      if (initSent && pending.isNotEmpty) {
+      if (_streamGeneration == gen && initSent && pending.isNotEmpty) {
         await sendBin(kBinSeg, pending);
       }
-      print('[ShareP2P] stream done, totalBytesSent=$totalBytesSent');
+      print('[ShareP2P] stream pipeline finished (gen=$gen, current=${_streamGeneration}, sent=$totalBytesSent)');
     } finally {
       _activeStreamProc = null;
       if (tempFile != null) {
@@ -468,7 +522,11 @@ class ShareP2PHandler {
       }
     }
 
-    print('[ShareP2P] sending stream-done');
+    if (_streamGeneration != gen) {
+      print('[ShareP2P] stream gen=$gen cancelled, skipping stream-done');
+      return;
+    }
+    print('[ShareP2P] sending stream-done (gen=$gen)');
     if (_dc?.state == RTCDataChannelState.RTCDataChannelOpen) {
       _sendJson({'type': 'stream-done'});
     }
@@ -487,7 +545,17 @@ class ShareP2PHandler {
     final filePath = _activeStreamFile;
     if (ffmpegPath == null || filePath == null) return;
 
+    // Invalidate old pipeline first so it stops sending.
+    _streamGeneration++;
     _killActiveStream();
+
+    if (_streamFlowGate != null && !_streamFlowGate!.isCompleted) {
+      _streamFlowGate!.complete();
+    }
+    _streamFlowGate = null;
+
+    // Yield so the old pipeline's async loops notice the generation change and exit.
+    await Future.delayed(Duration.zero);
 
     _sendJson({'type': 'stream-seeked', 'actualTime': targetTime});
 

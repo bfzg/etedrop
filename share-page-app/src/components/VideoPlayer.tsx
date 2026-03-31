@@ -68,7 +68,6 @@ export function VideoPlayer({ src, streaming, onSeek, onPlaybackTime, onError }:
         if (!Number.isFinite(target)) return;
 
         if (!isInBufferedRange(media, target)) {
-          media.currentTime = lastGoodTimeRef.current;
           onSeekRef.current(target);
         }
       };

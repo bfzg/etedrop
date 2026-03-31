@@ -96,7 +96,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
               stream.handleStreamMeta(m);
               break;
             case "stream-seeked":
-              stream.handleStreamSeeked();
+              stream.handleStreamSeeked(typeof m.actualTime === "number" ? m.actualTime : undefined);
               break;
             case "stream-done":
               download.downloadCompletedRef.current = true;
