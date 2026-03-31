@@ -47,77 +47,108 @@ class FileTableView extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        final dividerColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.15);
+        final headerStyle = theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600);
+
         return SingleChildScrollView(
           child: ConstrainedBox(
             constraints: BoxConstraints(minWidth: constraints.maxWidth),
-            child: Theme(
-              data: theme.copyWith(
-                dividerColor: theme.colorScheme.outlineVariant.withValues(
-                  alpha: 0.15,
-                ),
-              ),
-              child: DataTable(
-                showCheckboxColumn: false,
-                columns: const [
-                  DataColumn(label: Text('名称')),
-                  DataColumn(label: Text('修改时间')),
-                  DataColumn(label: Text('大小')),
-                  DataColumn(label: Text('操作')),
-                ],
-                rows: entries.map((entry) {
-                  return DataRow(
-                    onSelectChanged: (_) => onTap(entry),
-                    cells: [
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              fileTypePngForEntry(entry),
-                              width: 20,
-                              height: 20,
-                              filterQuality: FilterQuality.high,
-                            ),
-                            const SizedBox(width: 12),
-                            Flexible(
-                              child: Text(
-                                entry.name,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Header
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: dividerColor)),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text('名称', style: headerStyle),
                       ),
-                      DataCell(Text(FormatUtils.dateTime(entry.mtime))),
-                      DataCell(
-                        Text(
-                          entry.isDirectory
-                              ? '-'
-                              : FormatUtils.fileSize(entry.size),
-                        ),
+                      SizedBox(
+                        width: 150,
+                        child: Text('修改时间', style: headerStyle),
                       ),
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.share, size: 18),
-                              tooltip: '分享',
-                              onPressed: () => onShare(entry),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, size: 18),
-                              tooltip: '删除',
-                              color: theme.colorScheme.error,
-                              onPressed: () => onDelete(entry),
-                            ),
-                          ],
-                        ),
+                      SizedBox(
+                        width: 80,
+                        child: Text('大小', style: headerStyle),
+                      ),
+                      SizedBox(
+                        width: 100,
+                        child: Text('操作', style: headerStyle),
                       ),
                     ],
+                  ),
+                ),
+                // Rows
+                ...entries.map((entry) {
+                  return InkWell(
+                    onTap: () => onTap(entry),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: dividerColor)),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Image.asset(
+                                  fileTypePngForEntry(entry),
+                                  width: 20,
+                                  height: 20,
+                                  filterQuality: FilterQuality.high,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    entry.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(
+                            width: 150,
+                            child: Text(FormatUtils.dateTime(entry.mtime)),
+                          ),
+                          SizedBox(
+                            width: 80,
+                            child: Text(
+                              entry.isDirectory
+                                  ? '-'
+                                  : FormatUtils.fileSize(entry.size),
+                            ),
+                          ),
+                          SizedBox(
+                            width: 100,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.share, size: 18),
+                                  tooltip: '分享',
+                                  onPressed: () => onShare(entry),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, size: 18),
+                                  tooltip: '删除',
+                                  color: theme.colorScheme.error,
+                                  onPressed: () => onDelete(entry),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
-                }).toList(),
-              ),
+                }),
+              ],
             ),
           ),
         );

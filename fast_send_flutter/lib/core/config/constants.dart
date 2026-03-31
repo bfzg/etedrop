@@ -7,8 +7,8 @@ class AppConstants {
   static const String apiBaseUrl = 'http://192.168.1.9:3000';
 
   /// 信令服务器地址（WebRTC 文件传输用）
-  // static const String signalingServerUrl = 'wss://fastsend.ing/api/connect';
-  // static const String signalingServerUrl = 'ws://43.153.143.37:40321/api/connect';
+  // static const String signalingServerUrl =
+  //     'ws://43.153.143.37:40321/api/connect';
   static const String signalingServerUrl = 'ws://192.168.1.9:3000/api/connect';
 
   /// 设备管理 WebSocket 地址（分享功能用）
