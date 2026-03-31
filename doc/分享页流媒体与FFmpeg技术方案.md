@@ -324,7 +324,7 @@ UI 在视频播放器下方以按钮组形式提供倍速选择。
 
 ## 十、参考链接
 
-- FFmpegKit Flutter 目录：<https://github.com/arthenica/ffmpeg-kit/tree/main/flutter/flutter>
+- FFmpegKit Flutter 目录：[https://github.com/arthenica/ffmpeg-kit/tree/main/flutter/flutter](https://github.com/arthenica/ffmpeg-kit/tree/main/flutter/flutter)
 - FFmpegKit Packages / 变体说明：仓库 Wiki（Packages、LTS）
 - 项目内关联：`doc/WebRTC网盘与分享方案.md`、`doc/分享接口说明.md`（若需与信令字段对齐可在此文档后续追加「流媒体控制消息」附录）
 
