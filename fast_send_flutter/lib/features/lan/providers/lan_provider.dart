@@ -518,7 +518,6 @@ class LanManager extends _$LanManager {
     final senderName = config.deviceName;
     final senderAvatar = config.avatar;
 
-    final host = await getLanIPv4() ?? '127.0.0.1';
     final shareId = const Uuid().v4();
     final expiresAt = DateTime.now()
         .add(const Duration(minutes: 2))
@@ -543,24 +542,25 @@ class LanManager extends _$LanManager {
       throw Exception('所选设备不在线或已离线，请等待设备上线后再试');
     }
 
-    final payload = LanShareOfferPayload(
-      shareId: shareId,
-      senderDeviceId: senderDeviceId,
-      senderName: senderName,
-      senderAvatar: senderAvatar,
-      senderHost: host,
-      senderPort: _listenPort,
-      files: files,
-      expiresAtMs: expiresAt,
-      caption: trimmedCaption != null && trimmedCaption.isNotEmpty
-          ? trimmedCaption
-          : null,
-    );
-
     final transfer = LanTransferService();
     for (final d in targets) {
       final ok = await transfer.ping(d.ip, d.port);
       if (!ok) continue;
+      final hostForPeer =
+          await getOutboundLocalIPv4ForPeer(d.ip) ?? await getLanIPv4() ?? '127.0.0.1';
+      final payload = LanShareOfferPayload(
+        shareId: shareId,
+        senderDeviceId: senderDeviceId,
+        senderName: senderName,
+        senderAvatar: senderAvatar,
+        senderHost: hostForPeer,
+        senderPort: _listenPort,
+        files: files,
+        expiresAtMs: expiresAt,
+        caption: trimmedCaption != null && trimmedCaption.isNotEmpty
+            ? trimmedCaption
+            : null,
+      );
       await transfer.postShareOffer(ip: d.ip, port: d.port, payload: payload);
     }
 
