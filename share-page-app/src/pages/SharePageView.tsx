@@ -88,6 +88,7 @@ export function SharePageView() {
     opfsAvailable ||
     fileSize <= wechatDownloadSoftLimitBytes;
   const wechatCanPlay = mediaSourceAvailable;
+  const canPlayWithoutMse = isIOS() && !mediaSourceAvailable;
 
   const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error;
 
@@ -105,7 +106,7 @@ export function SharePageView() {
 
   return (
     <>
-      {inWeChat && (
+        {isWechatMobile && (
         <img
           src={`${import.meta.env.BASE_URL}img/wechat.png`}
           alt="请在浏览器打开"
@@ -113,7 +114,7 @@ export function SharePageView() {
         />
       )}
       <div
-        className={`flex items-center justify-center ${inWeChat ? "px-5" : "min-h-screen p-5"}`}
+        className={`flex items-center justify-center ${isWechatMobile ? "px-5" : "min-h-screen p-5"}`}
       >
         <div className="max-w-[440px] w-full">
           {/* 仅微信内置浏览器展示引导图；用 BASE_URL 兼容 /share/ 子路径部署 */}
@@ -221,7 +222,8 @@ export function SharePageView() {
                       void sendDownloadStart({
                         intent: "play",
                         remuxFmp4: true,
-                        stream: true,
+                        // iOS without MediaSource: fall back to full download then play via <video src=blob>.
+                        stream: !canPlayWithoutMse,
                       });
                     }}
                     className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -247,6 +249,12 @@ export function SharePageView() {
                     : "下载"}
                 </button>
               )}
+            </div>
+          )}
+
+          {canPlayWithoutMse && isLikelyVideo(fileInfo?.fileName ?? "") && (
+            <div className="mt-2 text-xs text-slate-600 text-center">
+              iOS 当前环境不支持流式播放，需要先完整下载后才能播放
             </div>
           )}
 
