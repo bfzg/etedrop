@@ -33,15 +33,36 @@ class FfmpegBundle {
     bool executable = false,
   }) async {
     final out = File(outPath);
+
+    // 读取打包内的资源；如果目标文件已存在且内容一致则跳过，否则覆盖写入。
+    // 这样可以避免升级 ffmpeg 后仍继续使用旧版本（甚至损坏/架构不匹配）的落地副本。
+    final ByteData data = await rootBundle.load(assetPath);
+    final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+
     if (await out.exists()) {
-      final len = await out.length();
-      if (len > 0) return out;
+      try {
+        final len = await out.length();
+        if (len == bytes.length && len > 0) {
+          final existing = await out.readAsBytes();
+          if (existing.length == bytes.length) {
+            var same = true;
+            for (var i = 0; i < bytes.length; i++) {
+              if (existing[i] != bytes[i]) {
+                same = false;
+                break;
+              }
+            }
+            if (same) return out;
+          }
+        }
+      } catch (_) {
+        // Best-effort: if read/compare fails, fall through to overwrite.
+      }
     }
 
-    final ByteData data = await rootBundle.load(assetPath);
     await out.parent.create(recursive: true);
     await out.writeAsBytes(
-      data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes),
+      bytes,
       flush: true,
     );
 
