@@ -47,6 +47,10 @@ class _FileDropCardState extends State<FileDropCard> {
   bool _dragging = false;
   bool _sending = false;
 
+  static bool get _isDesktop {
+    return Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+  }
+
   static bool _isImagePath(String path) {
     switch (p.extension(path).toLowerCase()) {
       case '.png':
@@ -266,7 +270,9 @@ class _FileDropCardState extends State<FileDropCard> {
                 textInputAction: TextInputAction.newline,
                 decoration: InputDecoration(
                   isDense: true,
-                  hintText: '输入文字，⌘V 粘贴截图，或拖入文件…',
+                  hintText: _isDesktop
+                      ? '输入文字，⌘V 粘贴截图，或拖入文件…'
+                      : '输入文字，或选择文件…',
                   hintStyle: AppTextStyles.hint(context),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -290,9 +296,9 @@ class _FileDropCardState extends State<FileDropCard> {
                   FilledButton.icon(
                     onPressed: _sending ? null : _send,
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
+                      padding: EdgeInsets.symmetric(
                         horizontal: 18,
-                        vertical: 16,
+                        vertical: _isDesktop ? 16 : 0,
                       ),
                       backgroundColor: AppStyles.primary,
                       foregroundColor: Colors.white,

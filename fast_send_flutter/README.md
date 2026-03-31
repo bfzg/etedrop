@@ -184,6 +184,14 @@ xcrun stapler staple build/macos/Build/Products/Release/<你的App名>.app
 
 6. 如果你需要 `.dmg` 安装包，可在签名/公证后再制作 DMG（常见做法是使用 `create-dmg` 等工具）。
 
+```
+brew install create-dmg
+create-dmg \
+  "build/macos/Build/Products/Release/<你的App名>.app" \
+  --dmg-title "<你的App名>" \
+  --overwrite
+```
+
 7. 包体积优化建议（macOS 上 80~150MB 很常见）：
 
 - **最有效的手段通常不是 Flutter 参数**：macOS 桌面端会自带 Flutter Engine/ICU 等运行时，基础体积就不小。
@@ -244,14 +252,15 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 pod --version
 ```
 
-
 # 生成 .g 文件
+
 ```
 flutter pub run build_runner build --delete-conflicting-outputs
 dart run build_runner build --delete-conflicting-outputs
 ```
 
 # 目录介绍
+
 ```
 lib/
 ├── main.dart
@@ -263,7 +272,7 @@ lib/
 │   ├── router/               # 路由（go_router / auto_route）
 │   │   └── app_router.dart
 │   ├── theme/                # 全局主题、颜色、字体
-│   ├── models/               # 全局可复用的数据模型 
+│   ├── models/               # 全局可复用的数据模型
 │
 ├── widgets/                 # 全局通用widgets（Loading、ErrorView等）
 │
