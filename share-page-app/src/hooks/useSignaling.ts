@@ -190,8 +190,15 @@ export function useSignaling(deviceId: string, shareCode: string) {
   }, [cleanup, connect]);
 
   useEffect(() => {
-    connect();
-    return cleanup;
+    let cancelled = false;
+    const t = window.setTimeout(() => {
+      if (!cancelled) connect();
+    }, 0);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(t);
+      cleanup();
+    };
   }, [connect, cleanup]);
 
   const sendJson = useCallback((data: unknown) => {

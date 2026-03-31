@@ -67,6 +67,7 @@ export function SharePageView() {
     mseUrl,
     streaming,
     streamDuration,
+    setPlaybackTime,
   } = useSharePage(deviceId, shareCode);
 
   const videoSrc = mseUrl || playUrl;
@@ -120,6 +121,7 @@ export function SharePageView() {
             streaming={streaming}
             duration={streamDuration}
             onSeek={sendSeek}
+            onPlaybackTime={setPlaybackTime}
             onError={(err) => {
               console.error("[fastsend] video error", err);
             }}

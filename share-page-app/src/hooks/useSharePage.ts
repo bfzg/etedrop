@@ -183,5 +183,6 @@ export function useSharePage(deviceId: string, shareCode: string) {
     sendVerify,
     sendDownloadStart,
     sendSeek: stream.sendSeek,
+    setPlaybackTime: stream.setPlaybackTime,
   };
 }

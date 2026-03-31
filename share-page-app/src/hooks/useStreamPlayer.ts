@@ -10,6 +10,7 @@ export interface StreamPlayerApi {
   streaming: boolean;
   streamDuration: number;
   startMse: () => void;
+  setPlaybackTime: (t: number) => void;
   handleStreamMeta: (m: {
     mime?: string;
     codecs?: string;
@@ -54,16 +55,79 @@ export function useStreamPlayer(
   const mseUrlRef = useRef<string>("");
   const streamDurationRef = useRef<number>(0);
   const seekingRef = useRef(false);
+  const playbackTimeRef = useRef<number>(0);
+
+  const EVICT_KEEP_BEHIND_S = 10;
+  const EVICT_ROUTINE_AHEAD_S = 20;
+  const MAX_BUFFER_AHEAD_S = 60;
+  const MSE_QUEUE_MAX_BYTES = useRef(64 * 1024 * 1024);
+  const mseQueueBytesRef = useRef(0);
+  const quotaRetryCountRef = useRef(0);
+
+  /** Try to remove already-played data from the SourceBuffer.
+   *  `force`: skip the "enough buffered ahead" check (used on QuotaExceededError).
+   *  Returns true if a remove operation was started (sb.updating becomes true). */
+  const evictSourceBuffer = useCallback((force: boolean): boolean => {
+    const sb = sourceBufferRef.current;
+    if (!sb || sb.updating) return false;
+    if (!mseReadyRef.current) return false;
+    const ms = mediaSourceRef.current;
+    if (!ms || ms.readyState !== "open") return false;
+
+    const b = sb.buffered;
+    if (!b || b.length === 0) return false;
+
+    const t = playbackTimeRef.current;
+    if (!Number.isFinite(t) || t <= 0) return false;
+
+    const start = b.start(0);
+    const end = b.end(b.length - 1);
+    if (!Number.isFinite(start) || !Number.isFinite(end)) return false;
+
+    if (!force) {
+      const ahead = end - t;
+      if (!Number.isFinite(ahead) || ahead < EVICT_ROUTINE_AHEAD_S) return false;
+    }
+
+    const removeEnd = t - EVICT_KEEP_BEHIND_S;
+    if (removeEnd <= start + 1) return false;
+
+    try {
+      sb.remove(start, removeEnd);
+      return true;
+    } catch (e) {
+      console.warn("[fastsend] mse evict failed", e);
+      return false;
+    }
+  }, []);
 
   const pumpMse = useCallback(() => {
     const sb = sourceBufferRef.current;
     if (!sb) return;
     if (!mseReadyRef.current) return;
+    const ms = mediaSourceRef.current;
+    if (!ms || ms.readyState !== "open") return;
     if (sb.updating) return;
+
+    // Routine eviction: reclaim already-played data.
+    if (evictSourceBuffer(false)) return; // remove started → updateend will call pumpMse again
+
+    // Buffer-ahead limit: don't stuff more into SourceBuffer if we're already
+    // far enough ahead of the playback position. Data stays in the JS queue
+    // and will be appended as playback advances (driven by setPlaybackTime).
+    const t = playbackTimeRef.current;
+    if (Number.isFinite(t) && t > 1) {
+      const b = sb.buffered;
+      if (b.length > 0) {
+        const bufferedEnd = b.end(b.length - 1);
+        if (bufferedEnd - t > MAX_BUFFER_AHEAD_S) return;
+      }
+    }
+
     const q = mseQueueRef.current;
     if (q.length === 0) {
       if (streamEndedRef.current) {
-        try { mediaSourceRef.current?.endOfStream(); } catch { /* ignore */ }
+        try { ms.endOfStream(); } catch { /* ignore */ }
         onStreamEnd();
         setStreaming(false);
         streamEndedRef.current = false;
@@ -78,6 +142,8 @@ export function useStreamPlayer(
       count++;
     }
     const items = q.splice(0, count);
+    for (const it of items) mseQueueBytesRef.current -= it.byteLength;
+    if (mseQueueBytesRef.current < 0) mseQueueBytesRef.current = 0;
     try {
       const merged = new Uint8Array(totalSize);
       let off = 0;
@@ -86,15 +152,40 @@ export function useStreamPlayer(
         off += it.byteLength;
       }
       sb.appendBuffer(merged);
+      quotaRetryCountRef.current = 0;
     } catch (e) {
-      console.error(
-        "[fastsend] mse append error", e,
-        "batchItems:", items.length,
-        "batchSize:", totalSize,
-        "readyState:", mediaSourceRef.current?.readyState,
-      );
+      if (e instanceof DOMException && e.name === "QuotaExceededError") {
+        for (const it of items) mseQueueBytesRef.current += it.byteLength;
+        q.unshift(...items);
+
+        quotaRetryCountRef.current++;
+        if (quotaRetryCountRef.current > 3) {
+          console.error("[fastsend] QuotaExceededError persists after eviction retries");
+          quotaRetryCountRef.current = 0;
+          return;
+        }
+        console.warn(
+          "[fastsend] QuotaExceededError, forcing eviction (attempt",
+          quotaRetryCountRef.current + ")",
+          "currentTime:", playbackTimeRef.current,
+        );
+        evictSourceBuffer(true);
+      } else {
+        console.error(
+          "[fastsend] mse append error", e,
+          "batchItems:", items.length,
+          "batchSize:", totalSize,
+          "readyState:", ms.readyState,
+        );
+      }
     }
-  }, [onStreamEnd]);
+  }, [evictSourceBuffer, onStreamEnd]);
+
+  const setPlaybackTime = useCallback((t: number) => {
+    if (!Number.isFinite(t) || t < 0) return;
+    playbackTimeRef.current = t;
+    pumpMse();
+  }, [pumpMse]);
 
   const ensureSourceBuffer = useCallback(
     (ms: MediaSource, mime: string) => {
@@ -155,6 +246,7 @@ export function useStreamPlayer(
               return;
             }
             mseQueueRef.current.push(mseInitAccRef.current);
+            mseQueueBytesRef.current += mseInitAccRef.current.byteLength;
             mseInitAccRef.current = new Uint8Array(0);
             mseInitDoneRef.current = true;
             msePendingMoofRef.current = box.data;
@@ -165,6 +257,7 @@ export function useStreamPlayer(
         if (box.type === "moof") {
           if (msePendingMoofRef.current.byteLength > 0) {
             mseQueueRef.current.push(msePendingMoofRef.current);
+            mseQueueBytesRef.current += msePendingMoofRef.current.byteLength;
           }
           msePendingMoofRef.current = box.data;
           continue;
@@ -174,12 +267,29 @@ export function useStreamPlayer(
           msePendingMoofRef.current = concatU8(msePendingMoofRef.current, box.data);
         } else {
           mseQueueRef.current.push(box.data);
+          mseQueueBytesRef.current += box.data.byteLength;
         }
       }
 
       if (msePendingMoofRef.current.byteLength >= 512 * 1024) {
         mseQueueRef.current.push(msePendingMoofRef.current);
+        mseQueueBytesRef.current += msePendingMoofRef.current.byteLength;
         msePendingMoofRef.current = new Uint8Array(0);
+      }
+
+      if (mseQueueBytesRef.current > MSE_QUEUE_MAX_BYTES.current) {
+        console.error(
+          "[fastsend] mse queue overflow",
+          mseQueueBytesRef.current,
+          "bytes; stopping stream",
+        );
+        setStatusState("error", "播放器缓冲过大（可能网络/性能不足），请重试或改用下载");
+        setShowReconnect(true);
+        setStreaming(false);
+        streamEndedRef.current = false;
+        mseQueueRef.current = [];
+        mseQueueBytesRef.current = 0;
+        return;
       }
     },
     [setStatusState, setShowReconnect],
@@ -307,6 +417,7 @@ export function useStreamPlayer(
               console.log("[fastsend] seg bytes", payload.byteLength);
             }
             mseQueueRef.current.push(payload);
+            mseQueueBytesRef.current += payload.byteLength;
           }
         }
       } else {
@@ -322,6 +433,7 @@ export function useStreamPlayer(
     try {
       if (msePendingMoofRef.current.byteLength > 0) {
         mseQueueRef.current.push(msePendingMoofRef.current);
+        mseQueueBytesRef.current += msePendingMoofRef.current.byteLength;
         msePendingMoofRef.current = new Uint8Array(0);
         pumpMse();
       }
@@ -333,6 +445,7 @@ export function useStreamPlayer(
   const handleStreamSeeked = useCallback(() => {
     seekingRef.current = false;
     mseQueueRef.current = [];
+    mseQueueBytesRef.current = 0;
     mseBufRef.current = new Uint8Array(0);
     mseInitDoneRef.current = false;
     mseInitAccRef.current = new Uint8Array(0);
@@ -374,6 +487,7 @@ export function useStreamPlayer(
     streamModeRef.current = "none";
     streamEndedRef.current = false;
     mseQueueRef.current = [];
+    mseQueueBytesRef.current = 0;
     mseBufRef.current = new Uint8Array(0);
     mseInitDoneRef.current = false;
     mseInitAccRef.current = new Uint8Array(0);
@@ -395,6 +509,7 @@ export function useStreamPlayer(
     streamDuration,
     streamModeRef,
     startMse,
+    setPlaybackTime,
     handleStreamMeta,
     handleStreamBinary,
     handleStreamDone,
