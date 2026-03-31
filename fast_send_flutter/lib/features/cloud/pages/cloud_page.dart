@@ -25,16 +25,19 @@ class CloudPage extends ConsumerWidget {
     final hasStorage = ref.watch(hasStorageDirProvider);
     final storagePath = ref.watch(storageDirPathProvider);
     final fileListAsync = ref.watch(cloudFileListProvider);
-    final currentPath = ref.watch(currentPathProvider);
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
+    final showActions = hasStorage;
 
     return Scaffold(
       appBar: AppBar(
+        actions: !isDesktopLayout && showActions
+            ? _buildActions(context, ref, storagePath)
+            : null,
         title: Row(
           children: [
             const Expanded(child: BreadcrumbNav()),
 
-            if (isDesktopLayout && currentPath.isNotEmpty)
+            if (isDesktopLayout && showActions)
               ..._buildActions(context, ref, storagePath),
           ],
         ),
