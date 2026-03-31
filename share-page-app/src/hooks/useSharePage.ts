@@ -135,6 +135,10 @@ export function useSharePage(deviceId: string, shareCode: string) {
     download.downloadIntentRef.current = opts?.intent ?? "download";
 
     if (opts?.stream) {
+      // Allow playing multiple stream sessions in one page lifecycle.
+      // After the first stream ends, MediaSource/SourceBuffer may remain in an ended state.
+      // Reset first so a new MediaSource is created.
+      stream.resetStream();
       stream.startMse();
       signaling.sendJson({
         type: "stream-start",
