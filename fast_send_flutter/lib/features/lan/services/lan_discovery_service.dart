@@ -44,6 +44,7 @@ class LanDiscoveryService {
 
   /// 避免启动时 connectivity + start 连续 force 重建时重复打印相同一行。
   String _lastUdpBindLogKey = '';
+  int _lastIgnoredSocketErrorLogAtMs = 0;
 
   final List<_LanDiscoveryBinding> _bindings = [];
   List<NetworkInterface> _lastEligibleIfaces = [];
@@ -197,11 +198,32 @@ class LanDiscoveryService {
         }
       },
       onError: (Object e, StackTrace st) {
+        if (_shouldIgnoreSocketError(e)) {
+          final now = DateTime.now().millisecondsSinceEpoch;
+          if (now - _lastIgnoredSocketErrorLogAtMs > 5000) {
+            _lastIgnoredSocketErrorLogAtMs = now;
+            debugPrint('[LAN discovery] UDP socket transient error (ignored): $e');
+          }
+          return;
+        }
         debugPrint('[LAN discovery] UDP socket error: $e\n$st');
         unawaited(_recreateBindings(force: true));
       },
       cancelOnError: false,
     );
+  }
+
+  static bool _shouldIgnoreSocketError(Object e) {
+    if (e is SocketException) {
+      final errno = e.osError?.errorCode;
+      // macOS: 51 ENETUNREACH when offline / no route for broadcast/multicast on some bindings.
+      if (errno == 51) return true;
+      final msg = e.osError?.message.toLowerCase() ?? e.message.toLowerCase();
+      if (msg.contains('network is unreachable')) return true;
+      // Some stacks report "no route to host" for multicast/broadcast transiently.
+      if (msg.contains('no route') || msg.contains('unreachable')) return true;
+    }
+    return false;
   }
 
   static void _setBroadcastEnabledBestEffort(RawDatagramSocket socket) {
@@ -321,6 +343,9 @@ class LanDiscoveryService {
     final socket = b.socket;
     void sendTo(InternetAddress addr) {
       try {
+        if (addr.type == InternetAddressType.IPv4 && addr.address == '0.0.0.0') {
+          return;
+        }
         socket.send(bytes, addr, _udpPort);
       } catch (e) {
         debugPrint('LAN send ${addr.address}: $e');

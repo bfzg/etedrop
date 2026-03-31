@@ -34,6 +34,8 @@ abstract final class LanDiscoveryNetwork {
 
   static bool isEligibleIpv4(InternetAddress a) {
     if (a.type != InternetAddressType.IPv4 || a.isLoopback) return false;
+    // Some environments report placeholder 0.0.0.0 addresses; never usable for LAN discovery.
+    if (a.address == '0.0.0.0') return false;
     if (a.address.startsWith('169.254.')) return false;
     return true;
   }
