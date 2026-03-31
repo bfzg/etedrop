@@ -26,6 +26,7 @@ class CloudPage extends ConsumerWidget {
     final storagePath = ref.watch(storageDirPathProvider);
     final fileListAsync = ref.watch(cloudFileListProvider);
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
+    final isDesktopPlatform = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
     final showActions = hasStorage;
 
     return Scaffold(
@@ -44,8 +45,10 @@ class CloudPage extends ConsumerWidget {
       ),
       body: !hasStorage
           ? EmptyStorageView(
-              onSelectDir: () =>
-                  ref.read(fileServiceProvider.notifier).selectStorageDir(),
+              // Mobile uses an app-owned directory automatically.
+              onSelectDir: isDesktopPlatform
+                  ? () => ref.read(fileServiceProvider.notifier).selectStorageDir()
+                  : () {},
             )
           : Column(
               children: [

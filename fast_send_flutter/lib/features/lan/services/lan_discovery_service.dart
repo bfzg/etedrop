@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import '../models/lan_device.dart';
 import 'lan_discovery_network.dart';
@@ -19,6 +20,10 @@ class LanDiscoveryService {
   static const Duration _heartbeatInterval = Duration(seconds: 3);
   static const Duration _networkPollInterval = Duration(seconds: 10);
   static const int _byeBurstPerSocket = 5;
+
+  static const MethodChannel _androidMulticastLockChannel =
+      MethodChannel('com.fasteddy.app/lan_multicast_lock');
+  static const bool _androidForceUnifiedBind = true;
 
   final String deviceId;
   final int httpPort;
@@ -75,6 +80,7 @@ class LanDiscoveryService {
 
   Future<void> start() async {
     try {
+      await _setAndroidMulticastLock(true);
       await _recreateBindings(force: true);
       _watchConnectivity();
       _networkPollTimer?.cancel();
@@ -87,7 +93,22 @@ class LanDiscoveryService {
       });
       _announceAll(includeGlobalBroadcast: true);
     } catch (e) {
+      await _setAndroidMulticastLock(false);
       debugPrint('LAN Discovery start failed: $e');
+    }
+  }
+
+  static Future<void> _setAndroidMulticastLock(bool acquire) async {
+    if (!Platform.isAndroid) return;
+    try {
+      await _androidMulticastLockChannel.invokeMethod<void>(
+        acquire ? 'acquire' : 'release',
+      );
+      if (kDebugMode) {
+        debugPrint('Android multicast lock ${acquire ? 'acquired' : 'released'}');
+      }
+    } catch (e) {
+      debugPrint('Android multicast lock ${acquire ? 'acquire' : 'release'}: $e');
     }
   }
 
@@ -146,7 +167,7 @@ class LanDiscoveryService {
     // Windows：同样走单 socket。否则每块网卡（含 Hyper-V / WSL / VPN / 虚拟适配器）各开一个 UDP，
     // 易触发 ERROR_NO_SYSTEM_RESOURCES（errno 1450，中文「系统资源不足」），且每 10s 整组销毁再建会放大问题。
     var usedUnifiedBind = false;
-    if (Platform.isMacOS || Platform.isWindows) {
+    if (Platform.isMacOS || Platform.isWindows || (Platform.isAndroid && _androidForceUnifiedBind)) {
       await _openFallbackBinding();
       usedUnifiedBind = _bindings.isNotEmpty;
       if (gen != _lifecycleEpoch) return;
@@ -216,8 +237,8 @@ class LanDiscoveryService {
   static bool _shouldIgnoreSocketError(Object e) {
     if (e is SocketException) {
       final errno = e.osError?.errorCode;
-      // macOS: 51 ENETUNREACH when offline / no route for broadcast/multicast on some bindings.
-      if (errno == 51) return true;
+      // macOS / BSD: 51 ENETUNREACH. Linux / Android: 101 ENETUNREACH.
+      if (errno == 51 || errno == 101) return true;
       final msg = e.osError?.message.toLowerCase() ?? e.message.toLowerCase();
       if (msg.contains('network is unreachable')) return true;
       // Some stacks report "no route to host" for multicast/broadcast transiently.
@@ -281,6 +302,10 @@ class LanDiscoveryService {
         reuseAddress: true,
       );
       _setBroadcastEnabledBestEffort(socket);
+      // Helpful for debugging discovery locally on Android; some stacks default this off.
+      try {
+        socket.multicastLoopback = true;
+      } catch (_) {}
       for (final ni in _lastEligibleIfaces) {
         try {
           socket.joinMulticast(
@@ -435,6 +460,8 @@ class LanDiscoveryService {
   }
 
   void stop() {
+    unawaited(_setAndroidMulticastLock(false));
+
     final snapshot = List<_LanDiscoveryBinding>.from(_bindings);
     final byeBytes = utf8.encode(
       jsonEncode({'deviceId': deviceId, 'bye': true}),

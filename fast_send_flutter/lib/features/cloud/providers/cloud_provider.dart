@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -15,6 +16,11 @@ import '../services/macos_cloud_storage_access.dart';
 part 'cloud_provider.g.dart';
 
 const _downloadDirKey = 'download_dir';
+const _mobileDefaultCloudSubdir = 'eddy';
+
+bool _isDesktopPlatform() {
+  return Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+}
 
 Future<String> _defaultDownloadDir() async {
   if (Platform.isAndroid) {
@@ -39,9 +45,20 @@ Future<String> _defaultDownloadDir() async {
 /// 与网盘列表异步扫描竞态，表现为长时间加载后误报无权限；设置里重选同一路径会新建实例因而「立刻好」。
 @Riverpod(keepAlive: true)
 class FileServiceNotifier extends _$FileServiceNotifier {
+  Future<void>? _mobileInitFuture;
+
   @override
   FileService build() {
     final fileService = FileService();
+
+    // Mobile: always use an app-owned directory (scoped storage / iOS sandbox).
+    // Avoid asking users to pick arbitrary folders which may be unwritable.
+    if (Platform.isAndroid || Platform.isIOS) {
+      // Kick off init once; when done we update state so UI stops showing "preparing".
+      _mobileInitFuture ??= _initMobileDefaultStorageDir();
+      return fileService;
+    }
+
     // 仅当用户明确手动选择过网盘目录时才恢复，默认保持未设置
     final userSelected =
         LocalStorageService.instance.get<bool>(kCloudStorageDirUserSelectedKey) ??
@@ -76,6 +93,13 @@ class FileServiceNotifier extends _$FileServiceNotifier {
   }
 
   Future<String?> selectStorageDir() async {
+    // Mobile: don't prompt for directory selection; keep storage in app-owned dir.
+    if (!_isDesktopPlatform()) {
+      _mobileInitFuture ??= _initMobileDefaultStorageDir();
+      await _mobileInitFuture;
+      return state.storageDir;
+    }
+
     final result = await FilePicker.platform.getDirectoryPath(
       dialogTitle: '选择网盘存储目录',
     );
@@ -83,6 +107,21 @@ class FileServiceNotifier extends _$FileServiceNotifier {
       await setStorageDir(result);
     }
     return result;
+  }
+
+  Future<void> _initMobileDefaultStorageDir() async {
+    try {
+      final base = Platform.isAndroid
+          ? (await getExternalStorageDirectory())?.path
+          : (await getApplicationDocumentsDirectory()).path;
+      final root = base ?? (await getApplicationDocumentsDirectory()).path;
+      final target = p.join(root, _mobileDefaultCloudSubdir);
+      await setStorageDir(target);
+      await state.ensureStorageDir();
+    } catch (e) {
+      // As a last resort, keep storageDir empty; UI will show error/empty state.
+      debugPrint('Init mobile storage dir failed: $e');
+    }
   }
 }
 

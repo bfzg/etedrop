@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 import '../../../styles/styles.dart';
 
@@ -11,6 +12,7 @@ class EmptyStorageView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDesktop = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
     return Center(
       child: Padding(
@@ -25,14 +27,14 @@ class EmptyStorageView extends StatelessWidget {
             ),
             Gap.md,
             Text(
-              '尚未设置存储目录',
+              isDesktop ? '尚未设置存储目录' : '正在准备存储目录',
               style: theme.textTheme.titleLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             Gap.xs,
             Text(
-              '请选择一个文件夹作为网盘存储目录',
+              isDesktop ? '请选择一个文件夹作为网盘存储目录' : '手机端将自动使用应用专用目录保存文件',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant.withValues(
                   alpha: 0.7,
@@ -40,11 +42,12 @@ class EmptyStorageView extends StatelessWidget {
               ),
             ),
             Gap.md,
-            FilledButton.icon(
-              onPressed: onSelectDir,
-              icon: const Icon(Icons.folder_open),
-              label: const Text('选择存储目录'),
-            ),
+            if (isDesktop)
+              FilledButton.icon(
+                onPressed: onSelectDir,
+                icon: const Icon(Icons.folder_open),
+                label: const Text('选择存储目录'),
+              ),
           ],
         ),
       ),

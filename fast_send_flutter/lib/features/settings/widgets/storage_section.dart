@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'dart:io';
 
 import '../../../l10n/app_localizations.dart';
 import '../../cloud/providers/cloud_provider.dart';
@@ -19,6 +20,7 @@ class StorageSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final isDesktop = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -31,9 +33,12 @@ class StorageSection extends ConsumerWidget {
                 leading: const Icon(Icons.cloud_outlined),
                 title: const Text('网盘目录'),
                 subtitle: Text(storagePath.isEmpty ? l10n.notSet : storagePath),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () =>
-                    ref.read(fileServiceProvider.notifier).selectStorageDir(),
+                trailing: isDesktop ? const Icon(Icons.chevron_right) : null,
+                onTap: isDesktop
+                    ? () => ref
+                        .read(fileServiceProvider.notifier)
+                        .selectStorageDir()
+                    : null,
               ),
               const Divider(height: 1, indent: 16, endIndent: 16),
               ListTile(

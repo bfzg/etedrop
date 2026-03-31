@@ -227,9 +227,29 @@ class FileService {
 
     await Directory(p.dirname(resolved)).create(recursive: true);
     final stream = src.openRead(offset);
-    final sink = offset == 0
-        ? partFile.openWrite(mode: FileMode.write)
-        : partFile.openWrite(mode: FileMode.append);
+    IOSink sink;
+    try {
+      sink = offset == 0
+          ? partFile.openWrite(mode: FileMode.write)
+          : partFile.openWrite(mode: FileMode.append);
+    } on PathAccessException catch (e) {
+      // Android scoped storage: writing to arbitrary public dirs (e.g. /storage/emulated/0/...)
+      // may fail with EPERM unless user grants "All files access" or uses SAF.
+      throw FileSystemException(
+        '无权限写入该目录，请在系统设置中开启“所有文件访问权限”，或更换到应用专用目录（Android/data/...）。',
+        e.path,
+        e.osError,
+      );
+    } on FileSystemException catch (e) {
+      if (_isLikelyAccessDenied(e)) {
+        throw FileSystemException(
+          '无权限写入该目录，请在系统设置中开启“所有文件访问权限”，或更换到应用专用目录（Android/data/...）。',
+          e.path,
+          e.osError,
+        );
+      }
+      rethrow;
+    }
 
     var written = offset;
     var sinceCheck = 0;
