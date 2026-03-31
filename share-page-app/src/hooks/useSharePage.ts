@@ -184,6 +184,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
     doneKind: download.doneKind,
     resumeHintBytes: download.resumeHintBytes,
     playUrl: download.playUrl,
+    downloadError: download.downloadError,
     mseUrl: stream.mseUrl,
     streaming: stream.streaming,
     streamDuration: stream.streamDuration,

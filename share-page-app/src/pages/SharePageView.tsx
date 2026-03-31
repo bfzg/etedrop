@@ -60,6 +60,7 @@ export function SharePageView() {
     showDone,
     doneKind,
     showReconnect,
+    downloadError,
     sendVerify,
     sendDownloadStart,
     sendSeek,
@@ -277,6 +278,12 @@ export function SharePageView() {
                   : 0}
                 %)
               </div>
+            </div>
+          )}
+
+          {!!downloadError && (
+            <div className="mt-3 rounded-lg bg-amber-50 text-amber-900 px-3 py-2 text-xs">
+              {downloadError}
             </div>
           )}
 

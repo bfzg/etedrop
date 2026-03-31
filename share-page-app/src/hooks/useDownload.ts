@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileMeta } from "../types";
 import {
   clearPartialFile,
@@ -27,6 +27,7 @@ export function useDownload(
   const [doneKind, setDoneKind] = useState<"" | "download" | "stream">("");
   const [resumeHintBytes, setResumeHintBytes] = useState(0);
   const [playUrl, setPlayUrl] = useState<string>("");
+  const [downloadError, setDownloadError] = useState<string>("");
 
   const chunksRef = useRef<ArrayBuffer[]>([]);
   const memoryDataChunksRef = useRef<ArrayBuffer[]>([]);
@@ -39,6 +40,8 @@ export function useDownload(
   const pendingWriteBytesRef = useRef(0);
   const downloadPausedRef = useRef(false);
   const downloadCompletedRef = useRef(false);
+  const lastProgressAtMsRef = useRef<number>(0);
+  const lastProgressBytesRef = useRef<number>(0);
   const downloadIntentRef = useRef<DownloadIntent>("download");
   const fileInfoRef = useRef<{
     fileName: string;
@@ -72,6 +75,9 @@ export function useDownload(
     opfsGateRef.current = Promise.resolve();
     pendingWriteBytesRef.current = 0;
     downloadPausedRef.current = false;
+    lastProgressAtMsRef.current = Date.now();
+    lastProgressBytesRef.current = 0;
+    setDownloadError("");
     setShowProgress(false);
     setProgress({ received: 0, total: 0 });
     setShowDone(false);
@@ -120,6 +126,9 @@ export function useDownload(
       totalBytesRef.current = m.fileSize;
       expectedNextOffsetRef.current = resumeEcho;
       setProgress({ received: resumeEcho, total: m.fileSize });
+      lastProgressAtMsRef.current = Date.now();
+      lastProgressBytesRef.current = resumeEcho;
+      setDownloadError("");
 
       if (prefix === 8) {
         memoryDataChunksRef.current = [];
@@ -169,6 +178,8 @@ export function useDownload(
         0,
       );
       setProgress((p) => ({ ...p, received, total }));
+      lastProgressAtMsRef.current = Date.now();
+      lastProgressBytesRef.current = received;
       return;
     }
 
@@ -180,6 +191,9 @@ export function useDownload(
         const { offset, data } = parseOffsetPrefixedChunk(buf);
         if (offset !== expectedNextOffsetRef.current) {
           console.warn("[fastsend] chunk offset mismatch", offset, expectedNextOffsetRef.current);
+          setDownloadError(
+            `下载数据异常：分片偏移不连续（收到 ${offset}，期望 ${expectedNextOffsetRef.current}）。请重试或重新连接。`,
+          );
           return;
         }
         if (binaryModeRef.current === "prefixed-opfs") {
@@ -195,9 +209,14 @@ export function useDownload(
         expectedNextOffsetRef.current += data.byteLength;
         const t = totalBytesRef.current;
         setProgress({ received: expectedNextOffsetRef.current, total: t });
+        lastProgressAtMsRef.current = Date.now();
+        lastProgressBytesRef.current = expectedNextOffsetRef.current;
       })
       .catch((e) => {
         console.error("[fastsend] write chunk", e);
+        setDownloadError(
+          `下载写入失败：${(e && (e as Error).message) ? (e as Error).message : String(e)}`,
+        );
       })
       .finally(() => {
         pendingWriteBytesRef.current -= buf.byteLength;
@@ -205,6 +224,27 @@ export function useDownload(
         updateFlowControl();
       });
   }, [updateFlowControl]);
+
+  // Watchdog: if progress stops increasing for too long, surface it in UI.
+  useEffect(() => {
+    if (!showProgress) return;
+    if (downloadCompletedRef.current) return;
+    const id = setInterval(() => {
+      if (!showProgress) return;
+      if (downloadCompletedRef.current) return;
+      const now = Date.now();
+      const lastAt = lastProgressAtMsRef.current;
+      const lastBytes = lastProgressBytesRef.current;
+      const stuckForMs = now - lastAt;
+      // If we haven't advanced for 12s, consider it stalled.
+      if (stuckForMs > 12_000 && progress.received === lastBytes) {
+        setDownloadError(
+          "下载似乎已停止（超过 12 秒无进度）。iOS 浏览器可能会在切后台/锁屏/省电时暂停 WebRTC 或限制内存。建议保持前台亮屏，或在 Safari 打开再试；也可点“重新连接”。",
+        );
+      }
+    }, 2000);
+    return () => clearInterval(id);
+  }, [showProgress, progress.received]);
 
   const finishDownload = useCallback(async () => {
     await writeChainRef.current.catch(() => {});
@@ -281,6 +321,7 @@ export function useDownload(
     setDoneKind,
     resumeHintBytes,
     playUrl,
+    downloadError,
     downloadCompletedRef,
     downloadIntentRef,
     totalBytesRef,
