@@ -32,7 +32,18 @@ const config: Config = {
   // may want to replace "en" with "zh-Hans".
   i18n: {
     defaultLocale: 'zh-Hans',
-    locales: ['zh-Hans'],
+    locales: ['zh-Hans', 'en', 'ja', 'ko', 'de', 'fr', 'es', 'ar', 'ru'],
+    localeConfigs: {
+      'zh-Hans': {label: '简体中文'},
+      en: {label: 'English'},
+      ja: {label: '日本語'},
+      ko: {label: '한국어'},
+      de: {label: 'Deutsch'},
+      fr: {label: 'Français'},
+      es: {label: 'Español'},
+      ar: {label: 'العربية', direction: 'rtl'},
+      ru: {label: 'Русский'},
+    },
   },
 
   presets: [
@@ -67,6 +78,7 @@ const config: Config = {
     image: 'img/docusaurus-social-card.jpg',
     colorMode: {
       respectPrefersColorScheme: true,
+      disableSwitch: false,
     },
     navbar: {
       title: 'Fast Send',
@@ -85,57 +97,17 @@ const config: Config = {
         },
         {to: '/blog', label: '文章', position: 'left'},
         {
+          type: 'localeDropdown',
+          position: 'right',
+        },
+        {
           href: 'https://github.com/',
           label: 'GitHub',
           position: 'right',
         },
       ],
     },
-    footer: {
-      style: 'dark',
-      links: [
-        {
-          title: '文档',
-          items: [
-            {
-              label: '文档',
-              to: '/docs',
-            },
-            {
-              label: '使用指南',
-              to: '/docs/how-to-use',
-            },
-          ],
-        },
-        {
-          title: '项目',
-          items: [
-            {
-              label: 'GitHub',
-              href: 'https://github.com/',
-            },
-            {
-              label: '服务端',
-              to: '/docs/服务端架构总览',
-            },
-            {
-              label: '信令协议',
-              to: '/docs/信令协议说明',
-            },
-          ],
-        },
-        {
-          title: '更多',
-          items: [
-            {
-              label: '文章',
-              to: '/blog',
-            },
-          ],
-        },
-      ],
-      copyright: `Copyright © ${new Date().getFullYear()} Fast Send.`,
-    },
+    footer: {},
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
