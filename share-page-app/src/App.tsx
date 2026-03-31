@@ -3,7 +3,7 @@ import { SharePageView } from './pages/SharePageView'
 
 /** 开发时访问 /share 或根路径时显示说明，避免空白页 */
 function DevFallback() {
-  const demoUrl = '/share/demo/000000'
+  const demoUrl = '/share/b257e209-6777-4efc-a4f5-b2a4853cce2d/191B33A9'
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <div className="max-w-md text-center space-y-4">

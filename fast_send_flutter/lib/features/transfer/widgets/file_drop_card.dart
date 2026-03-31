@@ -290,6 +290,10 @@ class _FileDropCardState extends State<FileDropCard> {
                   FilledButton.icon(
                     onPressed: _sending ? null : _send,
                     style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 18,
+                        vertical: 16,
+                      ),
                       backgroundColor: AppStyles.primary,
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: AppStyles.primary.withValues(

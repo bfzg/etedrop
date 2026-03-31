@@ -1,51 +1,48 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams } from 'react-router-dom'
-import { useSharePage } from '../hooks/useSharePage'
-import { formatBytes } from '../utils/format'
-import { FileIconSvg } from '../components/fileIconSvgComponent'
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { useSharePage } from "../hooks/useSharePage";
+import { formatBytes } from "../utils/format";
+import { FileIconSvg } from "../components/fileIconSvgComponent";
+import { VideoPlayer } from "../components/VideoPlayer";
 
-const VIDEO_EXTS = new Set([
-  'mp4',
-  'm4v',
-  'mov',
-  'webm',
-  'ogv',
-])
+const VIDEO_EXTS = new Set(["mp4", "m4v", "mov", "webm", "ogv"]);
 
 function isLikelyVideo(fileName: string) {
-  const i = fileName.lastIndexOf('.')
-  if (i < 0) return false
-  const ext = fileName.slice(i + 1).toLowerCase()
-  return VIDEO_EXTS.has(ext)
+  const i = fileName.lastIndexOf(".");
+  if (i < 0) return false;
+  const ext = fileName.slice(i + 1).toLowerCase();
+  return VIDEO_EXTS.has(ext);
 }
 
 const STATUS_CLASSES = {
   pending: {
-    el: 'flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-amber-50 text-amber-800',
-    dot: 'w-2 h-2 rounded-full shrink-0 bg-amber-500 animate-pulse',
+    el: "flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-amber-50 text-amber-800",
+    dot: "w-2 h-2 rounded-full shrink-0 bg-amber-500 animate-pulse",
   },
   online: {
-    el: 'flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-green-50 text-green-700',
-    dot: 'w-2 h-2 rounded-full shrink-0 bg-green-500',
+    el: "flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-green-50 text-green-700",
+    dot: "w-2 h-2 rounded-full shrink-0 bg-green-500",
   },
   error: {
-    el: 'flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-red-50 text-red-600',
-    dot: 'w-2 h-2 rounded-full shrink-0 bg-red-500',
+    el: "flex items-center gap-2 py-3 px-4 rounded-lg mb-4 text-sm bg-red-50 text-red-600",
+    dot: "w-2 h-2 rounded-full shrink-0 bg-red-500",
   },
-} as const
+} as const;
 
 export function SharePageView() {
-  const { deviceId, shareCode } = useParams<{ deviceId: string; shareCode: string }>()
-  const [password, setPassword] = useState('')
-  const [emptyPwdError, setEmptyPwdError] = useState(false)
-  const [playbackRate, setPlaybackRate] = useState(1)
+  const { deviceId, shareCode } = useParams<{
+    deviceId: string;
+    shareCode: string;
+  }>();
+  const [password, setPassword] = useState("");
+  const [emptyPwdError, setEmptyPwdError] = useState(false);
 
   if (!deviceId || !shareCode) {
     return (
       <div className="min-h-screen flex items-center justify-center p-5 text-red-600">
         缺少设备 ID 或分享码
       </div>
-    )
+    );
   }
 
   const {
@@ -69,58 +66,24 @@ export function SharePageView() {
     playUrl,
     mseUrl,
     streaming,
-  } = useSharePage(deviceId, shareCode)
+    streamDuration,
+  } = useSharePage(deviceId, shareCode);
 
-  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const videoSrc = mseUrl || playUrl;
 
-  useEffect(() => {
-    const v = videoRef.current
-    if (!v) return
-    if (!mseUrl && !playUrl) return
-    const tryPlay = () => { void v.play().catch(() => {}) }
-    v.addEventListener('canplay', tryPlay, { once: true })
-    return () => { v.removeEventListener('canplay', tryPlay) }
-  }, [mseUrl, playUrl])
+  const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error;
 
-  const handleSeeking = () => {
-    if (!streaming) return
-    const v = videoRef.current
-    if (!v) return
-    const target = v.currentTime
-    const buffered = v.buffered
-    let inBuffer = false
-    for (let i = 0; i < buffered.length; i++) {
-      if (target >= buffered.start(i) - 0.5 && target <= buffered.end(i) + 0.5) {
-        inBuffer = true
-        break
-      }
-    }
-    if (!inBuffer) {
-      sendSeek(target)
-    }
-  }
-
-  const SPEED_OPTIONS = [0.5, 1, 1.5, 2] as const
-
-  const changeSpeed = useCallback((rate: number) => {
-    setPlaybackRate(rate)
-    const v = videoRef.current
-    if (v) v.playbackRate = rate
-  }, [])
-
-  const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error
-
-  const displayPasswordError = emptyPwdError ? '请输入密码' : passwordError
+  const displayPasswordError = emptyPwdError ? "请输入密码" : passwordError;
 
   const handleVerify = () => {
-    const p = password.trim()
+    const p = password.trim();
     if (!p) {
-      setEmptyPwdError(true)
-      return
+      setEmptyPwdError(true);
+      return;
     }
-    setEmptyPwdError(false)
-    sendVerify(p)
-  }
+    setEmptyPwdError(false);
+    sendVerify(p);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-5">
@@ -137,7 +100,11 @@ export function SharePageView() {
 
         {fileInfo && (
           <div className="bg-slate-50 rounded-xl p-5 mb-4">
-            <FileIconSvg fileName={fileInfo.fileName} className="w-12 h-12 mb-3" alt="" />
+            <FileIconSvg
+              fileName={fileInfo.fileName}
+              className="w-12 h-12 mb-3"
+              alt=""
+            />
             <div className="text-base font-semibold text-slate-800 break-all mb-1">
               {fileInfo.fileName}
             </div>
@@ -147,38 +114,16 @@ export function SharePageView() {
           </div>
         )}
 
-        {(mseUrl || playUrl) && (
-          <div className="mb-4">
-            <video
-              ref={videoRef}
-              className="w-full rounded-xl bg-black"
-              src={mseUrl || playUrl}
-              controls
-              playsInline
-              onSeeking={handleSeeking}
-              onError={() => {
-                const v = videoRef.current
-                console.error('[fastsend] video error', v?.error)
-              }}
-            />
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="text-xs text-slate-500 mr-1">倍速</span>
-              {SPEED_OPTIONS.map((rate) => (
-                <button
-                  key={rate}
-                  type="button"
-                  onClick={() => changeSpeed(rate)}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
-                    playbackRate === rate
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {rate}x
-                </button>
-              ))}
-            </div>
-          </div>
+        {videoSrc && (
+          <VideoPlayer
+            src={videoSrc}
+            streaming={streaming}
+            duration={streamDuration}
+            onSeek={sendSeek}
+            onError={(err) => {
+              console.error("[fastsend] video error", err);
+            }}
+          />
         )}
 
         {showPassword && (
@@ -191,10 +136,10 @@ export function SharePageView() {
                 type="password"
                 value={password}
                 onChange={(e) => {
-                setPassword(e.target.value)
-                setEmptyPwdError(false)
-              }}
-                onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                  setPassword(e.target.value);
+                  setEmptyPwdError(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                 placeholder="请输入密码"
                 className="flex-1 py-2.5 px-3.5 bg-gray-100 rounded-lg text-sm outline-none"
               />
@@ -208,7 +153,9 @@ export function SharePageView() {
               </button>
             </div>
             {displayPasswordError && (
-              <div className="text-xs text-red-500 mt-1">{displayPasswordError}</div>
+              <div className="text-xs text-red-500 mt-1">
+                {displayPasswordError}
+              </div>
             )}
           </div>
         )}
@@ -219,7 +166,11 @@ export function SharePageView() {
               type="button"
               disabled={!fileInfo || !isLikelyVideo(fileInfo.fileName)}
               onClick={() => {
-                void sendDownloadStart({ intent: 'play', remuxFmp4: true, stream: true })
+                void sendDownloadStart({
+                  intent: "play",
+                  remuxFmp4: true,
+                  stream: true,
+                });
               }}
               className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -229,13 +180,17 @@ export function SharePageView() {
             <button
               type="button"
               onClick={() => {
-                void sendDownloadStart({ intent: 'download', remuxFmp4: false, stream: false })
+                void sendDownloadStart({
+                  intent: "download",
+                  remuxFmp4: false,
+                  stream: false,
+                });
               }}
               className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-slate-900 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {resumeHintBytes > 0
                 ? `继续下载（已保存 ${formatBytes(resumeHintBytes)}）`
-                : '下载'}
+                : "下载"}
             </button>
           </div>
         )}
@@ -245,19 +200,20 @@ export function SharePageView() {
             <div className="text-xs text-slate-500 text-center">
               {formatBytes(progress.received)} / {formatBytes(progress.total)} (
               {progress.total > 0
-                ? Math.min(100, (progress.received / progress.total) * 100).toFixed(1)
+                ? Math.min(
+                    100,
+                    (progress.received / progress.total) * 100,
+                  ).toFixed(1)
                 : 0}
               %)
             </div>
           </div>
         )}
 
-        {showDone && !streaming && (
+        {showDone && !streaming && doneKind !== "stream" && (
           <div className="text-center py-5">
             <div className="text-4xl mb-2">✅</div>
-            <p className="text-green-600 font-medium">
-              {doneKind === 'stream' ? '播放结束' : '下载完成'}
-            </p>
+            <p className="text-green-600 font-medium">下载完成</p>
           </div>
         )}
 
@@ -272,5 +228,5 @@ export function SharePageView() {
         )}
       </div>
     </div>
-  )
+  );
 }
