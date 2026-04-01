@@ -1,11 +1,12 @@
 import type {ReactNode} from 'react';
 import Heading from '@theme/Heading';
 import Translate from '@docusaurus/Translate';
+import Container from '../Container';
 
 export default function HomeHowItWorks(): ReactNode {
   return (
     <section className="bg-linear-to-b from-white to-slate-50 py-14 dark:from-slate-950/85 dark:to-slate-900/60">
-      <div className="mx-auto w-full max-w-[1180px] px-4">
+      <Container>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="grid gap-3">
             <Heading as="h2" className="m-0 text-[1.75rem] tracking-[-0.01em]">
@@ -76,7 +77,7 @@ export default function HomeHowItWorks(): ReactNode {
             </div>
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

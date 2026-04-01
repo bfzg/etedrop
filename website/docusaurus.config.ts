@@ -56,7 +56,7 @@ const config: Config = {
         { to: "/", label: "首页", exact: true },
         {
           type: "docSidebar",
-          to: "/docs/doc/使用手册",
+          to: "/docs",
           label: "文档",
           sidebarId: "docSidebar",
         },

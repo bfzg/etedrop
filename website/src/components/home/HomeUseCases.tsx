@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import Heading from '@theme/Heading';
 import Translate from '@docusaurus/Translate';
+import Container from '../Container';
 
 const items = [
   {
@@ -23,7 +24,7 @@ const items = [
 export default function HomeUseCases(): ReactNode {
   return (
     <section className="py-12">
-      <div className="mx-auto w-full max-w-[1180px] px-4">
+      <Container>
         <div className="mb-5 grid gap-1">
           <Heading as="h2" className="m-0 text-[1.75rem] tracking-[-0.01em]">
             <Translate id="homepage.useCases.title">适用场景</Translate>
@@ -49,7 +50,7 @@ export default function HomeUseCases(): ReactNode {
             </div>
           ))}
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

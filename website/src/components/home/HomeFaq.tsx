@@ -1,6 +1,7 @@
 import type {ReactNode} from 'react';
 import Heading from '@theme/Heading';
 import Translate from '@docusaurus/Translate';
+import Container from '../Container';
 
 const faqs = [
   {
@@ -23,7 +24,7 @@ const faqs = [
 export default function HomeFaq(): ReactNode {
   return (
     <section className="bg-linear-to-b from-white to-slate-50 py-14 dark:from-slate-950/85 dark:to-slate-900/60">
-      <div className="mx-auto w-full max-w-[1180px] px-4">
+      <Container>
         <div className="mb-4 grid gap-1">
           <Heading as="h2" className="m-0 text-[1.75rem] tracking-[-0.01em]">
             <Translate id="homepage.faq.title">常见问题</Translate>
@@ -42,7 +43,7 @@ export default function HomeFaq(): ReactNode {
             </div>
           ))}
         </div>
-      </div>
+      </Container>
     </section>
   );
 }
