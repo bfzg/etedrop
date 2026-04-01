@@ -1,3 +1,200 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-@import "../theme/custom.css";
+/* Inter Font */
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-VariableFont_opsz,wght.ttf")
+    format("truetype-variations");
+  font-weight: 100 900;
+  font-stretch: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/fonts/Inter-Italic-VariableFont_opsz,wght.ttf")
+    format("truetype-variations");
+  font-weight: 100 900;
+  font-stretch: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Global Font */
+/* :root {
+  --ifm-font-family-base:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+} */
+
+.home {
+  --ifm-font-family-base:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  font-family: var(--ifm-font-family-base);
+}
+
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+/* You can override the default Infima variables here. */
+:root {
+  --ifm-color-primary: #2083ff;
+  --ifm-color-primary-dark: #0070e0;
+  --ifm-color-primary-darker: #006add;
+  --ifm-color-primary-darkest: #0057b6;
+  --ifm-color-primary-light: #4ea0ff;
+  --ifm-color-primary-lighter: #66adff;
+  --ifm-color-primary-lightest: #9eccff;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme="dark"] {
+  --ifm-color-primary: #5fb0ff;
+  --ifm-color-primary-dark: #2083ff;
+  --ifm-color-primary-darker: #0070e0;
+  --ifm-color-primary-darkest: #0057b6;
+  --ifm-color-primary-light: #8dcaff;
+  --ifm-color-primary-lighter: #a3d4ff;
+  --ifm-color-primary-lightest: #e0f0ff;
+  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}
+
+.bg-custom {
+  position: relative;
+}
+
+.bg-custom::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    currentColor 1px,
+    transparent 0
+  );
+  background-size: 15px 15px;
+  background-position-x: 7.5px;
+  background-position-y: 7.5px;
+  opacity: 10%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bg-custom > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* Navbar Scroll & Glassmorphism Styles - Only for Home */
+.navbar.navbar-home {
+  border-bottom: none;
+  box-shadow: none;
+  background-color: transparent; /* Start transparent or blend with hero */
+  transition: all 0.3s ease;
+  padding: 40px 0;
+  font-size: 19px;
+}
+
+/* Scrolled state for Home */
+.navbar.navbar-home.navbar-scrolled {
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  padding: 0;
+  font-size: 17px;
+}
+
+[data-theme="dark"] .navbar.navbar-home.navbar-scrolled {
+  background-color: rgba(27, 27, 29, 0.8); /* Dark mode background */
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.navbar__logo {
+  margin-right: 2px;
+  height: 38px;
+}
+
+/* Navbar Centering Logic for Desktop - Only for Home */
+@media (min-width: 997px) {
+  .navbar-home .navbar__inner {
+    position: relative;
+  }
+  .navbar-home .navbar__item {
+    padding: 0 20px;
+  }
+
+  /* Make the left items container take full width and center its content */
+  .navbar-home .navbar__items:not(.navbar__items--right) {
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* Position the logo absolutely to the left */
+  .navbar-home .navbar__brand {
+    position: absolute;
+    left: var(--ifm-navbar-padding-horizontal);
+    z-index: 10;
+  }
+
+  /* Position the right items absolutely to the right */
+  .navbar-home .navbar__items--right {
+    position: absolute;
+    right: var(--ifm-navbar-padding-horizontal);
+    margin: 0;
+    z-index: 10;
+  }
+}
+
+.navbar.navbar-home.navbar-scrolled .navbar__items--right {
+  height: 100%;
+}
+
+/* Container constraints - Only for Home if desired, or global? 
+   Assuming user wanted these for the home layout control. 
+   Scoping to navbar-home to be safe. */
+@media (min-width: 640px) {
+  .navbar-home .navbar__inner {
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+@media (min-width: 768px) {
+  .navbar-home .navbar__inner {
+    max-width: 768px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+@media (min-width: 1024px) {
+  .navbar-home .navbar__inner {
+    max-width: 1024px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+@media (min-width: 1280px) {
+  .navbar-home .navbar__inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
+@media (min-width: 1536px) {
+  .navbar-home .navbar__inner {
+    max-width: 1536px;
+    margin: 0 auto;
+    width: 100%;
+  }
+}
