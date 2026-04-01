@@ -47,10 +47,10 @@ const config: Config = {
   themeConfig: {
     navbar: {
       hideOnScroll: false,
-      title: "EasyDSS",
+      title: "Eddy",
       logo: {
-        alt: "EasyDSS Logo",
-        src: "img/logo_white.png",
+        alt: "Eddy",
+        src: "img/app_icon.png",
       },
       items: [
         { to: "/", label: "首页", exact: true },
