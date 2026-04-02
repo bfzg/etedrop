@@ -104,42 +104,46 @@ class _FileListTile extends StatelessWidget {
             : '${FormatUtils.fileSize(entry.size)}  ·  ${FormatUtils.dateTime(entry.mtime)}',
         style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
       ),
-      trailing: PopupMenuButton<String>(
-        icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
-        onSelected: (value) {
-          switch (value) {
-            case 'delete':
-              onDelete?.call(entry);
-              break;
-            case 'share':
-              onShare?.call(entry);
-              break;
-          }
-        },
-        itemBuilder: (context) => [
-          if (!entry.isDirectory)
-            const PopupMenuItem(
-              value: 'share',
-              child: Row(
-                children: [
-                  Icon(Icons.share, size: 18),
-                  SizedBox(width: 8),
-                  Text('分享'),
-                ],
-              ),
-            ),
-          PopupMenuItem(
-            value: 'delete',
-            child: Row(
-              children: [
-                Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
-                const SizedBox(width: 8),
-                Text('删除', style: TextStyle(color: colorScheme.error)),
+      trailing: entry.isDirectory
+          ? const SizedBox(
+              width: 48,
+              height: 48,
+            )
+          : PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
+              onSelected: (value) {
+                switch (value) {
+                  case 'delete':
+                    onDelete?.call(entry);
+                    break;
+                  case 'share':
+                    onShare?.call(entry);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      Icon(Icons.share, size: 18),
+                      SizedBox(width: 8),
+                      Text('分享'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
+                      const SizedBox(width: 8),
+                      Text('删除', style: TextStyle(color: colorScheme.error)),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        ],
-      ),
       onTap: () => onTap?.call(entry),
     );
   }

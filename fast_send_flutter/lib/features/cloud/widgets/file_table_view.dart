@@ -124,24 +124,28 @@ class FileTableView extends StatelessWidget {
                                   : FormatUtils.fileSize(entry.size),
                             ),
                           ),
+                          // 与双 IconButton 同高，避免文件夹行因无按钮变矮
                           SizedBox(
                             width: 100,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.share, size: 18),
-                                  tooltip: '分享',
-                                  onPressed: () => onShare(entry),
-                                ),
-                                IconButton(
-                                  icon: const Icon(Icons.delete, size: 18),
-                                  tooltip: '删除',
-                                  color: theme.colorScheme.error,
-                                  onPressed: () => onDelete(entry),
-                                ),
-                              ],
-                            ),
+                            height: kMinInteractiveDimension,
+                            child: entry.isDirectory
+                                ? null
+                                : Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(Icons.share, size: 18),
+                                        tooltip: '分享',
+                                        onPressed: () => onShare(entry),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(Icons.delete, size: 18),
+                                        tooltip: '删除',
+                                        color: theme.colorScheme.error,
+                                        onPressed: () => onDelete(entry),
+                                      ),
+                                    ],
+                                  ),
                           ),
                         ],
                       ),
