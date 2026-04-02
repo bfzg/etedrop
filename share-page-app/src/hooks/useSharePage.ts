@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { DataChannelMessage } from "../types";
 import { ensureMetaMatchesOrClear, getOpfsPartialSize, hasOpfs, readSessionMeta } from "../utils/shareDownloadStorage";
 import { useSignaling } from "./useSignaling";
@@ -6,6 +7,7 @@ import { useDownload, type DownloadIntent } from "./useDownload";
 import { useStreamPlayer } from "./useStreamPlayer";
 
 export function useSharePage(deviceId: string, shareCode: string) {
+  const { t } = useTranslation();
   const [fileInfo, setFileInfo] = useState<{
     fileName: string;
     fileSize: number;
@@ -39,7 +41,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
       // Handle DC close
       if (ev.data === "__dc_close__") {
         if (!download.downloadCompletedRef.current) {
-          signaling.setStatusState("error", "P2P 连接已断开（可重新连接后续传）");
+          signaling.setStatusState("error", t("p2p.disconnected"));
           signaling.setShowReconnect(true);
         }
         return;
@@ -71,7 +73,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
               }
               break;
             case "error":
-              signaling.setStatusState("error", m.message || "未知错误");
+              signaling.setStatusState("error", m.message || t("errors.unknown"));
               signaling.setShowReconnect(true);
               break;
             case "verify-result":
@@ -80,7 +82,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
                 setPasswordError("");
                 setShowDownloadBtn(true);
               } else {
-                setPasswordError(m.error || "密码错误");
+                setPasswordError(m.error || t("errors.passwordWrong"));
                 setVerifyLoading(false);
               }
               break;
@@ -119,7 +121,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
         download.handleBinaryChunk(buf);
       }
     });
-  }, [deviceId, shareCode, signaling, download, stream]);
+  }, [deviceId, shareCode, signaling, download, stream, t]);
 
   const sendVerify = useCallback((password: string) => {
     setVerifyLoading(true);

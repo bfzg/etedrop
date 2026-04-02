@@ -1,0 +1,54 @@
+{
+  "share": {
+    "brand": "Eddy",
+    "missingParams": "기기 ID 또는 공유 코드가 없습니다",
+    "shareCode": "공유 코드: {{code}}",
+    "wechatAlt": "브라우저에서 열기",
+    "wechatInBrowser": "위챗 인앱 브라우저: ",
+    "wechatOpfsOn": "지원",
+    "wechatOpfsOff": "미지원",
+    "wechatMobileLimit": " ({{size}} 이하 파일만)",
+    "wechatDesktopHint": " (이어받기가 안 될 수 있으나 다운로드는 보통 가능)",
+    "passwordRequired": "이 파일에는 암호가 필요합니다",
+    "passwordPlaceholder": "암호 입력",
+    "verify": "확인",
+    "enterPassword": "암호를 입력하세요",
+    "play": "재생",
+    "download": "다운로드",
+    "resumeDownload": "계속 ({{size}} 저장됨)",
+    "iosNoStream": "이 iOS 환경에서는 스트리밍 재생을 지원하지 않습니다. 전체를 받은 뒤 재생합니다.",
+    "wechatNoPlay": "(이 환경에서는 인앱 재생을 지원하지 않습니다)",
+    "downloadComplete": "다운로드 완료",
+    "reconnect": "다시 연결",
+    "language": "언어"
+  },
+  "status": {
+    "connecting": "기기에 연결 중…",
+    "p2pConnected": "P2P 연결됨, 파일 정보 가져오는 중…",
+    "p2pFailed": "P2P 연결 실패. 다시 시도하세요.",
+    "createOfferFailed": "연결 만들기 실패",
+    "deviceOnline": "기기 온라인, P2P 연결 중…",
+    "sharerOffline": "공유 기기가 오프라인입니다. 나중에 다시 시도하세요.",
+    "connectionError": "연결 오류",
+    "parseFailed": "메시지 파싱 실패",
+    "networkFailed": "네트워크 연결 실패",
+    "connectionClosed": "연결이 닫혔습니다"
+  },
+  "p2p": {
+    "disconnected": "P2P 연결이 끊겼습니다(다시 연결해 이어받을 수 있음)"
+  },
+  "errors": {
+    "unknown": "알 수 없는 오류",
+    "passwordWrong": "암호가 올바르지 않습니다"
+  },
+  "download": {
+    "chunkMismatch": "다운로드 오류: 청크 오프셋 불일치(받음 {{got}}, 예상 {{expected}}). 다시 시도하거나 재연결하세요.",
+    "writeFailed": "쓰기 실패: {{message}}",
+    "stalled": "다운로드가 멈춘 것 같습니다(12초 이상 진행 없음). iOS에서는 백그라운드나 잠금 시 WebRTC가 일시 중지될 수 있습니다. 화면을 켜 둔 채 Safari로 시도하거나 「다시 연결」을 누르세요."
+  },
+  "dev": {
+    "title": "Eddy 공유 페이지",
+    "useFullLink": "전체 공유 링크를 사용하세요:",
+    "debugVisit": "개발 미리보기:"
+  }
+}

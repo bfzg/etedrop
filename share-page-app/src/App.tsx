@@ -1,19 +1,25 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { SharePageView } from './pages/SharePageView'
+import { useTranslation } from "react-i18next";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { SharePageView } from "./pages/SharePageView";
 
-/** 开发时访问 /share 或根路径时显示说明，避免空白页 */
+/** Dev fallback when visiting /share or root without a full share path */
 function DevFallback() {
-  const demoUrl = '/share/b257e209-6777-4efc-a4f5-b2a4853cce2d/191B33A9'
+  const { t } = useTranslation();
+  const demoUrl =
+    "/share/b257e209-6777-4efc-a4f5-b2a4853cce2d/191B33A9";
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
       <div className="max-w-md text-center space-y-4">
-        <h1 className="text-xl font-semibold text-slate-800">Eddy 分享页</h1>
+        <h1 className="text-xl font-semibold text-slate-800">
+          {t("dev.title")}
+        </h1>
         <p className="text-sm text-slate-600">
-          请使用完整分享链接：<code className="bg-slate-200 px-1 rounded">/share/:deviceId/:shareCode</code>
+          {t("dev.useFullLink")}{" "}
+          <code className="bg-slate-200 px-1 rounded">
+            /share/:deviceId/:shareCode
+          </code>
         </p>
-        <p className="text-sm text-slate-500">
-          开发调试可访问：
-        </p>
+        <p className="text-sm text-slate-500">{t("dev.debugVisit")}</p>
         <a
           href={demoUrl}
           className="inline-block py-2 px-4 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:opacity-90"
@@ -22,7 +28,7 @@ function DevFallback() {
         </a>
       </div>
     </div>
-  )
+  );
 }
 
 export default function App() {
@@ -33,5 +39,5 @@ export default function App() {
         <Route path="/" element={<DevFallback />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }

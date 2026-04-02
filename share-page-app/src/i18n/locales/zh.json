@@ -1,0 +1,54 @@
+{
+  "share": {
+    "brand": "Eddy",
+    "missingParams": "缺少设备 ID 或分享码",
+    "shareCode": "分享码: {{code}}",
+    "wechatAlt": "请在浏览器打开",
+    "wechatInBrowser": "微信内浏览器：",
+    "wechatOpfsOn": "支持",
+    "wechatOpfsOff": "不支持",
+    "wechatMobileLimit": "（仅允许下载 {{size}} 以内文件）",
+    "wechatDesktopHint": "（可能无法断点续传，但通常仍可下载）",
+    "passwordRequired": "此文件需要访问密码",
+    "passwordPlaceholder": "请输入密码",
+    "verify": "验证",
+    "enterPassword": "请输入密码",
+    "play": "播放",
+    "download": "下载",
+    "resumeDownload": "继续下载（已保存 {{size}}）",
+    "iosNoStream": "iOS 当前环境不支持流式播放，需要先完整下载后才能播放",
+    "wechatNoPlay": "（当前环境不支持在线播放）",
+    "downloadComplete": "下载完成",
+    "reconnect": "重新连接",
+    "language": "语言"
+  },
+  "status": {
+    "connecting": "正在连接设备…",
+    "p2pConnected": "P2P 已连接，获取文件信息…",
+    "p2pFailed": "P2P 连接失败，请重试",
+    "createOfferFailed": "创建连接失败",
+    "deviceOnline": "设备在线，正在建立 P2P 连接…",
+    "sharerOffline": "分享者设备离线，请稍后再试",
+    "connectionError": "连接异常",
+    "parseFailed": "消息解析失败",
+    "networkFailed": "网络连接失败",
+    "connectionClosed": "连接已关闭"
+  },
+  "p2p": {
+    "disconnected": "P2P 连接已断开（可重新连接后续传）"
+  },
+  "errors": {
+    "unknown": "未知错误",
+    "passwordWrong": "密码错误"
+  },
+  "download": {
+    "chunkMismatch": "下载数据异常：分片偏移不连续（收到 {{got}}，期望 {{expected}}）。请重试或重新连接。",
+    "writeFailed": "下载写入失败：{{message}}",
+    "stalled": "下载似乎已停止（超过 12 秒无进度）。iOS 浏览器可能会在切后台/锁屏/省电时暂停 WebRTC 或限制内存。建议保持前台亮屏，或在 Safari 打开再试；也可点「重新连接」。"
+  },
+  "dev": {
+    "title": "Eddy 分享页",
+    "useFullLink": "请使用完整分享链接：",
+    "debugVisit": "开发调试可访问："
+  }
+}

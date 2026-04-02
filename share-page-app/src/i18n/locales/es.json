@@ -1,0 +1,54 @@
+{
+  "share": {
+    "brand": "Eddy",
+    "missingParams": "Falta el ID del dispositivo o el código de compartición",
+    "shareCode": "Código: {{code}}",
+    "wechatAlt": "Abrir en el navegador",
+    "wechatInBrowser": "Navegador integrado de WeChat: ",
+    "wechatOpfsOn": "compatible",
+    "wechatOpfsOff": "no compatible",
+    "wechatMobileLimit": " (solo archivos de hasta {{size}})",
+    "wechatDesktopHint": " (puede que no haya reanudación; la descarga suele funcionar)",
+    "passwordRequired": "Este archivo está protegido con contraseña",
+    "passwordPlaceholder": "Introduce la contraseña",
+    "verify": "Desbloquear",
+    "enterPassword": "Introduce la contraseña",
+    "play": "Reproducir",
+    "download": "Descargar",
+    "resumeDownload": "Continuar ({{size}} guardados)",
+    "iosNoStream": "Este entorno iOS no admite reproducción por streaming. Primero se descargará el archivo completo.",
+    "wechatNoPlay": "(Reproducción en la app no disponible en este entorno)",
+    "downloadComplete": "Descarga completada",
+    "reconnect": "Volver a conectar",
+    "language": "Idioma"
+  },
+  "status": {
+    "connecting": "Conectando al dispositivo…",
+    "p2pConnected": "P2P conectado, obteniendo información…",
+    "p2pFailed": "Error de conexión P2P. Inténtalo de nuevo.",
+    "createOfferFailed": "No se pudo crear la conexión",
+    "deviceOnline": "Dispositivo en línea, estableciendo P2P…",
+    "sharerOffline": "El dispositivo del remitente está fuera de línea. Prueba más tarde.",
+    "connectionError": "Error de conexión",
+    "parseFailed": "No se pudo analizar el mensaje",
+    "networkFailed": "Error de red",
+    "connectionClosed": "Conexión cerrada"
+  },
+  "p2p": {
+    "disconnected": "P2P desconectado (puedes reconectar para continuar)"
+  },
+  "errors": {
+    "unknown": "Error desconocido",
+    "passwordWrong": "Contraseña incorrecta"
+  },
+  "download": {
+    "chunkMismatch": "Error de descarga: desplazamiento de fragmento incorrecto (recibido {{got}}, esperado {{expected}}). Reintenta o reconecta.",
+    "writeFailed": "Error al escribir: {{message}}",
+    "stalled": "La descarga parece detenida (sin progreso en 12+ s). iOS puede pausar WebRTC en segundo plano. Mantén la página visible, prueba Safari o pulsa Reconectar."
+  },
+  "dev": {
+    "title": "Página de compartición Eddy",
+    "useFullLink": "Usa un enlace completo:",
+    "debugVisit": "Vista previa de desarrollo:"
+  }
+}

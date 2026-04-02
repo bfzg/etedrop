@@ -1,0 +1,54 @@
+{
+  "share": {
+    "brand": "Eddy",
+    "missingParams": "Missing device ID or share code",
+    "shareCode": "Share code: {{code}}",
+    "wechatAlt": "Open in system browser",
+    "wechatInBrowser": "WeChat in-app browser: ",
+    "wechatOpfsOn": "supported",
+    "wechatOpfsOff": "not supported",
+    "wechatMobileLimit": " (files up to {{size}} only)",
+    "wechatDesktopHint": " (resume may not work; download usually still works)",
+    "passwordRequired": "This file is password-protected",
+    "passwordPlaceholder": "Enter password",
+    "verify": "Unlock",
+    "enterPassword": "Please enter your password",
+    "play": "Play",
+    "download": "Download",
+    "resumeDownload": "Continue ({{size}} saved)",
+    "iosNoStream": "Streaming is not available in this iOS environment. The file will download completely before playback.",
+    "wechatNoPlay": "(In-app playback not available in this environment)",
+    "downloadComplete": "Download complete",
+    "reconnect": "Reconnect",
+    "language": "Language"
+  },
+  "status": {
+    "connecting": "Connecting to device…",
+    "p2pConnected": "P2P connected, fetching file info…",
+    "p2pFailed": "P2P connection failed. Please try again.",
+    "createOfferFailed": "Failed to create connection",
+    "deviceOnline": "Device online, establishing P2P…",
+    "sharerOffline": "Sharer’s device is offline. Try again later.",
+    "connectionError": "Connection error",
+    "parseFailed": "Failed to parse message",
+    "networkFailed": "Network connection failed",
+    "connectionClosed": "Connection closed"
+  },
+  "p2p": {
+    "disconnected": "P2P disconnected (you can reconnect to resume)"
+  },
+  "errors": {
+    "unknown": "Unknown error",
+    "passwordWrong": "Incorrect password"
+  },
+  "download": {
+    "chunkMismatch": "Download error: chunk offset mismatch (got {{got}}, expected {{expected}}). Try again or reconnect.",
+    "writeFailed": "Failed to write download: {{message}}",
+    "stalled": "Download seems stalled (no progress for 12+ seconds). iOS may pause WebRTC when backgrounded or locked. Keep the page in the foreground, try Safari, or tap Reconnect."
+  },
+  "dev": {
+    "title": "Eddy share page",
+    "useFullLink": "Use a full share link:",
+    "debugVisit": "Dev preview:"
+  }
+}

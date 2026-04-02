@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useSharePage } from "../hooks/useSharePage";
 import { formatBytes } from "../utils/format";
 import { FileIconSvg } from "../components/fileIconSvgComponent";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { isIOS, isMobile, isWeChat } from "../utils/env";
 import { hasOpfs } from "../utils/shareDownloadStorage";
+import { SUPPORTED } from "../i18n";
 
 const VIDEO_EXTS = new Set(["mp4"]);
 
@@ -31,7 +33,16 @@ const STATUS_CLASSES = {
   },
 } as const;
 
+const LANG_LABELS: Record<string, string> = {
+  en: "English",
+  zh: "简体中文",
+  ja: "日本語",
+  ko: "한국어",
+  es: "Español",
+};
+
 export function SharePageView() {
+  const { t, i18n } = useTranslation();
   const { deviceId, shareCode } = useParams<{
     deviceId: string;
     shareCode: string;
@@ -42,7 +53,7 @@ export function SharePageView() {
   if (!deviceId || !shareCode) {
     return (
       <div className="min-h-screen flex items-center justify-center p-5 text-red-600">
-        缺少设备 ID 或分享码
+        {t("share.missingParams")}
       </div>
     );
   }
@@ -82,8 +93,6 @@ export function SharePageView() {
     typeof window !== "undefined" && "MediaSource" in window;
   const wechatDownloadSoftLimitBytes = 10 * 1024 * 1024;
   const fileSize = fileInfo?.fileSize ?? 0;
-  // Only enforce the 10MB soft limit on mobile WeChat. Desktop WeChat can often
-  // handle larger downloads even without OPFS.
   const wechatCanDownload =
     !isWechatMobile ||
     opfsAvailable ||
@@ -93,7 +102,9 @@ export function SharePageView() {
 
   const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error;
 
-  const displayPasswordError = emptyPwdError ? "请输入密码" : passwordError;
+  const displayPasswordError = emptyPwdError
+    ? t("share.enterPassword")
+    : passwordError;
 
   const handleVerify = () => {
     const p = password.trim();
@@ -105,12 +116,26 @@ export function SharePageView() {
     sendVerify(p);
   };
 
+  const changeLanguage = (lng: string) => {
+    void i18n.changeLanguage(lng);
+    localStorage.setItem("i18nextLng", lng);
+  };
+
+  const currentLng = useMemo(() => {
+    const base = (i18n.resolvedLanguage ?? i18n.language)
+      .split("-")[0]
+      .toLowerCase();
+    return SUPPORTED.includes(base as (typeof SUPPORTED)[number])
+      ? base
+      : "en";
+  }, [i18n.resolvedLanguage, i18n.language]);
+
   return (
     <>
-        {isWechatMobile && (
+      {isWechatMobile && (
         <img
           src={`${import.meta.env.BASE_URL}img/wechat.png`}
-          alt="请在浏览器打开"
+          alt={t("share.wechatAlt")}
           className="w-full rounded-xl bg-white"
         />
       )}
@@ -118,23 +143,29 @@ export function SharePageView() {
         className={`flex items-center justify-center ${isWechatMobile ? "px-5" : "min-h-screen p-5"}`}
       >
         <div className="max-w-[440px] w-full">
-          {/* 仅微信内置浏览器展示引导图；用 BASE_URL 兼容 /share/ 子路径部署 */}
-
-          <div className="text-2xl font-bold text-gray-800 mb-1">Eddy</div>
-          <p className="text-[13px] text-gray-500 mb-6">分享码: {shareCode}</p>
+          <div className="text-2xl font-bold text-gray-800 mb-1">
+            {t("share.brand")}
+          </div>
+          <p className="text-[13px] text-gray-500 mb-6">
+            {t("share.shareCode", { code: shareCode })}
+          </p>
 
           {inWeChat && (
             <div className="mb-4">
               <div className="mt-2 text-xs text-slate-600">
-                微信内浏览器：{opfsAvailable ? "支持" : "不支持"}
+                {t("share.wechatInBrowser")}
+                {opfsAvailable
+                  ? t("share.wechatOpfsOn")
+                  : t("share.wechatOpfsOff")}
                 {!opfsAvailable && isWechatMobile && (
                   <span>
-                    （仅允许下载 {formatBytes(wechatDownloadSoftLimitBytes)}{" "}
-                    以内文件）
+                    {t("share.wechatMobileLimit", {
+                      size: formatBytes(wechatDownloadSoftLimitBytes),
+                    })}
                   </span>
                 )}
                 {!opfsAvailable && !isWechatMobile && (
-                  <span>（可能无法断点续传，但通常仍可下载）</span>
+                  <span>{t("share.wechatDesktopHint")}</span>
                 )}
               </div>
             </div>
@@ -179,7 +210,7 @@ export function SharePageView() {
           {showPassword && (
             <div className="mb-4">
               <label className="block text-[13px] text-slate-600 mb-1.5 font-medium">
-                此文件需要访问密码
+                {t("share.passwordRequired")}
               </label>
               <div className="flex gap-2">
                 <input
@@ -190,7 +221,7 @@ export function SharePageView() {
                     setEmptyPwdError(false);
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
-                  placeholder="请输入密码"
+                  placeholder={t("share.passwordPlaceholder")}
                   className="flex-1 py-2.5 px-3.5 bg-gray-100 rounded-lg text-sm outline-none"
                 />
                 <button
@@ -199,7 +230,7 @@ export function SharePageView() {
                   onClick={handleVerify}
                   className="inline-flex items-center justify-center gap-1.5 py-2.5 px-5 rounded-lg text-sm font-medium bg-indigo-600 text-white cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  验证
+                  {t("share.verify")}
                 </button>
               </div>
               {displayPasswordError && (
@@ -223,13 +254,12 @@ export function SharePageView() {
                       void sendDownloadStart({
                         intent: "play",
                         remuxFmp4: true,
-                        // iOS without MediaSource: fall back to full download then play via <video src=blob>.
                         stream: !canPlayWithoutMse,
                       });
                     }}
                     className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    播放
+                    {t("share.play")}
                   </button>
                 )}
 
@@ -246,8 +276,10 @@ export function SharePageView() {
                   className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-slate-900 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {resumeHintBytes > 0
-                    ? `继续下载（已保存 ${formatBytes(resumeHintBytes)}）`
-                    : "下载"}
+                    ? t("share.resumeDownload", {
+                        size: formatBytes(resumeHintBytes),
+                      })
+                    : t("share.download")}
                 </button>
               )}
             </div>
@@ -255,13 +287,13 @@ export function SharePageView() {
 
           {canPlayWithoutMse && isLikelyVideo(fileInfo?.fileName ?? "") && (
             <div className="mt-2 text-xs text-slate-600 text-center">
-              iOS 当前环境不支持流式播放，需要先完整下载后才能播放
+              {t("share.iosNoStream")}
             </div>
           )}
 
           {inWeChat && showDownloadBtn && (
             <div className="mt-3 text-xs text-slate-600 text-center">
-              {isWechatIOS && !wechatCanPlay && "（当前环境不支持在线播放）"}
+              {isWechatIOS && !wechatCanPlay && t("share.wechatNoPlay")}
             </div>
           )}
 
@@ -290,7 +322,9 @@ export function SharePageView() {
           {showDone && !streaming && doneKind !== "stream" && (
             <div className="text-center py-5">
               <div className="text-4xl mb-2">✅</div>
-              <p className="text-green-600 font-medium">下载完成</p>
+              <p className="text-green-600 font-medium">
+                {t("share.downloadComplete")}
+              </p>
             </div>
           )}
 
@@ -300,9 +334,26 @@ export function SharePageView() {
               onClick={reconnect}
               className="inline-flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium w-full mt-3 bg-slate-100 text-slate-600 cursor-pointer hover:bg-slate-200"
             >
-              重新连接
+              {t("share.reconnect")}
             </button>
           )}
+
+          <div className="mt-8 pt-4 border-t border-slate-200">
+            <label className="flex items-center justify-between gap-3 text-[13px] text-slate-600">
+              <span>{t("share.language")}</span>
+              <select
+                className="rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-sm text-slate-800"
+                value={currentLng}
+                onChange={(e) => changeLanguage(e.target.value)}
+              >
+                {SUPPORTED.map((lng) => (
+                  <option key={lng} value={lng}>
+                    {LANG_LABELS[lng] ?? lng}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
       </div>
     </>

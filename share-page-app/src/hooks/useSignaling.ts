@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 export type StatusKind = "pending" | "online" | "error";
 
 export type DcMessageHandler = (ev: MessageEvent) => void;
 
 export function useSignaling(deviceId: string, shareCode: string) {
+  const { t } = useTranslation();
   const [status, setStatus] = useState<{ kind: StatusKind; text: string }>({
     kind: "pending",
-    text: "正在连接设备…",
+    text: t("status.connecting"),
   });
   const [showStatusBar, setShowStatusBar] = useState(true);
   const [showReconnect, setShowReconnect] = useState(false);
@@ -49,7 +51,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
       dcRef.current = dc;
 
       dc.onopen = () => {
-        setStatusState("online", "P2P 已连接，获取文件信息…");
+        setStatusState("online", t("status.p2pConnected"));
         dc.send(JSON.stringify({ type: "share-request", shareCode }));
       };
 
@@ -80,7 +82,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
 
       pc.oniceconnectionstatechange = () => {
         if (pc.iceConnectionState === "failed") {
-          setStatusState("error", "P2P 连接失败，请重试");
+          setStatusState("error", t("status.p2pFailed"));
           setShowReconnect(true);
         }
       };
@@ -99,15 +101,15 @@ export function useSignaling(deviceId: string, shareCode: string) {
           );
         })
         .catch(() => {
-          setStatusState("error", "创建连接失败");
+          setStatusState("error", t("status.createOfferFailed"));
           setShowReconnect(true);
         });
     },
-    [shareCode, setStatusState],
+    [shareCode, setStatusState, t],
   );
 
   const connect = useCallback(() => {
-    setStatusState("pending", "正在连接设备…");
+    setStatusState("pending", t("status.connecting"));
     setShowReconnect(false);
 
     const proto = location.protocol === "https:" ? "wss:" : "ws:";
@@ -123,7 +125,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
         const m = JSON.parse(ev.data as string);
         switch (m.type) {
           case "device-online":
-            setStatusState("online", "设备在线，正在建立 P2P 连接…");
+            setStatusState("online", t("status.deviceOnline"));
             startRTC(ws);
             break;
           case "answer":
@@ -144,30 +146,30 @@ export function useSignaling(deviceId: string, shareCode: string) {
             setStatusState(
               "error",
               m.code === "OFFLINE"
-                ? "分享者设备离线，请稍后再试"
-                : m.msg || "连接异常",
+                ? t("status.sharerOffline")
+                : (m.msg as string) || t("status.connectionError"),
             );
             setShowReconnect(true);
             break;
         }
       } catch {
-        setStatusState("error", "消息解析失败");
+        setStatusState("error", t("status.parseFailed"));
         setShowReconnect(true);
       }
     };
 
     ws.onerror = () => {
-      setStatusState("error", "网络连接失败");
+      setStatusState("error", t("status.networkFailed"));
       setShowReconnect(true);
     };
 
     ws.onclose = () => {
       if (statusKindRef.current === "pending") {
-        setStatusState("error", "连接已关闭");
+        setStatusState("error", t("status.connectionClosed"));
         setShowReconnect(true);
       }
     };
-  }, [deviceId, setStatusState, startRTC]);
+  }, [deviceId, setStatusState, startRTC, t]);
 
   const cleanup = useCallback(() => {
     if (dcRef.current) {
@@ -191,12 +193,12 @@ export function useSignaling(deviceId: string, shareCode: string) {
 
   useEffect(() => {
     let cancelled = false;
-    const t = window.setTimeout(() => {
+    const tmr = window.setTimeout(() => {
       if (!cancelled) connect();
     }, 0);
     return () => {
       cancelled = true;
-      window.clearTimeout(t);
+      window.clearTimeout(tmr);
       cleanup();
     };
   }, [connect, cleanup]);
