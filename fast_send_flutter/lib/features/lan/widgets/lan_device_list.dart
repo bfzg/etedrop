@@ -14,6 +14,11 @@ class LanDeviceList extends ConsumerWidget {
     final raw = ref.watch(lanManagerProvider);
     final devices = [...raw]..sort((a, b) {
         if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+        if (a.isOnline &&
+            b.isOnline &&
+            a.isPresenceWeak != b.isPresenceWeak) {
+          return a.isPresenceWeak ? 1 : -1;
+        }
         return a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase());
       });
 
@@ -92,6 +97,7 @@ class _DeviceItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final offline = !device.isOnline;
+    final weak = device.isOnline && device.isPresenceWeak;
 
     Widget iconCircle = Container(
       width: 48,
@@ -110,6 +116,8 @@ class _DeviceItem extends StatelessWidget {
         colorFilter: _grayscale,
         child: Opacity(opacity: 0.52, child: iconCircle),
       );
+    } else if (weak) {
+      iconCircle = Opacity(opacity: 0.78, child: iconCircle);
     }
 
     return InkWell(
@@ -142,6 +150,16 @@ class _DeviceItem extends StatelessWidget {
                   fontSize: 10,
                   color: theme.colorScheme.onSurfaceVariant.withValues(
                     alpha: 0.45,
+                  ),
+                ),
+              )
+            else if (weak)
+              Text(
+                '信号弱',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: theme.colorScheme.onSurfaceVariant.withValues(
+                    alpha: 0.65,
                   ),
                 ),
               ),

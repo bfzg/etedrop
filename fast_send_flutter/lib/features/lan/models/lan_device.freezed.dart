@@ -16,7 +16,8 @@ T _$identity<T>(T value) => value;
 mixin _$LanDevice {
 
  String get deviceId; String get deviceName; String get ip; int get port; String get os; int get lastSeen; int get avatar;/// 是否在局域网发现窗口内仍收到心跳（离线条目保留展示，样式置灰）
- bool get isOnline;
+ bool get isOnline;/// 长时间未收到对端宣告时的「可疑」态：仍视为在线尝试连接，UI 略灰
+ bool get isPresenceWeak;
 /// Create a copy of LanDevice
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -29,16 +30,16 @@ $LanDeviceCopyWith<LanDevice> get copyWith => _$LanDeviceCopyWithImpl<LanDevice>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LanDevice&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.port, port) || other.port == port)&&(identical(other.os, os) || other.os == os)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.isOnline, isOnline) || other.isOnline == isOnline));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LanDevice&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.port, port) || other.port == port)&&(identical(other.os, os) || other.os == os)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.isOnline, isOnline) || other.isOnline == isOnline)&&(identical(other.isPresenceWeak, isPresenceWeak) || other.isPresenceWeak == isPresenceWeak));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,deviceId,deviceName,ip,port,os,lastSeen,avatar,isOnline);
+int get hashCode => Object.hash(runtimeType,deviceId,deviceName,ip,port,os,lastSeen,avatar,isOnline,isPresenceWeak);
 
 @override
 String toString() {
-  return 'LanDevice(deviceId: $deviceId, deviceName: $deviceName, ip: $ip, port: $port, os: $os, lastSeen: $lastSeen, avatar: $avatar, isOnline: $isOnline)';
+  return 'LanDevice(deviceId: $deviceId, deviceName: $deviceName, ip: $ip, port: $port, os: $os, lastSeen: $lastSeen, avatar: $avatar, isOnline: $isOnline, isPresenceWeak: $isPresenceWeak)';
 }
 
 
@@ -49,7 +50,7 @@ abstract mixin class $LanDeviceCopyWith<$Res>  {
   factory $LanDeviceCopyWith(LanDevice value, $Res Function(LanDevice) _then) = _$LanDeviceCopyWithImpl;
 @useResult
 $Res call({
- String deviceId, String deviceName, String ip, int port, String os, int lastSeen, int avatar, bool isOnline
+ String deviceId, String deviceName, String ip, int port, String os, int lastSeen, int avatar, bool isOnline, bool isPresenceWeak
 });
 
 
@@ -66,7 +67,7 @@ class _$LanDeviceCopyWithImpl<$Res>
 
 /// Create a copy of LanDevice
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? deviceId = null,Object? deviceName = null,Object? ip = null,Object? port = null,Object? os = null,Object? lastSeen = null,Object? avatar = null,Object? isOnline = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? deviceId = null,Object? deviceName = null,Object? ip = null,Object? port = null,Object? os = null,Object? lastSeen = null,Object? avatar = null,Object? isOnline = null,Object? isPresenceWeak = null,}) {
   return _then(_self.copyWith(
 deviceId: null == deviceId ? _self.deviceId : deviceId // ignore: cast_nullable_to_non_nullable
 as String,deviceName: null == deviceName ? _self.deviceName : deviceName // ignore: cast_nullable_to_non_nullable
@@ -76,6 +77,7 @@ as int,os: null == os ? _self.os : os // ignore: cast_nullable_to_non_nullable
 as String,lastSeen: null == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
 as int,avatar: null == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as int,isOnline: null == isOnline ? _self.isOnline : isOnline // ignore: cast_nullable_to_non_nullable
+as bool,isPresenceWeak: null == isPresenceWeak ? _self.isPresenceWeak : isPresenceWeak // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -161,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  String ip,  int port,  String os,  int lastSeen,  int avatar,  bool isOnline)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  String ip,  int port,  String os,  int lastSeen,  int avatar,  bool isOnline,  bool isPresenceWeak)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LanDevice() when $default != null:
-return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_that.lastSeen,_that.avatar,_that.isOnline);case _:
+return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_that.lastSeen,_that.avatar,_that.isOnline,_that.isPresenceWeak);case _:
   return orElse();
 
 }
@@ -182,10 +184,10 @@ return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  String ip,  int port,  String os,  int lastSeen,  int avatar,  bool isOnline)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String deviceId,  String deviceName,  String ip,  int port,  String os,  int lastSeen,  int avatar,  bool isOnline,  bool isPresenceWeak)  $default,) {final _that = this;
 switch (_that) {
 case _LanDevice():
-return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_that.lastSeen,_that.avatar,_that.isOnline);case _:
+return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_that.lastSeen,_that.avatar,_that.isOnline,_that.isPresenceWeak);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -202,10 +204,10 @@ return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String deviceId,  String deviceName,  String ip,  int port,  String os,  int lastSeen,  int avatar,  bool isOnline)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String deviceId,  String deviceName,  String ip,  int port,  String os,  int lastSeen,  int avatar,  bool isOnline,  bool isPresenceWeak)?  $default,) {final _that = this;
 switch (_that) {
 case _LanDevice() when $default != null:
-return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_that.lastSeen,_that.avatar,_that.isOnline);case _:
+return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_that.lastSeen,_that.avatar,_that.isOnline,_that.isPresenceWeak);case _:
   return null;
 
 }
@@ -217,7 +219,7 @@ return $default(_that.deviceId,_that.deviceName,_that.ip,_that.port,_that.os,_th
 @JsonSerializable()
 
 class _LanDevice implements LanDevice {
-  const _LanDevice({required this.deviceId, required this.deviceName, required this.ip, required this.port, required this.os, this.lastSeen = 0, this.avatar = 1, this.isOnline = true});
+  const _LanDevice({required this.deviceId, required this.deviceName, required this.ip, required this.port, required this.os, this.lastSeen = 0, this.avatar = 1, this.isOnline = true, this.isPresenceWeak = false});
   factory _LanDevice.fromJson(Map<String, dynamic> json) => _$LanDeviceFromJson(json);
 
 @override final  String deviceId;
@@ -229,6 +231,8 @@ class _LanDevice implements LanDevice {
 @override@JsonKey() final  int avatar;
 /// 是否在局域网发现窗口内仍收到心跳（离线条目保留展示，样式置灰）
 @override@JsonKey() final  bool isOnline;
+/// 长时间未收到对端宣告时的「可疑」态：仍视为在线尝试连接，UI 略灰
+@override@JsonKey() final  bool isPresenceWeak;
 
 /// Create a copy of LanDevice
 /// with the given fields replaced by the non-null parameter values.
@@ -243,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LanDevice&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.port, port) || other.port == port)&&(identical(other.os, os) || other.os == os)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.isOnline, isOnline) || other.isOnline == isOnline));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _LanDevice&&(identical(other.deviceId, deviceId) || other.deviceId == deviceId)&&(identical(other.deviceName, deviceName) || other.deviceName == deviceName)&&(identical(other.ip, ip) || other.ip == ip)&&(identical(other.port, port) || other.port == port)&&(identical(other.os, os) || other.os == os)&&(identical(other.lastSeen, lastSeen) || other.lastSeen == lastSeen)&&(identical(other.avatar, avatar) || other.avatar == avatar)&&(identical(other.isOnline, isOnline) || other.isOnline == isOnline)&&(identical(other.isPresenceWeak, isPresenceWeak) || other.isPresenceWeak == isPresenceWeak));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,deviceId,deviceName,ip,port,os,lastSeen,avatar,isOnline);
+int get hashCode => Object.hash(runtimeType,deviceId,deviceName,ip,port,os,lastSeen,avatar,isOnline,isPresenceWeak);
 
 @override
 String toString() {
-  return 'LanDevice(deviceId: $deviceId, deviceName: $deviceName, ip: $ip, port: $port, os: $os, lastSeen: $lastSeen, avatar: $avatar, isOnline: $isOnline)';
+  return 'LanDevice(deviceId: $deviceId, deviceName: $deviceName, ip: $ip, port: $port, os: $os, lastSeen: $lastSeen, avatar: $avatar, isOnline: $isOnline, isPresenceWeak: $isPresenceWeak)';
 }
 
 
@@ -263,7 +267,7 @@ abstract mixin class _$LanDeviceCopyWith<$Res> implements $LanDeviceCopyWith<$Re
   factory _$LanDeviceCopyWith(_LanDevice value, $Res Function(_LanDevice) _then) = __$LanDeviceCopyWithImpl;
 @override @useResult
 $Res call({
- String deviceId, String deviceName, String ip, int port, String os, int lastSeen, int avatar, bool isOnline
+ String deviceId, String deviceName, String ip, int port, String os, int lastSeen, int avatar, bool isOnline, bool isPresenceWeak
 });
 
 
@@ -280,7 +284,7 @@ class __$LanDeviceCopyWithImpl<$Res>
 
 /// Create a copy of LanDevice
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? deviceId = null,Object? deviceName = null,Object? ip = null,Object? port = null,Object? os = null,Object? lastSeen = null,Object? avatar = null,Object? isOnline = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? deviceId = null,Object? deviceName = null,Object? ip = null,Object? port = null,Object? os = null,Object? lastSeen = null,Object? avatar = null,Object? isOnline = null,Object? isPresenceWeak = null,}) {
   return _then(_LanDevice(
 deviceId: null == deviceId ? _self.deviceId : deviceId // ignore: cast_nullable_to_non_nullable
 as String,deviceName: null == deviceName ? _self.deviceName : deviceName // ignore: cast_nullable_to_non_nullable
@@ -290,6 +294,7 @@ as int,os: null == os ? _self.os : os // ignore: cast_nullable_to_non_nullable
 as String,lastSeen: null == lastSeen ? _self.lastSeen : lastSeen // ignore: cast_nullable_to_non_nullable
 as int,avatar: null == avatar ? _self.avatar : avatar // ignore: cast_nullable_to_non_nullable
 as int,isOnline: null == isOnline ? _self.isOnline : isOnline // ignore: cast_nullable_to_non_nullable
+as bool,isPresenceWeak: null == isPresenceWeak ? _self.isPresenceWeak : isPresenceWeak // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

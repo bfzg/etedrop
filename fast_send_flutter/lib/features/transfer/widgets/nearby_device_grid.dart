@@ -26,6 +26,11 @@ class NearbyDeviceGrid extends ConsumerWidget {
     final devices = [...raw]
       ..sort((a, b) {
         if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+        if (a.isOnline &&
+            b.isOnline &&
+            a.isPresenceWeak != b.isPresenceWeak) {
+          return a.isPresenceWeak ? 1 : -1;
+        }
         final aSelf = a.deviceId == myDeviceId;
         final bSelf = b.deviceId == myDeviceId;
         if (aSelf != bSelf) return aSelf ? -1 : 1;
@@ -169,7 +174,8 @@ class _DeviceAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final offline = !device.isOnline;
-    final dimmed = offline && !isSelf;
+    final weak = device.isOnline && device.isPresenceWeak;
+    final dimmed = (offline || weak) && !isSelf;
 
     return GestureDetector(
       onTap: onTap,
@@ -219,11 +225,13 @@ class _DeviceAvatar extends StatelessWidget {
                               ),
                             ),
                           );
-                          if (dimmed) {
+                          if (offline && !isSelf) {
                             img = ColorFiltered(
                               colorFilter: _grayscale,
                               child: Opacity(opacity: 0.52, child: img),
                             );
+                          } else if (weak && !isSelf) {
+                            img = Opacity(opacity: 0.75, child: img);
                           }
                           return img;
                         },
@@ -297,11 +305,17 @@ class _DeviceAvatar extends StatelessWidget {
             ),
             // 系统名称 / 离线
             Text(
-              offline ? '离线' : _osLabel(device.os),
+              offline
+                  ? '离线'
+                  : weak
+                  ? '信号弱'
+                  : _osLabel(device.os),
               style: TextStyle(
                 fontSize: 12,
                 color: offline
                     ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.45)
+                    : weak
+                    ? theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.65)
                     : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
               ),
               maxLines: 1,

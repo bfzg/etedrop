@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
@@ -26,9 +27,15 @@ import 'transfer_receive_speed_provider.dart';
 
 part 'lan_provider.g.dart';
 
-/// 超过该时间未收到发现广播则视为离线（仍保留在列表，仅 `isOnline: false`）。
-/// 与发现层约 3s 心跳对齐：约 8 个周期 + 余量，并留 UDP 丢包容忍。
-const int _lanDeviceStaleMs = 24000;
+/// 超过该时间未收到对端宣告则进入「可疑」态（`isPresenceWeak`），UI 灰显但仍可点。
+/// 与发现层 ~8s 周期、UDP 丢包对齐。
+const int _lanDeviceWeakMs = 20000;
+
+/// 超过该时间仍无宣告则视为离线（仍保留在列表，仅 `isOnline: false`）。
+const int _lanDeviceOfflineMs = 52000;
+
+/// 对端多久未更新后才启动单播探测（带退避，见 [_LanProbeState]）。
+const int _unicastProbeMinAgeMs = 12000;
 
 /// 超过该时间无任何发现包则从列表与本地缓存移除，避免无限增长。
 const int _lanDeviceForgetMs = 14 * 24 * 60 * 60 * 1000;
@@ -42,6 +49,11 @@ bool _lanDeviceListEquals(List<LanDevice> a, List<LanDevice> b) {
     if (a[i] != b[i]) return false;
   }
   return true;
+}
+
+class _LanProbeState {
+  int nextProbeAtMs = 0;
+  int backoffMs = 5000;
 }
 
 class _OutgoingShare {
@@ -81,6 +93,10 @@ class LanManager extends _$LanManager {
   final Map<String, int> _outboundUploadRefCount = {};
   final Map<String, bool> _outboundHadSuccess = {};
 
+  String? _localDeviceId;
+  final Map<String, _LanProbeState> _probeByDeviceId = {};
+  final Random _probeRandom = Random();
+
   @override
   List<LanDevice> build() {
     _init();
@@ -96,6 +112,7 @@ class LanManager extends _$LanManager {
     final manager = ref.read(deviceManagerProvider);
     final config = manager.config ?? await manager.loadConfig();
     final deviceId = config.deviceId;
+    _localDeviceId = deviceId;
     final deviceName = config.deviceName;
     final deviceAvatar = config.avatar;
     final cloudDir = ref.read(fileServiceProvider).storageDir;
@@ -139,7 +156,8 @@ class LanManager extends _$LanManager {
     }
 
     _sub = _discovery!.onDeviceFound.listen((device) {
-      final online = device.copyWith(isOnline: true);
+      _probeByDeviceId.remove(device.deviceId);
+      final online = device.copyWith(isOnline: true, isPresenceWeak: false);
       final current = List<LanDevice>.from(state);
       final index = current.indexWhere((d) => d.deviceId == online.deviceId);
       if (index >= 0) {
@@ -152,8 +170,13 @@ class LanManager extends _$LanManager {
     });
 
     _goneSub = _discovery!.onDeviceGone.listen((id) {
+      _probeByDeviceId.remove(id);
       final next = state
-          .map((d) => d.deviceId == id ? d.copyWith(isOnline: false) : d)
+          .map(
+            (d) => d.deviceId == id
+                ? d.copyWith(isOnline: false, isPresenceWeak: false)
+                : d,
+          )
           .toList();
       if (!_lanDeviceListEquals(state, next)) {
         state = next;
@@ -183,7 +206,7 @@ class LanManager extends _$LanManager {
           .map(
             (e) => LanDevice.fromJson(
               Map<String, dynamic>.from(e as Map),
-            ).copyWith(isOnline: false),
+            ).copyWith(isOnline: false, isPresenceWeak: false),
           )
           .toList();
     } catch (e) {
@@ -216,16 +239,52 @@ class LanManager extends _$LanManager {
     final next = <LanDevice>[];
     for (final d in state) {
       if (now - d.lastSeen > _lanDeviceForgetMs) continue;
-      final stale = now - d.lastSeen >= _lanDeviceStaleMs;
-      if (stale && d.isOnline) {
-        next.add(d.copyWith(isOnline: false));
-      } else {
+      if (!d.isOnline) {
         next.add(d);
+        continue;
+      }
+      final age = now - d.lastSeen;
+      if (age >= _lanDeviceOfflineMs) {
+        _probeByDeviceId.remove(d.deviceId);
+        next.add(d.copyWith(isOnline: false, isPresenceWeak: false));
+      } else if (age >= _lanDeviceWeakMs) {
+        next.add(d.copyWith(isPresenceWeak: true));
+      } else {
+        next.add(d.copyWith(isPresenceWeak: false));
       }
     }
     if (!_lanDeviceListEquals(state, next)) {
       state = next;
       _schedulePersistRememberedDevices();
+    }
+    _runUnicastProbes();
+  }
+
+  void _runUnicastProbes() {
+    final disc = _discovery;
+    final self = _localDeviceId;
+    if (disc == null || self == null) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    for (final d in state) {
+      if (d.deviceId == self) continue;
+      if (!d.isOnline) continue;
+      final age = now - d.lastSeen;
+      if (age < _unicastProbeMinAgeMs) {
+        _probeByDeviceId.remove(d.deviceId);
+        continue;
+      }
+      var st = _probeByDeviceId[d.deviceId];
+      if (st == null) {
+        st = _LanProbeState();
+        st.nextProbeAtMs = now;
+        _probeByDeviceId[d.deviceId] = st;
+      }
+      if (now < st.nextProbeAtMs) continue;
+      final ip = InternetAddress.tryParse(d.ip);
+      if (ip == null || ip.type != InternetAddressType.IPv4) continue;
+      disc.sendUnicastProbe(ip);
+      st.nextProbeAtMs = now + st.backoffMs + _probeRandom.nextInt(480);
+      st.backoffMs = min(72000, max(5000, (st.backoffMs * 1.45).round()));
     }
   }
 
@@ -247,6 +306,8 @@ class LanManager extends _$LanManager {
     _outgoingShares.clear();
     _outboundUploadRefCount.clear();
     _outboundHadSuccess.clear();
+    _probeByDeviceId.clear();
+    _localDeviceId = null;
   }
 
   // —— 接收：分享邀约 —— //

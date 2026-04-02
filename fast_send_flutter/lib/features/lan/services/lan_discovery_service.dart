@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
@@ -11,15 +12,23 @@ import 'lan_discovery_network.dart';
 
 /// 局域网 UDP 发现（与 LocalSend 同类方案：每块网卡独立 socket + 多播成员，避免单 socket 上频繁 leave/join 丢包）。
 ///
+/// 周期宣告默认 **8s**，且 **多数周期不发送 255.255.255.255**（见 [_fullBroadcastEveryNHeartbeats]），以降低对无线/交换的影响。
+///
 /// 仍使用既有 JSON 载荷，与旧版客户端互通。
 class LanDiscoveryService {
   static const int _udpPort = 53317;
   static const String _multicastGroupIpv4 = '239.255.88.117';
 
-  /// 与 [LanManager] 中 `_lanDeviceStaleMs` 配合：需明显小于离线阈值、留足丢包容忍。
-  static const Duration _heartbeatInterval = Duration(seconds: 3);
-  static const Duration _networkPollInterval = Duration(seconds: 10);
+  /// 周期性宣告间隔（略拉长以减少局域网广播总量；全网广播见 [_fullBroadcastEvery]）。
+  static const Duration _heartbeatInterval = Duration(seconds: 8);
+  /// 仅多播+子网定向广播；不含 255.255.255.255 的「全接口」洪泛。
+  static const Duration _networkPollInterval = Duration(seconds: 20);
   static const int _byeBurstPerSocket = 5;
+  /// 每 N 次周期心跳才附带一次 255.255.255.255，降低对交换机/无线的影响。
+  static const int _fullBroadcastEveryNHeartbeats = 6;
+  /// 上线 / 网卡重建后的短 burst 次数（带随机间隔，避免多机同步风暴）。
+  static const int _presenceBurstCount = 3;
+  static final Random _rng = Random();
 
   static const MethodChannel _androidMulticastLockChannel =
       MethodChannel('com.fasteddy.app/lan_multicast_lock');
@@ -50,6 +59,10 @@ class LanDiscoveryService {
   /// 避免启动时 connectivity + start 连续 force 重建时重复打印相同一行。
   String _lastUdpBindLogKey = '';
   int _lastIgnoredSocketErrorLogAtMs = 0;
+  int _heartbeatTickCount = 0;
+  /// 对端 `unicastProbe` 回显节流，防止双向互 ping。
+  final Map<String, int> _lastEchoAtMsByPeerId = {};
+  static const int _minEchoIntervalMs = 2000;
 
   final List<_LanDiscoveryBinding> _bindings = [];
   List<NetworkInterface> _lastEligibleIfaces = [];
@@ -74,7 +87,10 @@ class LanDiscoveryService {
       changed = true;
     }
     if (changed) {
-      _announceAll(includeGlobalBroadcast: true);
+      _announceAll(
+        includeGlobalBroadcast: true,
+        includeSubnetBroadcast: true,
+      );
     }
   }
 
@@ -89,9 +105,11 @@ class LanDiscoveryService {
       });
       _heartbeatTimer?.cancel();
       _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-        _announceAll(includeGlobalBroadcast: true);
+        _heartbeatTick();
       });
-      _announceAll(includeGlobalBroadcast: true);
+      _heartbeatTickCount = 0;
+      _heartbeatTick();
+      _schedulePresenceBurst(reason: 'start');
     } catch (e) {
       await _setAndroidMulticastLock(false);
       debugPrint('LAN Discovery start failed: $e');
@@ -146,8 +164,9 @@ class LanDiscoveryService {
     final ifaces = await LanDiscoveryNetwork.listDiscoveryInterfaces();
     if (gen != _lifecycleEpoch) return;
 
+    final prevFp = _ifaceFingerprint;
     final fp = LanDiscoveryNetwork.interfaceSetFingerprint(ifaces);
-    if (!force && fp == _ifaceFingerprint && _bindings.isNotEmpty) {
+    if (!force && fp == prevFp && _bindings.isNotEmpty) {
       return;
     }
     if (gen != _lifecycleEpoch) return;
@@ -204,7 +223,59 @@ class LanDiscoveryService {
       }
     }
 
-    _announceAll(includeGlobalBroadcast: true);
+    _announceAll(
+      includeGlobalBroadcast: false,
+      includeSubnetBroadcast: true,
+    );
+    if (force && _bindings.isNotEmpty) {
+      _schedulePresenceBurst(reason: 'rebind');
+    }
+  }
+
+  void _heartbeatTick() {
+    _heartbeatTickCount++;
+    final includeGlobal =
+        _heartbeatTickCount % _fullBroadcastEveryNHeartbeats == 0;
+    _announceAll(
+      includeGlobalBroadcast: includeGlobal,
+      includeSubnetBroadcast: true,
+    );
+  }
+
+  /// 短 burst：仅多播 + 子网定向，不含 255.255.255.255；包间随机间隔防抖风暴。
+  void _schedulePresenceBurst({required String reason}) {
+    if (_bindings.isEmpty) return;
+    var n = 0;
+    void sendOne() {
+      if (n >= _presenceBurstCount) return;
+      n++;
+      _announceAll(
+        includeGlobalBroadcast: false,
+        includeSubnetBroadcast: true,
+      );
+      if (n < _presenceBurstCount) {
+        final ms = 60 + _rng.nextInt(120);
+        Future<void>.delayed(Duration(milliseconds: ms), sendOne);
+      } else if (kDebugMode) {
+        debugPrint('[LAN discovery] presence burst done ($reason)');
+      }
+    }
+
+    sendOne();
+  }
+
+  /// 向已知 IPv4 单播探测包（带 [unicastProbe]），对端可选回显，用于加速互相刷新 lastSeen。
+  void sendUnicastProbe(InternetAddress ipv4) {
+    if (ipv4.type != InternetAddressType.IPv4) return;
+    if (_bindings.isEmpty) return;
+    final bytes = utf8.encode(
+      jsonEncode(_presenceMap(unicastProbe: true)),
+    );
+    try {
+      _bindings.first.socket.send(bytes, ipv4, _udpPort);
+    } catch (e) {
+      debugPrint('LAN unicast probe → ${ipv4.address}: $e');
+    }
   }
 
   /// 避免 RawDatagramSocket 错误进 Zone 未捕获导致进程退出。
@@ -339,15 +410,24 @@ class LanDiscoveryService {
     _bindings.clear();
   }
 
-  Map<String, dynamic> _presenceMap() => {
-        'deviceId': deviceId,
-        'deviceName': deviceName,
-        'port': httpPort,
-        'os': os,
-        'avatar': avatar,
-      };
+  Map<String, dynamic> _presenceMap({bool unicastProbe = false}) {
+    final m = <String, dynamic>{
+      'deviceId': deviceId,
+      'deviceName': deviceName,
+      'port': httpPort,
+      'os': os,
+      'avatar': avatar,
+    };
+    if (unicastProbe) {
+      m['unicastProbe'] = true;
+    }
+    return m;
+  }
 
-  void _announceAll({required bool includeGlobalBroadcast}) {
+  void _announceAll({
+    required bool includeGlobalBroadcast,
+    bool includeSubnetBroadcast = true,
+  }) {
     final bytes = utf8.encode(jsonEncode(_presenceMap()));
     var first = true;
     for (final b in _bindings) {
@@ -355,6 +435,7 @@ class LanDiscoveryService {
         b,
         bytes,
         includeGlobalBroadcast: includeGlobalBroadcast && first,
+        includeSubnetBroadcast: includeSubnetBroadcast,
       );
       first = false;
     }
@@ -364,6 +445,7 @@ class LanDiscoveryService {
     _LanDiscoveryBinding b,
     List<int> bytes, {
     required bool includeGlobalBroadcast,
+    bool includeSubnetBroadcast = true,
   }) {
     final socket = b.socket;
     void sendTo(InternetAddress addr) {
@@ -382,6 +464,10 @@ class LanDiscoveryService {
     }
     sendTo(InternetAddress(_multicastGroupIpv4));
 
+    if (!includeSubnetBroadcast) {
+      return;
+    }
+
     final seenBcast = <String>{};
     final ifaces = b.mode == _LanDiscoveryBindingMode.fallbackAny
         ? _lastEligibleIfaces
@@ -394,6 +480,30 @@ class LanDiscoveryService {
         seenBcast.add(bc);
         sendTo(InternetAddress(bc));
       }
+    }
+  }
+
+  void _maybeEchoUnicastProbe(
+    Map<String, dynamic> map,
+    String peerId,
+    InternetAddress sourceAddr,
+    int sourcePort,
+  ) {
+    if (map['unicastProbe'] != true) return;
+    if (peerId == deviceId) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final last = _lastEchoAtMsByPeerId[peerId] ?? 0;
+    if (now - last < _minEchoIntervalMs) return;
+    _lastEchoAtMsByPeerId[peerId] = now;
+    if (_lastEchoAtMsByPeerId.length > 80) {
+      _lastEchoAtMsByPeerId.removeWhere((_, t) => now - t > 120000);
+    }
+    final bytes = utf8.encode(jsonEncode(_presenceMap()));
+    if (_bindings.isEmpty) return;
+    try {
+      _bindings.first.socket.send(bytes, sourceAddr, sourcePort);
+    } catch (e) {
+      debugPrint('LAN echo presence: $e');
     }
   }
 
@@ -438,6 +548,8 @@ class LanDiscoveryService {
       return;
     }
 
+    _maybeEchoUnicastProbe(map, id, datagram.address, datagram.port);
+
     final device = LanDevice(
       deviceId: id,
       deviceName: map['deviceName'] as String? ?? 'Unknown',
@@ -447,6 +559,7 @@ class LanDiscoveryService {
       lastSeen: DateTime.now().millisecondsSinceEpoch,
       avatar: _jsonInt(map['avatar'], fallback: 1),
       isOnline: true,
+      isPresenceWeak: false,
     );
 
     _deviceController.add(device);
@@ -473,6 +586,7 @@ class LanDiscoveryService {
           b,
           byeBytes,
           includeGlobalBroadcast: isFirstBinding && i == 0,
+          includeSubnetBroadcast: true,
         );
       }
       isFirstBinding = false;

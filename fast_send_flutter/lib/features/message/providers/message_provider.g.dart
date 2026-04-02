@@ -41,7 +41,7 @@ final class MessageListProvider
   }
 }
 
-String _$messageListHash() => r'474224fe1c36aa658dcb67a3fcfed45ad5bf4877';
+String _$messageListHash() => r'0418d332dfdafa5e966620419252fb494050c568';
 
 abstract class _$MessageList extends $Notifier<List<TransferMessage>> {
   List<TransferMessage> build();
