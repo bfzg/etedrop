@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../widgets/ui/e_dialog.dart';
+import '../../../widgets/ui/e_button.dart';
 
 /// 新建文件夹对话框
 /// 对应 Electron: src/components/cloud/new-folder-dialog.tsx
@@ -67,37 +69,39 @@ class _NewFolderDialogState extends State<NewFolderDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return AlertDialog(
-      title: Text(l10n.newFolderDialogTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _controller,
-            autofocus: true,
-            decoration: InputDecoration(
-              hintText: l10n.folderNameHint,
-              errorText: _error,
-              border: const OutlineInputBorder(),
-            ),
-            onSubmitted: (_) => _handleConfirm(),
+    final screenW = MediaQuery.sizeOf(context).width;
+    // Slightly wider than the global default to better fit the input.
+    final formWidth = screenW >= 420 ? 380.0 : null;
+
+    final content = Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: l10n.folderNameHint,
+            errorText: _error,
+            border: const OutlineInputBorder(),
           ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: _loading ? null : () => Navigator.of(context).pop(),
-          child: Text(l10n.cancel),
+          onSubmitted: (_) => _handleConfirm(),
         ),
-        FilledButton(
+      ],
+    );
+
+    return EDialog.alert(
+      title: Text(l10n.newFolderDialogTitle),
+      content: formWidth != null ? SizedBox(width: formWidth, child: content) : content,
+      actions: [
+        EButton(
+          text: l10n.cancel,
+          variant: EButtonVariant.secondary,
+          onPressed: _loading ? null : () => Navigator.of(context).pop(),
+        ),
+        EButton(
+          text: l10n.createFolderButton,
+          loading: _loading,
           onPressed: _loading ? null : _handleConfirm,
-          child: _loading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(l10n.createFolderButton),
         ),
       ],
     );

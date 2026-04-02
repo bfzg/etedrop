@@ -64,6 +64,23 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
         (l10n.expireThirtyDays, 2592000000),
       ];
 
+  Widget _scrollableFormBodyWider(BuildContext context, Widget child) {
+    final w = MediaQuery.sizeOf(context).width;
+    double? formWidth;
+    if (w < 340) {
+      formWidth = null;
+    } else if (w >= 420) {
+      // Slightly wider than EDialog default (340).
+      formWidth = 380;
+    } else {
+      formWidth = 340;
+    }
+
+    final scroll = SingleChildScrollView(child: child);
+    if (formWidth == null) return scroll;
+    return SizedBox(width: formWidth, child: scroll);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -215,13 +232,16 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     final opts = _expireOptions(l10n);
     return EDialog.alert(
       title: Text(l10n.createShareDialogTitle),
-      content: EDialog.scrollableFormBody(
+      content: _scrollableFormBodyWider(
         context,
         Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.fileColon(widget.fileName), style: theme.textTheme.bodyMedium),
+            Text(
+              l10n.fileColon(widget.fileName),
+              style: theme.textTheme.bodyMedium,
+            ),
             const SizedBox(height: 16),
             SwitchListTile(
               title: Text(l10n.setPassword),
@@ -249,7 +269,12 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                 isDense: true,
               ),
               items: opts
-                  .map((e) => DropdownMenuItem(value: e.$2, child: Text(e.$1)))
+                  .map(
+                    (e) => DropdownMenuItem(
+                      value: e.$2,
+                      child: Text(e.$1),
+                    ),
+                  )
                   .toList(),
               onChanged: (v) => setState(() => _expiresIn = v),
             ),
@@ -257,7 +282,10 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
               const SizedBox(height: 12),
               Text(
                 _error!,
-                style: TextStyle(color: theme.colorScheme.error, fontSize: 13),
+                style: TextStyle(
+                  color: theme.colorScheme.error,
+                  fontSize: 13,
+                ),
               ),
             ],
           ],
@@ -296,7 +324,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
 
     return EDialog.alert(
       title: title,
-      content: EDialog.scrollableFormBody(
+      content: _scrollableFormBodyWider(
         context,
         Column(
           mainAxisSize: MainAxisSize.min,
@@ -312,7 +340,10 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
               ),
               const SizedBox(height: 12),
             ] else
-              Text(l10n.fileColon(widget.fileName), style: theme.textTheme.bodyMedium),
+              Text(
+                l10n.fileColon(widget.fileName),
+                style: theme.textTheme.bodyMedium,
+              ),
             if (!isExistingFlow) const SizedBox(height: 16),
             if (shareLink != null)
               Container(
