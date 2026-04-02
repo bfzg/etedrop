@@ -24,7 +24,7 @@ final List<NavItemConfig> navItems = [
     path: Routes.cloud,
   ),
   NavItemConfig(
-    label: '分享',
+    label: '附近',
     outlinedIcon: Icons.wifi_tethering,
     roundedIcon: Icons.wifi_tethering,
     path: Routes.send,

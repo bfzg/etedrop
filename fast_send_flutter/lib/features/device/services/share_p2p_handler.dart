@@ -30,6 +30,8 @@ const int _smallFileLegacyChunkBytes = 64 * 1024;
 /// 小文件可走无头快速路径；大文件或断点续传走 8 字节偏移前缀分片（与 share-page-app 一致）。
 class ShareP2PHandler {
   final void Function(Map<String, dynamic> message) sendSignaling;
+  /// P2P 断开时通知 [DeviceManager] 从多会话表中移除（避免仅依赖 dispose）
+  void Function()? onSessionEnded;
   final ShareService _shareService = ShareService();
 
   RTCPeerConnection? _pc;
@@ -39,6 +41,7 @@ class ShareP2PHandler {
   String? _currentShareCode;
   bool _passwordVerified = false;
   bool _initialized = false;
+  bool _disposeRequested = false;
 
   /// Flow control: the web client can pause/resume the stream to avoid
   /// overwhelming its SourceBuffer / JS memory queue.
@@ -49,7 +52,7 @@ class ShareP2PHandler {
   Timer? _seekDebounceTimer;
   Map<String, dynamic>? _pendingSeekMsg;
 
-  ShareP2PHandler({required this.sendSignaling});
+  ShareP2PHandler({required this.sendSignaling, this.onSessionEnded});
 
   String get _storageDir =>
       LocalStorageService.instance.get<String>(kCloudStorageDirKey) ?? '';
@@ -69,6 +72,16 @@ class ShareP2PHandler {
         {'urls': 'stun:stun.l.google.com:19302'},
       ],
     });
+
+    _pc!.onConnectionState = (RTCPeerConnectionState state) {
+      if (_disposeRequested) return;
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
+          state ==
+              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
+        onSessionEnded?.call();
+      }
+    };
 
     _pc!.onIceCandidate = (candidate) {
       if (candidate.candidate != null) {
@@ -820,6 +833,9 @@ class ShareP2PHandler {
   }
 
   Future<void> dispose() async {
+    if (_disposeRequested) return;
+    _disposeRequested = true;
+    onSessionEnded = null;
     _killActiveStream();
     _dc?.close();
     await _pc?.close();

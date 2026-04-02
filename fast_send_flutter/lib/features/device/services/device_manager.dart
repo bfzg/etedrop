@@ -24,7 +24,7 @@ class DeviceManager {
   Timer? _heartbeatTimer;
   StreamSubscription? _wsSubscription;
   bool _disposed = false;
-  ShareP2PHandler? _p2pHandler;
+  final Map<String, ShareP2PHandler> _p2pHandlers = {};
 
   final _stateController = StreamController<int>.broadcast();
   int _stateTick = 0;
@@ -172,25 +172,44 @@ class DeviceManager {
         break;
       case 'offer':
         final offerData = data['data'];
+        final peerId = data['peerId'] as String?;
         if (offerData is Map<String, dynamic>) {
-          _onOffer(offerData);
+          final id = (peerId != null && peerId.isNotEmpty) ? peerId : 'default';
+          unawaited(_onOffer(offerData, id));
         }
         break;
       case 'ice-candidate':
         final iceData = data['data'];
+        final peerId = data['peerId'] as String?;
         if (iceData is Map<String, dynamic>) {
-          _p2pHandler?.handleIceCandidate(iceData);
+          final id = (peerId != null && peerId.isNotEmpty) ? peerId : 'default';
+          unawaited(_p2pHandlers[id]?.handleIceCandidate(iceData));
         }
         break;
     }
   }
 
-  Future<void> _onOffer(Map<String, dynamic> offerData) async {
-    await _p2pHandler?.dispose();
-    _p2pHandler = ShareP2PHandler(
-      sendSignaling: (msg) => _ws?.sink.add(jsonEncode(msg)),
+  Future<void> _onOffer(Map<String, dynamic> offerData, String peerId) async {
+    final previous = _p2pHandlers.remove(peerId);
+    await previous?.dispose();
+
+    late ShareP2PHandler handler;
+    handler = ShareP2PHandler(
+      sendSignaling: (msg) =>
+          _ws?.sink.add(jsonEncode({...msg, 'peerId': peerId})),
+      onSessionEnded: () {
+        unawaited(_removeP2pSession(peerId, handler));
+      },
     );
-    await _p2pHandler!.handleOffer(offerData);
+    _p2pHandlers[peerId] = handler;
+    await handler.handleOffer(offerData);
+  }
+
+  Future<void> _removeP2pSession(String peerId, ShareP2PHandler handler) async {
+    if (_p2pHandlers[peerId] == handler) {
+      _p2pHandlers.remove(peerId);
+    }
+    await handler.dispose();
   }
 
   void _scheduleReconnect() {
@@ -210,8 +229,10 @@ class DeviceManager {
     _heartbeatTimer = null;
     _wsSubscription?.cancel();
     _wsSubscription = null;
-    _p2pHandler?.dispose();
-    _p2pHandler = null;
+    for (final h in _p2pHandlers.values) {
+      unawaited(h.dispose());
+    }
+    _p2pHandlers.clear();
     _ws?.sink.close().catchError((_) {});
     _ws = null;
     _setState(DeviceConnectionState.disconnected, error: error);
