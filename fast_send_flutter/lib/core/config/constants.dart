@@ -21,15 +21,11 @@ class AppConstants {
   /// 应用版本
   static const String version = '1.0.0';
 
-  /// 更新清单（自建 HTTP）：返回 JSON，例如：
-  /// {
-  ///   "latestVersion": "1.2.3",
-  ///   "windowsDownloadUrl": "https://your.site/download/eddy-1.2.3.exe",
-  ///   "macDownloadUrl": "https://your.site/download/eddy-1.2.3.dmg",
-  ///   "releaseNotes": "…",
-  ///   "releasePageUrl": "https://github.com/xxx/xxx/releases/tag/v1.2.3"
-  /// }
-  static const String updateManifestUrl = '';
+  /// 更新清单（自建 HTTP）：返回 JSON
+  // static const String updateManifestUrl =
+  //     'http://43.153.143.37:40321/version.json';
+  static const String updateManifestUrl =
+      'http://192.168.1.9:3000/version.json';
 
   /// iOS/Android 未来上架后可配置商店链接（用于“去商店更新”跳转）
   static const String iosStoreUrl = '';

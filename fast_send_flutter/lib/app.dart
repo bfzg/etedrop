@@ -78,6 +78,20 @@ class _AppState extends ConsumerState<App> {
     final hasUpdate = ref.read(updateStateProvider).hasUpdate;
     if (!hasUpdate) return;
 
-    await UpdateService.instance.checkAndPrompt(context, ref: ref);
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx != null) {
+      // ignore: use_build_context_synchronously
+      await UpdateService.instance.checkAndPrompt(ctx, ref: ref);
+      return;
+    }
+
+    // In rare cases (very first frame), navigator context may not be ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
+      final ctx2 = rootNavigatorKey.currentContext;
+      if (ctx2 == null) return;
+      // ignore: use_build_context_synchronously
+      await UpdateService.instance.checkAndPrompt(ctx2, ref: ref);
+    });
   }
 }

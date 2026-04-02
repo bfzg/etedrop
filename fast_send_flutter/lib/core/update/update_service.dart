@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:eddy/core/config/styles.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -50,6 +51,17 @@ class UpdateService {
     return m.releasePageUrl;
   }
 
+  List<String> _releaseNotesForLocale(UpdateManifest m, Locale locale) {
+    String norm(String s) => s.trim().toLowerCase();
+    final lang = norm(locale.languageCode);
+    final tag = norm(locale.toLanguageTag());
+    return m.releaseNotes[tag] ??
+        m.releaseNotes[lang] ??
+        m.releaseNotes['zh'] ??
+        m.releaseNotes['en'] ??
+        const [];
+  }
+
   Future<bool> checkHasUpdate({
     required String currentVersion,
     required UpdateManifest manifest,
@@ -63,23 +75,22 @@ class UpdateService {
       final current = pkg.version;
       final manifest = await fetchManifest();
       if (manifest == null || manifest.latestVersion.isEmpty) {
-        ref.read(updateStateProvider.notifier).setResult(
-              manifest: null,
-              hasUpdate: false,
-            );
+        ref
+            .read(updateStateProvider.notifier)
+            .setResult(manifest: null, hasUpdate: false);
         return;
       }
-      final hasUpdate =
-          await checkHasUpdate(currentVersion: current, manifest: manifest);
-      ref.read(updateStateProvider.notifier).setResult(
-            manifest: manifest,
-            hasUpdate: hasUpdate,
-          );
+      final hasUpdate = await checkHasUpdate(
+        currentVersion: current,
+        manifest: manifest,
+      );
+      ref
+          .read(updateStateProvider.notifier)
+          .setResult(manifest: manifest, hasUpdate: hasUpdate);
     } catch (_) {
-      ref.read(updateStateProvider.notifier).setResult(
-            manifest: null,
-            hasUpdate: false,
-          );
+      ref
+          .read(updateStateProvider.notifier)
+          .setResult(manifest: null, hasUpdate: false);
     }
   }
 
@@ -90,24 +101,22 @@ class UpdateService {
 
     final manifest = await fetchManifest();
     if (manifest == null || manifest.latestVersion.isEmpty) {
-      ref?.read(updateStateProvider.notifier).setResult(
-            manifest: null,
-            hasUpdate: false,
-          );
+      ref
+          ?.read(updateStateProvider.notifier)
+          .setResult(manifest: null, hasUpdate: false);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.updateCheckFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.updateCheckFailed)));
       }
       return;
     }
 
     final latest = manifest.latestVersion;
     final hasUpdate = VersionUtils.isLess(current, latest);
-    ref?.read(updateStateProvider.notifier).setResult(
-          manifest: manifest,
-          hasUpdate: hasUpdate,
-        );
+    ref
+        ?.read(updateStateProvider.notifier)
+        .setResult(manifest: manifest, hasUpdate: hasUpdate);
     if (!hasUpdate) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -120,51 +129,99 @@ class UpdateService {
     final url = _downloadUrlForPlatform(manifest);
     if (!context.mounted) return;
 
+    final notes = _releaseNotesForLocale(
+      manifest,
+      Localizations.localeOf(context),
+    );
+
     await showDialog<void>(
       context: context,
+      barrierDismissible: !manifest.forceUpdate,
       builder: (ctx) {
+        final primary = AppStyles.primary;
         return EDialog.alert(
-          title: Text(l10n.updateAvailableTitle),
-          content: EDialog.scrollableFormBody(
-            ctx,
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
+          title: RichText(
+            text: TextSpan(
+              style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: primary,
+                fontSize: 26,
+              ),
               children: [
-                Text(l10n.updateAvailableBody(current, latest)),
-                if ((manifest.releaseNotes ?? '').isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    manifest.releaseNotes!,
-                    style: Theme.of(ctx).textTheme.bodySmall,
+                TextSpan(
+                  text: l10n.updateAvailableTitle,
+                  style: Theme.of(ctx).textTheme.titleMedium?.copyWith(
+                    color: Colors.black,
+                    fontSize: 26,
                   ),
-                ],
+                ),
+                TextSpan(text: ' v$latest'),
               ],
             ),
           ),
-          actions: [
-            EButton(
-              text: l10n.later,
-              variant: EButtonVariant.secondary,
-              onPressed: () => Navigator.of(ctx).pop(),
+          content: SizedBox(
+            width: 520,
+            child: EDialog.scrollableFormBody(
+              ctx,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (notes.isNotEmpty)
+                    ...notes.map(
+                      (line) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Text(
+                          line,
+                          style: TextStyle(fontSize: 16, color: Colors.black),
+                        ),
+                      ),
+                    )
+                  else
+                    Text(
+                      l10n.checkForUpdatesDesc,
+                      style: Theme.of(ctx).textTheme.bodyMedium,
+                    ),
+                ],
+              ),
             ),
-            EButton(
-              text: l10n.updateNow,
-              onPressed: (url == null || url.isEmpty)
-                  ? null
-                  : () async {
-                      final ok = await launchUrl(
-                        Uri.parse(url),
-                        mode: LaunchMode.externalApplication,
-                      );
-                      if (!ok && ctx.mounted) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          SnackBar(content: Text(l10n.openLinkFailed)),
-                        );
-                      }
-                      ref?.read(updateStateProvider.notifier).clearBadge();
-                      if (ctx.mounted) Navigator.of(ctx).pop();
-                    },
+          ),
+          actions: [
+            Row(
+              children: [
+                if (!manifest.forceUpdate) ...[
+                  Expanded(
+                    child: EButton(
+                      text: l10n.later,
+                      variant: EButtonVariant.secondary,
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: EButton(
+                    text: l10n.updateNow,
+                    onPressed: (url == null || url.isEmpty)
+                        ? null
+                        : () async {
+                            final ok = await launchUrl(
+                              Uri.parse(url),
+                              mode: LaunchMode.externalApplication,
+                            );
+                            if (!ok && ctx.mounted) {
+                              ScaffoldMessenger.of(ctx).showSnackBar(
+                                SnackBar(content: Text(l10n.openLinkFailed)),
+                              );
+                            }
+                            ref
+                                ?.read(updateStateProvider.notifier)
+                                .clearBadge();
+                            if (ctx.mounted) Navigator.of(ctx).pop();
+                          },
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -172,4 +229,3 @@ class UpdateService {
     );
   }
 }
-

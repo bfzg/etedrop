@@ -31,7 +31,7 @@
     }
   },
   "updateNow": "立即更新",
-  "later": "稍后",
+  "later": "暂不更新",
   "openLinkFailed": "打开链接失败",
   "connected": "已连接",
   "disconnected": "未连接",

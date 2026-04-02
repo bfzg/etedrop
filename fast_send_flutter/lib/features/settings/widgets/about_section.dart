@@ -21,32 +21,30 @@ class AboutSection extends ConsumerWidget {
       children: [
         SettingsSectionHeader(title: l10n.about),
         SettingsCard(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const ListTile(
-                leading: Icon(Icons.info_outline),
-                title: Text(AppConstants.appName),
-                subtitle: Text('v${AppConstants.version}'),
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(Icons.system_update_alt),
-                title: Text(l10n.checkForUpdates),
-                subtitle: Text(l10n.checkForUpdatesDesc),
-                trailing: hasUpdate
-                    ? Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFE53935),
-                          shape: BoxShape.circle,
-                        ),
-                      )
-                    : null,
-                onTap: () => UpdateService.instance.checkAndPrompt(context, ref: ref),
-              ),
-            ],
+          child: ListTile(
+            leading: const Icon(Icons.info_outline),
+            title: const Text(AppConstants.appName),
+            subtitle: Text('v${AppConstants.version}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (hasUpdate)
+                  Container(
+                    width: 10,
+                    height: 10,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE53935),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                TextButton(
+                  onPressed: () =>
+                      UpdateService.instance.checkAndPrompt(context, ref: ref),
+                  child: Text(l10n.checkForUpdates),
+                ),
+              ],
+            ),
           ),
         ),
       ],

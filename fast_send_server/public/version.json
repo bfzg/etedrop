@@ -28,7 +28,10 @@
       "[Improve] Linux ARM64 no UPX",
       "[Improve] Plugin login/keepalive auth check removed",
       "[Fix] Zombie processes on some Linux"
-    ]
+    ],
+    "ja": [],
+    "ko": [],
+    "es": []
   },
   "releasePageUrl": "https://github.com/your-org/eddy/releases/tag/v1.0.1"
 }

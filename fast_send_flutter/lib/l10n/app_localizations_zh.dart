@@ -73,7 +73,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get updateNow => '立即更新';
 
   @override
-  String get later => '稍后';
+  String get later => '暂不更新';
 
   @override
   String get openLinkFailed => '打开链接失败';
