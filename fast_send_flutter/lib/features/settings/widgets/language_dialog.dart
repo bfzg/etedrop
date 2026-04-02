@@ -12,6 +12,16 @@ Future<void> showLanguageDialog(
   Locale? currentLocale,
   AppLocalizations l10n,
 ) async {
+  // Language names should be shown in their own language (autonyms),
+  // regardless of the current UI locale.
+  const langNativeName = <String, String>{
+    'zh': '简体中文',
+    'en': 'English',
+    'ja': '日本語',
+    'ko': '한국어',
+    'es': 'Español',
+  };
+
   await showDialog<void>(
     context: context,
     builder: (context) {
@@ -34,7 +44,7 @@ Future<void> showLanguageDialog(
                   },
                 ),
                 SelectionOption(
-                  title: l10n.langChineseSimplified,
+                  title: langNativeName['zh']!,
                   selected: currentLocale?.languageCode == 'zh',
                   onTap: () {
                     ref
@@ -44,7 +54,7 @@ Future<void> showLanguageDialog(
                   },
                 ),
                 SelectionOption(
-                  title: l10n.langEnglish,
+                  title: langNativeName['en']!,
                   selected: currentLocale?.languageCode == 'en',
                   onTap: () {
                     ref
@@ -54,7 +64,7 @@ Future<void> showLanguageDialog(
                   },
                 ),
                 SelectionOption(
-                  title: l10n.langJapanese,
+                  title: langNativeName['ja']!,
                   selected: currentLocale?.languageCode == 'ja',
                   onTap: () {
                     ref
@@ -64,7 +74,7 @@ Future<void> showLanguageDialog(
                   },
                 ),
                 SelectionOption(
-                  title: l10n.langKorean,
+                  title: langNativeName['ko']!,
                   selected: currentLocale?.languageCode == 'ko',
                   onTap: () {
                     ref
@@ -74,7 +84,7 @@ Future<void> showLanguageDialog(
                   },
                 ),
                 SelectionOption(
-                  title: l10n.langSpanish,
+                  title: langNativeName['es']!,
                   selected: currentLocale?.languageCode == 'es',
                   onTap: () {
                     ref

@@ -8,12 +8,15 @@ export default function HomeHero(): ReactNode {
   return (
     <header className="relative overflow-hidden pb-14 pt-20">
       <Container className="flex flex-col items-center justify-center space-y-8">
-        <Heading as="h1" className="m-0 text-[clamp(2.6rem,3.6vw,3.4rem)] leading-[1.05] tracking-[-0.02em]">
-          <Translate id="homepage.hero.title">Fast Send</Translate>
+        <Heading
+          as="h1"
+          className="m-0 text-[clamp(2.6rem,3.6vw,3.4rem)] leading-[1.05] tracking-[-0.02em]"
+        >
+          <Translate id="homepage.hero.title">把文件发送给任何人</Translate>
         </Heading>
         <p className="m-0 text-[1.15rem] leading-relaxed text-slate-600 dark:text-slate-300/90">
           <Translate id="homepage.hero.subtitle">
-            以 WebRTC 为核心的快速传输方案：分享、取件、播放、文档，一站式闭环。
+            以 p2p 为核心的快速传输方案：分享、播放、文档，一站式闭环。
           </Translate>
         </p>
 

@@ -133,12 +133,19 @@ class _SidebarItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 3),
-              Text(
-                item.label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
-                  color: selected ? selectedColor : normalColor,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  softWrap: false,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+                    color: selected ? selectedColor : normalColor,
+                  ),
                 ),
               ),
             ],
