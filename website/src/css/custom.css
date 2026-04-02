@@ -98,16 +98,43 @@
 .navbar.navbar-home {
   border-bottom: none;
   box-shadow: none;
-  background-color: transparent; /* Start transparent or blend with hero */
+  background: transparent;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  overflow: hidden;
   transition: all 0.3s ease;
-  padding: 40px 0;
+  padding: 20px 0;
   font-size: 19px;
+}
+
+.navbar.navbar-home::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-color: rgba(255, 255, 255, 0.85);
+  background-image: radial-gradient(circle at 1px 1px, rgba(15, 23, 42, 0.28) 1px, transparent 0);
+  background-size: 15px 15px;
+  background-position: 7.5px 7.5px;
+  opacity: 0.4;
+  z-index: 0;
+}
+
+[data-theme="dark"] .navbar.navbar-home::before {
+  background-color: rgba(27, 27, 29, 0.65);
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.18) 1px, transparent 0);
+}
+
+.navbar.navbar-home > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Scrolled state for Home */
 .navbar.navbar-home.navbar-scrolled {
   border-bottom: 1px solid var(--ifm-color-emphasis-200);
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -118,6 +145,12 @@
 [data-theme="dark"] .navbar.navbar-home.navbar-scrolled {
   background-color: rgba(27, 27, 29, 0.8); /* Dark mode background */
   border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.navbar.navbar-home.navbar-scrolled::before {
+  /* When scrolled, switch to pure glass (no dot matrix). */
+  background-image: none;
+  opacity: 1;
 }
 
 .navbar__logo {
@@ -135,17 +168,17 @@
   }
 
   /* Make the left items container take full width and center its content */
-  .navbar-home .navbar__items:not(.navbar__items--right) {
+  /* .navbar-home .navbar__items:not(.navbar__items--right) {
     flex: 1;
     justify-content: center;
-  }
+  } */
 
   /* Position the logo absolutely to the left */
-  .navbar-home .navbar__brand {
+  /* .navbar-home .navbar__brand {
     position: absolute;
     left: var(--ifm-navbar-padding-horizontal);
     z-index: 10;
-  }
+  } */
 
   /* Position the right items absolutely to the right */
   .navbar-home .navbar__items--right {

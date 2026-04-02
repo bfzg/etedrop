@@ -28,7 +28,7 @@ function Spinner({className}: {className?: string}) {
 
 function getClasses({variant, size}: {variant: Variant; size: Size}) {
   const base =
-    'inline-flex items-center justify-center gap-2 rounded-full no-underline transition ' +
+    'inline-flex items-center cursor-pointer justify-center gap-2 rounded-full no-underline transition ' +
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 focus-visible:ring-offset-white ' +
     'disabled:pointer-events-none disabled:opacity-60';
 
@@ -38,7 +38,7 @@ function getClasses({variant, size}: {variant: Variant; size: Size}) {
   };
 
   const variants: Record<Variant, string> = {
-    primary: 'bg-primary text-white hover:bg-primaryHover',
+    primary: 'bg-primary text-white hover:bg-primaryHover  border-0',
     default: 'bg-transparent text-black border border-solid border-gray-300 hover:bg-gray-200',
     text: 'bg-transparent text-primary hover:bg-gray-200',
   };

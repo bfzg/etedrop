@@ -72,12 +72,6 @@ const config: Config = {
           label: "下载",
           exact: true,
         },
-        {
-          label: "支持",
-          href: "/#footer",
-          target: "_self",
-          exact: true,
-        },
       ],
     },
     prism: {},
