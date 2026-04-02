@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/config/styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../widgets/ui/e_button.dart';
 import '../../../widgets/ui/e_dialog.dart';
 import '../../device/models/device_config.dart';
@@ -32,8 +33,9 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return EDialog.alert(
-      title: const Text('选择头像'),
+      title: Text(l10n.chooseAvatar),
       content: SizedBox(
         width: 360,
         height: 400,
@@ -71,12 +73,12 @@ class _AvatarPickerDialogState extends State<AvatarPickerDialog> {
       ),
       actions: [
         EButton(
-          text: '取消',
+          text: l10n.cancel,
           variant: EButtonVariant.secondary,
           onPressed: () => Navigator.of(context).pop(),
         ),
         EButton(
-          text: '确定',
+          text: l10n.confirm,
           onPressed: () => Navigator.of(context).pop(_selected),
         ),
       ],

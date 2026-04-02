@@ -92,7 +92,7 @@ class FileServiceNotifier extends _$FileServiceNotifier {
     await MacosCloudStorageAccess.persistBookmarkForPath(path);
   }
 
-  Future<String?> selectStorageDir() async {
+  Future<String?> selectStorageDir({String? dialogTitle}) async {
     // Mobile: don't prompt for directory selection; keep storage in app-owned dir.
     if (!_isDesktopPlatform()) {
       _mobileInitFuture ??= _initMobileDefaultStorageDir();
@@ -101,7 +101,7 @@ class FileServiceNotifier extends _$FileServiceNotifier {
     }
 
     final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: '选择网盘存储目录',
+      dialogTitle: dialogTitle,
     );
     if (result != null) {
       await setStorageDir(result);
@@ -143,9 +143,9 @@ class DownloadDir extends _$DownloadDir {
     await LocalStorageService.instance.set<String>(_downloadDirKey, path);
   }
 
-  Future<String?> selectDownloadDir() async {
+  Future<String?> selectDownloadDir({String? dialogTitle}) async {
     final result = await FilePicker.platform.getDirectoryPath(
-      dialogTitle: '选择下载目录',
+      dialogTitle: dialogTitle,
     );
     if (result != null) {
       await setDownloadDir(result);

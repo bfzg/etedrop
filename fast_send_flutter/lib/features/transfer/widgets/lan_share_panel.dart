@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 import '../../device/models/device_config.dart';
 import '../../lan/models/lan_device.dart';
@@ -105,6 +106,7 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final outgoing = _outgoing();
     final completed = outgoing?.status == TransferMessageStatus.completed;
@@ -114,10 +116,12 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
     final ss = _left.inSeconds.remainder(60).toString().padLeft(2, '0');
 
     final statusText = completed
-        ? '已完成'
+        ? l10n.transferCompleted
         : receiving
-            ? '传输中'
-            : (_left == Duration.zero ? '已结束' : '剩余 $mm:$ss');
+            ? l10n.transferInProgress
+            : (_left == Duration.zero
+                ? l10n.transferEnded
+                : l10n.timeRemaining(mm, ss));
 
     final statusColor = completed
         ? Colors.green
@@ -141,7 +145,7 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
             Row(
               children: [
                 Text(
-                  '分享记录',
+                  l10n.shareRecordTitle,
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
@@ -157,7 +161,7 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
               ],
             ),
             if (widget.recipients.isNotEmpty) ...[
-              Text('接收方', style: AppTextStyles.secondary(context)),
+              Text(l10n.receiverLabel, style: AppTextStyles.secondary(context)),
               const SizedBox(height: 6),
               _RecipientAvatarStack(devices: widget.recipients),
               const SizedBox(height: 12),
@@ -171,10 +175,10 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
             const SizedBox(height: 4),
             Text(
               completed
-                  ? '对方已成功接收本次分享的全部文件。'
+                  ? l10n.shareAllReceivedHint
                   : receiving
-                      ? '正在向对方设备传输文件，请保持本应用在前台或勿断网。'
-                      : '对端需在消息里「接收」后才会开始传输；无人接受 2 分钟后自动取消。',
+                      ? l10n.shareTransferringHint
+                      : l10n.shareWaitAcceptHint,
               style: AppTextStyles.secondary(context),
             ),
             const SizedBox(height: 12),
@@ -186,23 +190,25 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
                     if (context.mounted) {
                       ScaffoldMessenger.of(
                         context,
-                      ).showSnackBar(const SnackBar(content: Text('已复制到剪贴板')));
+                      ).showSnackBar(
+                        SnackBar(content: Text(l10n.copiedToClipboard)),
+                      );
                     }
                   },
                   icon: const Icon(Icons.copy, size: 18),
-                  label: const Text('复制'),
+                  label: Text(l10n.copyAction),
                 ),
                 const SizedBox(width: 8),
                 if (completed)
                   FilledButton.tonal(
                     onPressed: widget.onDismissRecord,
-                    child: const Text('关闭'),
+                    child: Text(l10n.closeAction),
                   )
                 else
                   TextButton(
                     onPressed: widget.onCancelSharing,
                     child: Text(
-                      '取消分享',
+                      l10n.cancelSharingAction,
                       style: TextStyle(color: theme.colorScheme.error),
                     ),
                   ),

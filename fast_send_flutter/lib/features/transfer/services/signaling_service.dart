@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../l10n/l10n_utils.dart';
 import 'peer_data_channel.dart';
 
 /// 信令状态
@@ -159,15 +160,19 @@ class SignalingService {
         },
         onError: (error) {
           _setStatus(SignalingStatus.error);
-          _callbacks.onError?.call('WebSocket错误');
+          _callbacks.onError?.call(loadAppLocalizationsSync().webSocketError);
         },
         onDone: () {
           if (_status == SignalingStatus.connecting) {
             _setStatus(SignalingStatus.error);
-            _callbacks.onError?.call('连接信令服务器失败');
+            _callbacks.onError?.call(
+              loadAppLocalizationsSync().signalingConnectFailed,
+            );
           } else if (_status == SignalingStatus.waiting) {
             _setStatus(SignalingStatus.timeout);
-            _callbacks.onError?.call('等待超时');
+            _callbacks.onError?.call(
+              loadAppLocalizationsSync().signalingWaitTimeout,
+            );
           } else {
             _setStatus(SignalingStatus.closed);
           }
@@ -175,7 +180,9 @@ class SignalingService {
       );
     } catch (e) {
       _setStatus(SignalingStatus.error);
-      _callbacks.onError?.call('连接信令服务器失败');
+      _callbacks.onError?.call(
+        loadAppLocalizationsSync().signalingConnectFailed,
+      );
     }
   }
 
@@ -193,7 +200,9 @@ class SignalingService {
       case 'status':
         if (data['code'] == 404) {
           _setStatus(SignalingStatus.error);
-          _callbacks.onError?.call('取件码无效');
+          _callbacks.onError?.call(
+            loadAppLocalizationsSync().invalidPickupCode,
+          );
           dispose();
         } else if (data['code'] == 0) {
           _initPDC(true);

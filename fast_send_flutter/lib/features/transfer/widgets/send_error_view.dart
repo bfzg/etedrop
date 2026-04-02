@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 
 class SendErrorView extends StatelessWidget {
@@ -14,6 +15,7 @@ class SendErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -25,7 +27,7 @@ class SendErrorView extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         Gap.md,
-        FilledButton(onPressed: onRetry, child: const Text('重试')),
+        FilledButton(onPressed: onRetry, child: Text(l10n.retry)),
       ],
     );
   }

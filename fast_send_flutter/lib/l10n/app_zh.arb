@@ -1,10 +1,13 @@
 {
+  "@@locale": "zh",
   "appName": "极速快传",
   "home": "首页",
   "send": "发送",
   "receive": "接收",
   "settings": "设置",
   "cloud": "网盘",
+  "nearby": "附近",
+  "messages": "消息",
   "deviceInfo": "设备信息",
   "storage": "存储",
   "desktopIntegration": "桌面集成",
@@ -59,5 +62,344 @@
       }
     }
   },
-  "unknownError": "未知错误"
+  "unknownError": "未知错误",
+  "langChineseSimplified": "简体中文",
+  "langEnglish": "English",
+  "langJapanese": "日本語",
+  "langKorean": "한국어",
+  "langSpanish": "Español",
+  "nearbyDevices": "附近的设备",
+  "selectedCount": "已选 {count}",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "findingNearbyUsers": "正在查找用户...",
+  "lookingForNearbyDevices": "正在寻找附近的设备...",
+  "offline": "离线",
+  "weakSignal": "信号弱",
+  "youLabel": "你",
+  "emptyFolder": "空文件夹",
+  "shareAction": "分享",
+  "deleteAction": "删除",
+  "columnName": "名称",
+  "columnModified": "修改时间",
+  "columnSize": "大小",
+  "columnActions": "操作",
+  "shareTooltip": "分享",
+  "deleteTooltip": "删除",
+  "storagePreparingTitle": "正在准备存储目录",
+  "storagePreparingSubtitle": "手机端将自动使用应用专用目录保存文件",
+  "storageNotSetTitle": "尚未设置存储目录",
+  "storageNotSetSubtitle": "请选择一个文件夹作为网盘存储目录",
+  "chooseStorageFolder": "选择存储目录",
+  "loadFailed": "加载失败",
+  "openSystemSettingsForAccess": "打开系统设置授权",
+  "changeStorageDirectory": "更换存储目录",
+  "confirmDelete": "确认删除",
+  "deleteEntryConfirm": "确定要删除 \"{name}\" 吗？{suffix}",
+  "@deleteEntryConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFolderSuffix": "\n文件夹内所有内容将被删除。",
+  "newFolderTooltip": "新建文件夹",
+  "uploadFileTooltip": "上传文件",
+  "refreshTooltip": "刷新",
+  "cloudDirectoryLabel": "网盘目录",
+  "downloadDirectoryLabel": "下载目录",
+  "clipboardImageSaveFailed": "保存剪贴板图片失败: {error}",
+  "@clipboardImageSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "enterTextOrAddFiles": "请输入文字或添加至少一个文件",
+  "selectOnlineReceiversFirst": "请先在上方选择在线的接收设备",
+  "sendFailed": "发送失败: {error}",
+  "@sendFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "inputHintDesktop": "输入文字，⌘V 粘贴截图，或拖入文件…",
+  "inputHintMobile": "输入文字，或选择文件…",
+  "addFilesTooltip": "添加文件",
+  "sendButtonLabel": "发送",
+  "sendingButton": "发送中…",
+  "removeTooltip": "移除",
+  "shareScreenTitle": "分享",
+  "selectAtLeastOneReceiver": "请先在上方选择至少一个接收设备",
+  "shareInviteSentSnack": "已发送分享邀请，对方在消息里接受后开始传输",
+  "expireNever": "永不过期",
+  "expireOneHour": "1 小时",
+  "expireOneDay": "24 小时",
+  "expireSevenDays": "7 天",
+  "expireThirtyDays": "30 天",
+  "shareLinkCopied": "已复制分享链接",
+  "createShareFailed": "创建分享失败: {error}",
+  "@createShareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelShareTitle": "取消分享",
+  "cancelShareBody": "确定取消分享？他人将无法再通过当前链接下载该文件。",
+  "backButton": "返回",
+  "cancelShareButton": "取消分享",
+  "shareCancelled": "已取消分享",
+  "cancelShareFailed": "取消分享失败: {error}",
+  "@cancelShareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareLoadingTitle": "分享「{name}」",
+  "@shareLoadingTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "closeButton": "关闭",
+  "createShareDialogTitle": "创建分享",
+  "fileColon": "文件: {name}",
+  "@fileColon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setPassword": "设置密码",
+  "enterPassword": "输入密码",
+  "shareCreatedTitle": "分享已创建",
+  "shareExistingDescription": "该文件已处于分享状态，可直接复制下方分享码或链接。",
+  "connectForShareLink": "请先连接设备（连接服务端）后，在「我的分享」中可查看分享链接。",
+  "passwordProtected": "已设置访问密码",
+  "expiresAt": "过期时间: {when}",
+  "@expiresAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "doneButton": "完成",
+  "createShareAction": "创建分享",
+  "copyShareLinkTooltip": "复制分享链接",
+  "pickCloudStorageTitle": "选择网盘存储目录",
+  "pickDownloadDirTitle": "选择下载目录",
+  "messagePageTitle": "消息",
+  "clearMessagesTooltip": "清空",
+  "noMessagesYet": "暂无消息",
+  "noMessagesSubtitle": "当有设备向你发送文件时，会在这里显示",
+  "waitAcceptInMessage": "等待对方在消息内接受（2 分钟内有效）",
+  "retrySend": "重试发送",
+  "reject": "拒绝",
+  "receiveAction": "接收",
+  "notifySenderFailed": "无法通知发送方: {error}",
+  "@notifySenderFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotFoundMaybeMoved": "找不到本地文件，可能已移动或删除",
+  "revealInFolderNotSupported": "当前平台无法在文件夹中定位文件",
+  "shareRestarted": "已重新发起分享",
+  "localFileGoneCannotRetry": "本地文件已不存在或已移动，无法重试",
+  "retryFailed": "重试失败: {error}",
+  "@retryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusPending": "待处理",
+  "statusAccepted": "已接受",
+  "statusReceiving": "接收中",
+  "statusCompleted": "已完成",
+  "statusRejected": "已拒绝",
+  "statusFailed": "失败",
+  "statusExpired": "已过期",
+  "meLabel": "我",
+  "sendingBadge": "发送",
+  "messageSendToRecipients": "发给 {names}",
+  "@messageSendToRecipients": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientNDevices": "{count} 台设备",
+  "@recipientNDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientTwo": "{name1}、{name2}",
+  "@recipientTwo": {
+    "placeholders": {
+      "name1": {
+        "type": "String"
+      },
+      "name2": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientMany": "{name1}、{name2} 等 {total} 台",
+  "@recipientMany": {
+    "placeholders": {
+      "name1": {
+        "type": "String"
+      },
+      "name2": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sendingPercent": "发送中 {percent}%",
+  "@sendingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingPercent": "接收中 {percent}%",
+  "@receivingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "approxSpeed": "约 {speed}",
+  "@approxSpeed": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "totalSizeLine": "合计 {size}",
+  "@totalSizeLine": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "shareRecordTitle": "分享记录",
+  "transferCompleted": "已完成",
+  "transferInProgress": "传输中",
+  "transferEnded": "已结束",
+  "timeRemaining": "剩余 {mm}:{ss}",
+  "@timeRemaining": {
+    "placeholders": {
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
+    }
+  },
+  "receiverLabel": "接收方",
+  "shareAllReceivedHint": "对方已成功接收本次分享的全部文件。",
+  "shareTransferringHint": "正在向对方设备传输文件，请保持本应用在前台或勿断网。",
+  "shareWaitAcceptHint": "对端需在消息里「接收」后才会开始传输；无人接受 2 分钟后自动取消。",
+  "copiedToClipboard": "已复制到剪贴板",
+  "copyAction": "复制",
+  "closeAction": "关闭",
+  "cancelSharingAction": "取消分享",
+  "processingPercent": "正在处理... {percent}%",
+  "@processingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseAvatar": "选择头像",
+  "newFolderDialogTitle": "新建文件夹",
+  "folderNameHint": "文件夹名称",
+  "createFolderButton": "创建",
+  "folderNameEmpty": "请输入文件夹名称",
+  "folderNameInvalidChars": "文件夹名称不能包含 / 或 \\",
+  "createFolderFailed": "创建失败: {error}",
+  "@createFolderFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "rootDirectory": "根目录",
+  "notificationIncomingTitle": "收到新的文件请求",
+  "notificationIncomingBody": "{sender} 正在发送：{file}",
+  "@notificationIncomingBody": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationCompleteTitle": "文件接收完成",
+  "notificationCompleteBody": "{file}（来自 {sender}）",
+  "@notificationCompleteBody": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      },
+      "sender": {
+        "type": "String"
+      }
+    }
+  },
+  "trayOpenApp": "打开 {appName}",
+  "@trayOpenApp": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "trayQuit": "退出",
+  "showInFolder": "在文件夹中显示",
+  "signalingConnectFailed": "连接信令服务器失败",
+  "signalingWaitTimeout": "等待超时",
+  "webSocketError": "WebSocket 错误",
+  "invalidPickupCode": "取件码无效"
 }

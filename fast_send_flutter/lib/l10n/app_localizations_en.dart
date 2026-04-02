@@ -27,6 +27,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloud => 'Cloud';
 
   @override
+  String get nearby => 'Nearby';
+
+  @override
+  String get messages => 'Messages';
+
+  @override
   String get deviceInfo => 'Device Info';
 
   @override
@@ -171,4 +177,501 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unknownError => 'Unknown Error';
+
+  @override
+  String get langChineseSimplified => 'Chinese (Simplified)';
+
+  @override
+  String get langEnglish => 'English';
+
+  @override
+  String get langJapanese => 'Japanese';
+
+  @override
+  String get langKorean => 'Korean';
+
+  @override
+  String get langSpanish => 'Spanish';
+
+  @override
+  String get nearbyDevices => 'Nearby devices';
+
+  @override
+  String selectedCount(int count) {
+    return 'Selected $count';
+  }
+
+  @override
+  String get findingNearbyUsers => 'Finding nearby users...';
+
+  @override
+  String get lookingForNearbyDevices => 'Looking for nearby devices...';
+
+  @override
+  String get offline => 'Offline';
+
+  @override
+  String get weakSignal => 'Weak signal';
+
+  @override
+  String get youLabel => 'You';
+
+  @override
+  String get emptyFolder => 'Empty folder';
+
+  @override
+  String get shareAction => 'Share';
+
+  @override
+  String get deleteAction => 'Delete';
+
+  @override
+  String get columnName => 'Name';
+
+  @override
+  String get columnModified => 'Modified';
+
+  @override
+  String get columnSize => 'Size';
+
+  @override
+  String get columnActions => 'Actions';
+
+  @override
+  String get shareTooltip => 'Share';
+
+  @override
+  String get deleteTooltip => 'Delete';
+
+  @override
+  String get storagePreparingTitle => 'Preparing storage';
+
+  @override
+  String get storagePreparingSubtitle =>
+      'Files will be saved to the app directory on this device.';
+
+  @override
+  String get storageNotSetTitle => 'No storage folder yet';
+
+  @override
+  String get storageNotSetSubtitle =>
+      'Choose a folder to use as cloud storage.';
+
+  @override
+  String get chooseStorageFolder => 'Choose storage folder';
+
+  @override
+  String get loadFailed => 'Load failed';
+
+  @override
+  String get openSystemSettingsForAccess => 'Open System Settings for access';
+
+  @override
+  String get changeStorageDirectory => 'Change storage folder';
+
+  @override
+  String get confirmDelete => 'Confirm delete';
+
+  @override
+  String deleteEntryConfirm(String name, String suffix) {
+    return 'Delete \"$name\"?$suffix';
+  }
+
+  @override
+  String get deleteFolderSuffix =>
+      '\nAll contents in this folder will be deleted.';
+
+  @override
+  String get newFolderTooltip => 'New folder';
+
+  @override
+  String get uploadFileTooltip => 'Upload files';
+
+  @override
+  String get refreshTooltip => 'Refresh';
+
+  @override
+  String get cloudDirectoryLabel => 'Cloud folder';
+
+  @override
+  String get downloadDirectoryLabel => 'Downloads folder';
+
+  @override
+  String clipboardImageSaveFailed(String error) {
+    return 'Could not save clipboard image: $error';
+  }
+
+  @override
+  String get enterTextOrAddFiles => 'Enter text or add at least one file';
+
+  @override
+  String get selectOnlineReceiversFirst =>
+      'Select online receiver devices above first';
+
+  @override
+  String sendFailed(String error) {
+    return 'Send failed: $error';
+  }
+
+  @override
+  String get inputHintDesktop =>
+      'Type text, ⌘V to paste screenshots, or drop files…';
+
+  @override
+  String get inputHintMobile => 'Type text or choose files…';
+
+  @override
+  String get addFilesTooltip => 'Add files';
+
+  @override
+  String get sendButtonLabel => 'Send';
+
+  @override
+  String get sendingButton => 'Sending…';
+
+  @override
+  String get removeTooltip => 'Remove';
+
+  @override
+  String get shareScreenTitle => 'Share';
+
+  @override
+  String get selectAtLeastOneReceiver =>
+      'Select at least one receiver device above';
+
+  @override
+  String get shareInviteSentSnack =>
+      'Invite sent. Transfer starts after the recipient accepts in Messages.';
+
+  @override
+  String get expireNever => 'Never expires';
+
+  @override
+  String get expireOneHour => '1 hour';
+
+  @override
+  String get expireOneDay => '24 hours';
+
+  @override
+  String get expireSevenDays => '7 days';
+
+  @override
+  String get expireThirtyDays => '30 days';
+
+  @override
+  String get shareLinkCopied => 'Share link copied';
+
+  @override
+  String createShareFailed(String error) {
+    return 'Could not create share: $error';
+  }
+
+  @override
+  String get cancelShareTitle => 'Stop sharing';
+
+  @override
+  String get cancelShareBody =>
+      'Stop sharing this file? Others will no longer be able to download it with the current link.';
+
+  @override
+  String get backButton => 'Back';
+
+  @override
+  String get cancelShareButton => 'Stop sharing';
+
+  @override
+  String get shareCancelled => 'Sharing stopped';
+
+  @override
+  String cancelShareFailed(String error) {
+    return 'Could not stop sharing: $error';
+  }
+
+  @override
+  String shareLoadingTitle(String name) {
+    return 'Share \"$name\"';
+  }
+
+  @override
+  String get closeButton => 'Close';
+
+  @override
+  String get createShareDialogTitle => 'Create share';
+
+  @override
+  String fileColon(String name) {
+    return 'File: $name';
+  }
+
+  @override
+  String get setPassword => 'Password protect';
+
+  @override
+  String get enterPassword => 'Enter password';
+
+  @override
+  String get shareCreatedTitle => 'Share created';
+
+  @override
+  String get shareExistingDescription =>
+      'This file is already being shared. Copy the code or link below.';
+
+  @override
+  String get connectForShareLink =>
+      'Connect to the server to see the share link in My Shares.';
+
+  @override
+  String get passwordProtected => 'Password enabled';
+
+  @override
+  String expiresAt(String when) {
+    return 'Expires: $when';
+  }
+
+  @override
+  String get doneButton => 'Done';
+
+  @override
+  String get createShareAction => 'Create share';
+
+  @override
+  String get copyShareLinkTooltip => 'Copy share link';
+
+  @override
+  String get pickCloudStorageTitle => 'Choose cloud storage folder';
+
+  @override
+  String get pickDownloadDirTitle => 'Choose downloads folder';
+
+  @override
+  String get messagePageTitle => 'Messages';
+
+  @override
+  String get clearMessagesTooltip => 'Clear';
+
+  @override
+  String get noMessagesYet => 'No messages yet';
+
+  @override
+  String get noMessagesSubtitle =>
+      'When a device sends you files, they will appear here.';
+
+  @override
+  String get waitAcceptInMessage =>
+      'Waiting for the recipient to accept in Messages (valid for 2 minutes)';
+
+  @override
+  String get retrySend => 'Retry send';
+
+  @override
+  String get reject => 'Decline';
+
+  @override
+  String get receiveAction => 'Receive';
+
+  @override
+  String notifySenderFailed(String error) {
+    return 'Could not notify sender: $error';
+  }
+
+  @override
+  String get fileNotFoundMaybeMoved =>
+      'Local file not found. It may have been moved or deleted.';
+
+  @override
+  String get revealInFolderNotSupported =>
+      'This platform cannot reveal the file in a folder.';
+
+  @override
+  String get shareRestarted => 'Share restarted';
+
+  @override
+  String get localFileGoneCannotRetry =>
+      'Local file is missing or moved; cannot retry.';
+
+  @override
+  String retryFailed(String error) {
+    return 'Retry failed: $error';
+  }
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get statusAccepted => 'Accepted';
+
+  @override
+  String get statusReceiving => 'Receiving';
+
+  @override
+  String get statusCompleted => 'Completed';
+
+  @override
+  String get statusRejected => 'Declined';
+
+  @override
+  String get statusFailed => 'Failed';
+
+  @override
+  String get statusExpired => 'Expired';
+
+  @override
+  String get meLabel => 'Me';
+
+  @override
+  String get sendingBadge => 'Send';
+
+  @override
+  String messageSendToRecipients(String names) {
+    return 'To $names';
+  }
+
+  @override
+  String recipientNDevices(int count) {
+    return '$count devices';
+  }
+
+  @override
+  String recipientTwo(String name1, String name2) {
+    return '$name1, $name2';
+  }
+
+  @override
+  String recipientMany(String name1, String name2, int total) {
+    return '$name1, $name2 ($total devices)';
+  }
+
+  @override
+  String sendingPercent(String percent) {
+    return 'Sending $percent%';
+  }
+
+  @override
+  String receivingPercent(String percent) {
+    return 'Receiving $percent%';
+  }
+
+  @override
+  String approxSpeed(String speed) {
+    return '~ $speed';
+  }
+
+  @override
+  String totalSizeLine(String size) {
+    return 'Total $size';
+  }
+
+  @override
+  String get shareRecordTitle => 'Share';
+
+  @override
+  String get transferCompleted => 'Completed';
+
+  @override
+  String get transferInProgress => 'Transferring';
+
+  @override
+  String get transferEnded => 'Ended';
+
+  @override
+  String timeRemaining(String mm, String ss) {
+    return '$mm:$ss left';
+  }
+
+  @override
+  String get receiverLabel => 'Recipients';
+
+  @override
+  String get shareAllReceivedHint =>
+      'The recipient received all files in this share.';
+
+  @override
+  String get shareTransferringHint =>
+      'Transferring to the recipient. Keep this app open and stay online.';
+
+  @override
+  String get shareWaitAcceptHint =>
+      'The recipient must tap Receive in Messages before transfer starts. Cancels if no one accepts within 2 minutes.';
+
+  @override
+  String get copiedToClipboard => 'Copied to clipboard';
+
+  @override
+  String get copyAction => 'Copy';
+
+  @override
+  String get closeAction => 'Close';
+
+  @override
+  String get cancelSharingAction => 'Cancel share';
+
+  @override
+  String processingPercent(String percent) {
+    return 'Processing… $percent%';
+  }
+
+  @override
+  String get chooseAvatar => 'Choose avatar';
+
+  @override
+  String get newFolderDialogTitle => 'New folder';
+
+  @override
+  String get folderNameHint => 'Folder name';
+
+  @override
+  String get createFolderButton => 'Create';
+
+  @override
+  String get folderNameEmpty => 'Please enter a folder name';
+
+  @override
+  String get folderNameInvalidChars => 'Name cannot contain / or \\';
+
+  @override
+  String createFolderFailed(String error) {
+    return 'Could not create folder: $error';
+  }
+
+  @override
+  String get rootDirectory => 'Root';
+
+  @override
+  String get notificationIncomingTitle => 'Incoming file request';
+
+  @override
+  String notificationIncomingBody(String sender, String file) {
+    return '$sender is sending: $file';
+  }
+
+  @override
+  String get notificationCompleteTitle => 'Receive complete';
+
+  @override
+  String notificationCompleteBody(String file, String sender) {
+    return '$file (from $sender)';
+  }
+
+  @override
+  String trayOpenApp(String appName) {
+    return 'Open $appName';
+  }
+
+  @override
+  String get trayQuit => 'Quit';
+
+  @override
+  String get showInFolder => 'Show in folder';
+
+  @override
+  String get signalingConnectFailed => 'Could not connect to signaling server';
+
+  @override
+  String get signalingWaitTimeout => 'Timed out';
+
+  @override
+  String get webSocketError => 'WebSocket connection error';
+
+  @override
+  String get invalidPickupCode => 'Invalid pickup code';
 }

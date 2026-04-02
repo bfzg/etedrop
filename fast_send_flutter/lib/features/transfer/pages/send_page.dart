@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 import '../../lan/models/lan_device.dart';
 import '../../lan/providers/lan_provider.dart';
@@ -89,9 +90,10 @@ class _SendPageState extends ConsumerState<SendPage> {
 
     if (targets.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('请先在上方选择至少一个接收设备')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.selectAtLeastOneReceiver)),
+        );
       }
       return;
     }
@@ -114,14 +116,16 @@ class _SendPageState extends ConsumerState<SendPage> {
       _activeRecipients = List<LanDevice>.from(targets);
     });
     if (mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已发送分享邀请，对方在消息里接受后开始传输')));
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.shareInviteSentSnack)),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
     final devices = ref.watch(lanManagerProvider);
 
@@ -130,7 +134,7 @@ class _SendPageState extends ConsumerState<SendPage> {
     );
 
     return Scaffold(
-      appBar: isDesktopLayout ? null : AppBar(title: const Text('分享')),
+      appBar: isDesktopLayout ? null : AppBar(title: Text(l10n.shareScreenTitle)),
       body: _buildBody(context),
     );
   }

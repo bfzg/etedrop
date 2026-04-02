@@ -1,0 +1,405 @@
+{
+  "@@locale": "es",
+  "appName": "Eddy",
+  "home": "Inicio",
+  "send": "Enviar",
+  "receive": "Recibir",
+  "settings": "Ajustes",
+  "cloud": "Nube",
+  "nearby": "Cerca",
+  "messages": "Mensajes",
+  "deviceInfo": "Información del dispositivo",
+  "storage": "Almacenamiento",
+  "desktopIntegration": "Integración de escritorio",
+  "appearance": "Apariencia",
+  "about": "Acerca de",
+  "connected": "Conectado",
+  "disconnected": "Desconectado",
+  "connect": "Conectar",
+  "deviceId": "ID del dispositivo",
+  "editDeviceName": "Editar nombre del dispositivo",
+  "storagePath": "Ruta de almacenamiento",
+  "notSet": "Sin definir",
+  "launchAtStartup": "Abrir al iniciar",
+  "minimizeToTray": "Minimizar a la bandeja",
+  "minimizeToTrayDesc": "Ocultar la ventana en la bandeja al cerrar",
+  "darkMode": "Modo oscuro",
+  "followSystem": "Seguir el sistema",
+  "lightMode": "Modo claro",
+  "language": "Idioma",
+  "cancel": "Cancelar",
+  "confirm": "Confirmar",
+  "selectTheme": "Elegir tema",
+  "inputDeviceName": "Nombre del dispositivo",
+  "sendFile": "Enviar archivo",
+  "selectFile": "Seleccionar archivo",
+  "selectFileToSend": "Selecciona un archivo para enviar",
+  "reselect": "Volver a elegir",
+  "startSend": "Empezar envío",
+  "connecting": "Conectando...",
+  "waitingForReceiver": "Esperando al receptor...",
+  "waitingForSender": "Esperando al emisor...",
+  "pickupCode": "Código de recogida",
+  "copied": "Copiado",
+  "sending": "Enviando...",
+  "sendComplete": "¡Envío completado!",
+  "sendNewFile": "Enviar otro archivo",
+  "error": "Error",
+  "retry": "Reintentar",
+  "receiveFile": "Recibir archivo",
+  "inputPickupCode": "Introducir código de recogida",
+  "inputPickupCodeHint": "Introduce el código para recibir",
+  "startReceive": "Empezar a recibir",
+  "receiving": "Recibiendo...",
+  "receiveComplete": "¡Recepción completada!",
+  "saveFile": "Guardar archivo",
+  "receiveNewFile": "Recibir otro archivo",
+  "fileSaved": "Archivo guardado en: {path}",
+  "@fileSaved": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "unknownError": "Error desconocido",
+  "langChineseSimplified": "Chino (simplificado)",
+  "langEnglish": "Inglés",
+  "langJapanese": "Japonés",
+  "langKorean": "Coreano",
+  "langSpanish": "Español",
+  "nearbyDevices": "Dispositivos cercanos",
+  "selectedCount": "Seleccionados: {count}",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "findingNearbyUsers": "Buscando usuarios...",
+  "lookingForNearbyDevices": "Buscando dispositivos cercanos...",
+  "offline": "Sin conexión",
+  "weakSignal": "Señal débil",
+  "youLabel": "Tú",
+  "emptyFolder": "Carpeta vacía",
+  "shareAction": "Compartir",
+  "deleteAction": "Eliminar",
+  "columnName": "Nombre",
+  "columnModified": "Modificado",
+  "columnSize": "Tamaño",
+  "columnActions": "Acciones",
+  "shareTooltip": "Compartir",
+  "deleteTooltip": "Eliminar",
+  "storagePreparingTitle": "Preparando almacenamiento",
+  "storagePreparingSubtitle": "Los archivos se guardarán en la carpeta de la app en este dispositivo.",
+  "storageNotSetTitle": "Aún no hay carpeta de almacenamiento",
+  "storageNotSetSubtitle": "Elige una carpeta para la nube.",
+  "chooseStorageFolder": "Elegir carpeta",
+  "loadFailed": "Error al cargar",
+  "openSystemSettingsForAccess": "Abrir Ajustes del sistema para permitir acceso",
+  "changeStorageDirectory": "Cambiar carpeta de almacenamiento",
+  "confirmDelete": "Confirmar eliminación",
+  "deleteEntryConfirm": "¿Eliminar «{name}»?{suffix}",
+  "@deleteEntryConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFolderSuffix": "\nSe eliminará todo el contenido de la carpeta.",
+  "newFolderTooltip": "Nueva carpeta",
+  "uploadFileTooltip": "Subir archivos",
+  "refreshTooltip": "Actualizar",
+  "cloudDirectoryLabel": "Carpeta de la nube",
+  "downloadDirectoryLabel": "Carpeta de descargas",
+  "clipboardImageSaveFailed": "No se pudo guardar la imagen del portapapeles: {error}",
+  "@clipboardImageSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "enterTextOrAddFiles": "Escribe texto o añade al menos un archivo",
+  "selectOnlineReceiversFirst": "Primero selecciona dispositivos receptores en línea arriba",
+  "sendFailed": "Error al enviar: {error}",
+  "@sendFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "inputHintDesktop": "Escribe texto, ⌘V para pegar capturas o arrastra archivos…",
+  "inputHintMobile": "Escribe texto o elige archivos…",
+  "addFilesTooltip": "Añadir archivos",
+  "sendButtonLabel": "Enviar",
+  "sendingButton": "Enviando…",
+  "removeTooltip": "Quitar",
+  "shareScreenTitle": "Compartir",
+  "selectAtLeastOneReceiver": "Selecciona al menos un receptor arriba",
+  "shareInviteSentSnack": "Invitación enviada. La transferencia empezará cuando el otro la acepte en Mensajes.",
+  "expireNever": "Sin caducidad",
+  "expireOneHour": "1 hora",
+  "expireOneDay": "24 horas",
+  "expireSevenDays": "7 días",
+  "expireThirtyDays": "30 días",
+  "shareLinkCopied": "Enlace de compartición copiado",
+  "createShareFailed": "No se pudo crear el recurso compartido: {error}",
+  "@createShareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelShareTitle": "Dejar de compartir",
+  "cancelShareBody": "¿Dejar de compartir este archivo? Ya no se podrá descargar con el enlace actual.",
+  "backButton": "Atrás",
+  "cancelShareButton": "Dejar de compartir",
+  "shareCancelled": "Compartición cancelada",
+  "cancelShareFailed": "Error al dejar de compartir: {error}",
+  "@cancelShareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareLoadingTitle": "Compartir «{name}»",
+  "@shareLoadingTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "closeButton": "Cerrar",
+  "createShareDialogTitle": "Crear recurso compartido",
+  "fileColon": "Archivo: {name}",
+  "@fileColon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setPassword": "Proteger con contraseña",
+  "enterPassword": "Introducir contraseña",
+  "shareCreatedTitle": "Recurso compartido creado",
+  "shareExistingDescription": "Este archivo ya se está compartiendo. Copia el código o el enlace de abajo.",
+  "connectForShareLink": "Conéctate al servidor para ver el enlace en Mis compartidos.",
+  "passwordProtected": "Contraseña activada",
+  "expiresAt": "Caduca: {when}",
+  "@expiresAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "doneButton": "Hecho",
+  "createShareAction": "Crear compartición",
+  "copyShareLinkTooltip": "Copiar enlace de compartición",
+  "pickCloudStorageTitle": "Elegir carpeta de la nube",
+  "pickDownloadDirTitle": "Elegir carpeta de descargas",
+  "messagePageTitle": "Mensajes",
+  "clearMessagesTooltip": "Vaciar",
+  "noMessagesYet": "No hay mensajes",
+  "noMessagesSubtitle": "Cuando un dispositivo te envíe archivos, aparecerán aquí.",
+  "waitAcceptInMessage": "Esperando que el otro acepte en Mensajes (válido 2 minutos)",
+  "retrySend": "Reintentar envío",
+  "reject": "Rechazar",
+  "receiveAction": "Recibir",
+  "notifySenderFailed": "No se pudo notificar al remitente: {error}",
+  "@notifySenderFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotFoundMaybeMoved": "Archivo local no encontrado; puede haberse movido o eliminado.",
+  "revealInFolderNotSupported": "Esta plataforma no puede mostrar el archivo en la carpeta.",
+  "shareRestarted": "Compartición reiniciada",
+  "localFileGoneCannotRetry": "Falta el archivo local; no se puede reintentar.",
+  "retryFailed": "Error al reintentar: {error}",
+  "@retryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusPending": "Pendiente",
+  "statusAccepted": "Aceptado",
+  "statusReceiving": "Recibiendo",
+  "statusCompleted": "Completado",
+  "statusRejected": "Rechazado",
+  "statusFailed": "Fallido",
+  "statusExpired": "Caducado",
+  "meLabel": "Yo",
+  "sendingBadge": "Enviar",
+  "messageSendToRecipients": "Para {names}",
+  "@messageSendToRecipients": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientNDevices": "{count} dispositivos",
+  "@recipientNDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientTwo": "{name1}, {name2}",
+  "@recipientTwo": {
+    "placeholders": {
+      "name1": {
+        "type": "String"
+      },
+      "name2": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientMany": "{name1}, {name2} ({total} dispositivos)",
+  "@recipientMany": {
+    "placeholders": {
+      "name1": {
+        "type": "String"
+      },
+      "name2": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sendingPercent": "Enviando {percent}%",
+  "@sendingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingPercent": "Recibiendo {percent}%",
+  "@receivingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "approxSpeed": "~ {speed}",
+  "@approxSpeed": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "totalSizeLine": "Total {size}",
+  "@totalSizeLine": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "shareRecordTitle": "Compartir",
+  "transferCompleted": "Completado",
+  "transferInProgress": "Transfiriendo",
+  "transferEnded": "Finalizado",
+  "timeRemaining": "Quedan {mm}:{ss}",
+  "@timeRemaining": {
+    "placeholders": {
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
+    }
+  },
+  "receiverLabel": "Destinatarios",
+  "shareAllReceivedHint": "El destinatario recibió todos los archivos de este recurso compartido.",
+  "shareTransferringHint": "Transfiriendo al destinatario. Mantén la app abierta y la conexión.",
+  "shareWaitAcceptHint": "El destinatario debe pulsar Recibir en Mensajes para empezar. Se cancela si nadie acepta en 2 minutos.",
+  "copiedToClipboard": "Copiado al portapapeles",
+  "copyAction": "Copiar",
+  "closeAction": "Cerrar",
+  "cancelSharingAction": "Cancelar compartición",
+  "processingPercent": "Procesando… {percent}%",
+  "@processingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseAvatar": "Elegir avatar",
+  "newFolderDialogTitle": "Nueva carpeta",
+  "folderNameHint": "Nombre de la carpeta",
+  "createFolderButton": "Crear",
+  "folderNameEmpty": "Introduce un nombre de carpeta",
+  "folderNameInvalidChars": "El nombre no puede contener / ni \\",
+  "createFolderFailed": "No se pudo crear la carpeta: {error}",
+  "@createFolderFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "rootDirectory": "Raíz",
+  "notificationIncomingTitle": "Nueva solicitud de archivo",
+  "notificationIncomingBody": "{sender} está enviando: {file}",
+  "@notificationIncomingBody": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationCompleteTitle": "Recepción completada",
+  "notificationCompleteBody": "{file} (de {sender})",
+  "@notificationCompleteBody": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      },
+      "sender": {
+        "type": "String"
+      }
+    }
+  },
+  "trayOpenApp": "Abrir {appName}",
+  "@trayOpenApp": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "trayQuit": "Salir",
+  "showInFolder": "Mostrar en carpeta",
+  "signalingConnectFailed": "No se pudo conectar al servidor de señalización",
+  "signalingWaitTimeout": "Tiempo de espera agotado",
+  "webSocketError": "Error de conexión WebSocket",
+  "invalidPickupCode": "Código de recogida no válido"
+}

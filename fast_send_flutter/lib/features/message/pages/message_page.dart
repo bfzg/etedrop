@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 import '../providers/message_provider.dart';
 import '../widgets/message_card.dart';
@@ -11,6 +12,7 @@ class MessagePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final messages = ref.watch(messageListProvider);
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
 
@@ -18,14 +20,14 @@ class MessagePage extends ConsumerWidget {
       appBar: isDesktopLayout
           ? null
           : AppBar(
-              title: const Text('消息'),
+              title: Text(l10n.messagePageTitle),
               actions: [
                 if (messages.isNotEmpty)
                   IconButton(
                     onPressed: () =>
                         ref.read(messageListProvider.notifier).clearAll(),
                     icon: const Icon(Icons.delete_sweep_outlined),
-                    tooltip: '清空',
+                    tooltip: l10n.clearMessagesTooltip,
                   ),
               ],
             ),

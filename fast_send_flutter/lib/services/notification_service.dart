@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import '../l10n/l10n_utils.dart';
+
 class NotificationService {
   NotificationService._();
 
@@ -90,10 +92,11 @@ class NotificationService {
     final id = _safeNotificationId(
       '$senderName|$fileName|${DateTime.now().millisecondsSinceEpoch}',
     );
+    final l10n = loadAppLocalizationsSync();
     await _plugin.show(
       id: id,
-      title: '收到新的文件请求',
-      body: '$senderName 正在发送：$fileName',
+      title: l10n.notificationIncomingTitle,
+      body: l10n.notificationIncomingBody(senderName, fileName),
       notificationDetails: details,
     );
   }
@@ -119,10 +122,11 @@ class NotificationService {
     );
 
     final id = _safeNotificationId('done|$senderName|$fileName');
+    final l10n = loadAppLocalizationsSync();
     await _plugin.show(
       id: id,
-      title: '文件接收完成',
-      body: '$fileName（来自 $senderName）',
+      title: l10n.notificationCompleteTitle,
+      body: l10n.notificationCompleteBody(fileName, senderName),
       notificationDetails: details,
     );
   }

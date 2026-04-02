@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../styles/styles.dart';
 
@@ -17,6 +18,7 @@ class SendUploadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SizedBox(
       width: 400,
       child: Column(
@@ -38,7 +40,7 @@ class SendUploadingView extends StatelessWidget {
           LinearProgressIndicator(value: progress),
           Gap.xs,
           Text(
-            '正在处理... ${(progress * 100).toStringAsFixed(0)}%',
+            l10n.processingPercent((progress * 100).toStringAsFixed(0)),
             style: AppTextStyles.hint(context),
           ),
         ],

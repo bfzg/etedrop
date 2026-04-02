@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../providers/cloud_provider.dart';
 
 /// 面包屑导航
@@ -10,6 +11,7 @@ class BreadcrumbNav extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final segments = ref.watch(breadcrumbSegmentsProvider);
     final theme = Theme.of(context);
 
@@ -27,7 +29,10 @@ class BreadcrumbNav extends ConsumerWidget {
                 children: [
                   Icon(Icons.home, size: 18, color: theme.colorScheme.primary),
                   const SizedBox(width: 4),
-                  Text('根目录', style: TextStyle(color: theme.colorScheme.primary, fontSize: 14)),
+                  Text(
+                    l10n.rootDirectory,
+                    style: TextStyle(color: theme.colorScheme.primary, fontSize: 14),
+                  ),
                 ],
               ),
             ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/utils/file_type_icon.dart';
 import '../models/fs_entry.dart';
@@ -20,6 +21,7 @@ class FileTableView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     if (entries.isEmpty) {
@@ -34,7 +36,7 @@ class FileTableView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '空文件夹',
+              l10n.emptyFolder,
               style: TextStyle(
                 color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 16,
@@ -65,19 +67,19 @@ class FileTableView extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text('名称', style: headerStyle),
+                        child: Text(l10n.columnName, style: headerStyle),
                       ),
                       SizedBox(
                         width: 150,
-                        child: Text('修改时间', style: headerStyle),
+                        child: Text(l10n.columnModified, style: headerStyle),
                       ),
                       SizedBox(
                         width: 80,
-                        child: Text('大小', style: headerStyle),
+                        child: Text(l10n.columnSize, style: headerStyle),
                       ),
                       SizedBox(
                         width: 100,
-                        child: Text('操作', style: headerStyle),
+                        child: Text(l10n.columnActions, style: headerStyle),
                       ),
                     ],
                   ),
@@ -135,12 +137,12 @@ class FileTableView extends StatelessWidget {
                                     children: [
                                       IconButton(
                                         icon: const Icon(Icons.share, size: 18),
-                                        tooltip: '分享',
+                                        tooltip: l10n.shareTooltip,
                                         onPressed: () => onShare(entry),
                                       ),
                                       IconButton(
                                         icon: const Icon(Icons.delete, size: 18),
-                                        tooltip: '删除',
+                                        tooltip: l10n.deleteTooltip,
                                         color: theme.colorScheme.error,
                                         onPressed: () => onDelete(entry),
                                       ),

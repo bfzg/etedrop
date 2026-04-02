@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 
 /// 未设置存储目录时的空状态视图
@@ -11,6 +12,7 @@ class EmptyStorageView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final isDesktop = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
 
@@ -27,14 +29,14 @@ class EmptyStorageView extends StatelessWidget {
             ),
             Gap.md,
             Text(
-              isDesktop ? '尚未设置存储目录' : '正在准备存储目录',
+              isDesktop ? l10n.storageNotSetTitle : l10n.storagePreparingTitle,
               style: theme.textTheme.titleLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             Gap.xs,
             Text(
-              isDesktop ? '请选择一个文件夹作为网盘存储目录' : '手机端将自动使用应用专用目录保存文件',
+              isDesktop ? l10n.storageNotSetSubtitle : l10n.storagePreparingSubtitle,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant.withValues(
                   alpha: 0.7,
@@ -46,7 +48,7 @@ class EmptyStorageView extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onSelectDir,
                 icon: const Icon(Icons.folder_open),
-                label: const Text('选择存储目录'),
+                label: Text(l10n.chooseStorageFolder),
               ),
           ],
         ),

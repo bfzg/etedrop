@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../../widgets/app_layout.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../features/cloud/pages/cloud_page.dart';
@@ -15,33 +16,32 @@ class Routes {
   static const settings = '/settings';
 }
 
-// 导航项配置列表
-final List<NavItemConfig> navItems = [
-  NavItemConfig(
-    label: '网盘',
-    outlinedIcon: Icons.cloud_outlined,
-    roundedIcon: Icons.cloud_rounded,
-    path: Routes.cloud,
-  ),
-  NavItemConfig(
-    label: '附近',
-    outlinedIcon: Icons.wifi_tethering,
-    roundedIcon: Icons.wifi_tethering,
-    path: Routes.send,
-  ),
-  NavItemConfig(
-    label: '消息',
-    outlinedIcon: Icons.chat_bubble_outline,
-    roundedIcon: Icons.chat_bubble,
-    path: Routes.messages,
-  ),
-  NavItemConfig(
-    label: '设置',
-    outlinedIcon: Icons.settings_outlined,
-    roundedIcon: Icons.settings_rounded,
-    path: Routes.settings,
-  ),
-];
+List<NavItemConfig> buildNavItems(AppLocalizations l10n) => [
+      NavItemConfig(
+        label: l10n.cloud,
+        outlinedIcon: Icons.cloud_outlined,
+        roundedIcon: Icons.cloud_rounded,
+        path: Routes.cloud,
+      ),
+      NavItemConfig(
+        label: l10n.nearby,
+        outlinedIcon: Icons.wifi_tethering,
+        roundedIcon: Icons.wifi_tethering,
+        path: Routes.send,
+      ),
+      NavItemConfig(
+        label: l10n.messages,
+        outlinedIcon: Icons.chat_bubble_outline,
+        roundedIcon: Icons.chat_bubble,
+        path: Routes.messages,
+      ),
+      NavItemConfig(
+        label: l10n.settings,
+        outlinedIcon: Icons.settings_outlined,
+        roundedIcon: Icons.settings_rounded,
+        path: Routes.settings,
+      ),
+    ];
 
 // 定义全局 navigatorKey
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -53,7 +53,11 @@ final router = GoRouter(
     // 底部导航页面
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {
-        return AppLayout(navigationShell: navigationShell, items: navItems);
+        final l10n = AppLocalizations.of(context)!;
+        return AppLayout(
+          navigationShell: navigationShell,
+          items: buildNavItems(l10n),
+        );
       },
       branches: [
         StatefulShellBranch(

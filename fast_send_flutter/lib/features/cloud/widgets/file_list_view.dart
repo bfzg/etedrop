@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/utils/file_type_icon.dart';
 import '../models/fs_entry.dart';
@@ -25,6 +26,7 @@ class FileListView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     if (entries.isEmpty) {
@@ -39,7 +41,7 @@ class FileListView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              '空文件夹',
+              l10n.emptyFolder,
               style: TextStyle(
                 color: theme.colorScheme.onSurfaceVariant,
                 fontSize: 16,
@@ -58,6 +60,7 @@ class FileListView extends StatelessWidget {
         final entry = entries[index];
         return _FileListTile(
           entry: entry,
+          l10n: l10n,
           onTap: onTap,
           onDelete: onDelete,
           onShare: onShare,
@@ -69,12 +72,14 @@ class FileListView extends StatelessWidget {
 
 class _FileListTile extends StatelessWidget {
   final FsEntry entry;
+  final AppLocalizations l10n;
   final FileEntryCallback? onTap;
   final FileEntryCallback? onDelete;
   final FileEntryCallback? onShare;
 
   const _FileListTile({
     required this.entry,
+    required this.l10n,
     this.onTap,
     this.onDelete,
     this.onShare,
@@ -122,13 +127,13 @@ class _FileListTile extends StatelessWidget {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'share',
                   child: Row(
                     children: [
-                      Icon(Icons.share, size: 18),
-                      SizedBox(width: 8),
-                      Text('分享'),
+                      const Icon(Icons.share, size: 18),
+                      const SizedBox(width: 8),
+                      Text(l10n.shareAction),
                     ],
                   ),
                 ),
@@ -138,7 +143,7 @@ class _FileListTile extends StatelessWidget {
                     children: [
                       Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
                       const SizedBox(width: 8),
-                      Text('删除', style: TextStyle(color: colorScheme.error)),
+                      Text(l10n.deleteAction, style: TextStyle(color: colorScheme.error)),
                     ],
                   ),
                 ),

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../l10n/app_localizations.dart';
+
 /// 新建文件夹对话框
 /// 对应 Electron: src/components/cloud/new-folder-dialog.tsx
 class NewFolderDialog extends StatefulWidget {
@@ -10,7 +12,10 @@ class NewFolderDialog extends StatefulWidget {
   @override
   State<NewFolderDialog> createState() => _NewFolderDialogState();
 
-  static Future<void> show(BuildContext context, Future<void> Function(String name) onConfirm) {
+  static Future<void> show(
+    BuildContext context,
+    Future<void> Function(String name) onConfirm,
+  ) {
     return showDialog(
       context: context,
       builder: (_) => NewFolderDialog(onConfirm: onConfirm),
@@ -30,13 +35,14 @@ class _NewFolderDialogState extends State<NewFolderDialog> {
   }
 
   Future<void> _handleConfirm() async {
+    final l10n = AppLocalizations.of(context)!;
     final name = _controller.text.trim();
     if (name.isEmpty) {
-      setState(() => _error = '请输入文件夹名称');
+      setState(() => _error = l10n.folderNameEmpty);
       return;
     }
     if (name.contains('/') || name.contains('\\')) {
-      setState(() => _error = '文件夹名称不能包含 / 或 \\');
+      setState(() => _error = l10n.folderNameInvalidChars);
       return;
     }
 
@@ -49,7 +55,10 @@ class _NewFolderDialogState extends State<NewFolderDialog> {
       await widget.onConfirm(name);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      if (mounted) setState(() => _error = '创建失败: $e');
+      if (mounted) {
+        final loc = AppLocalizations.of(context)!;
+        setState(() => _error = loc.createFolderFailed('$e'));
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -57,8 +66,9 @@ class _NewFolderDialogState extends State<NewFolderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
-      title: const Text('新建文件夹'),
+      title: Text(l10n.newFolderDialogTitle),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -66,7 +76,7 @@ class _NewFolderDialogState extends State<NewFolderDialog> {
             controller: _controller,
             autofocus: true,
             decoration: InputDecoration(
-              hintText: '文件夹名称',
+              hintText: l10n.folderNameHint,
               errorText: _error,
               border: const OutlineInputBorder(),
             ),
@@ -77,13 +87,17 @@ class _NewFolderDialogState extends State<NewFolderDialog> {
       actions: [
         TextButton(
           onPressed: _loading ? null : () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: _loading ? null : _handleConfirm,
           child: _loading
-              ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Text('创建'),
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.createFolderButton),
         ),
       ],
     );

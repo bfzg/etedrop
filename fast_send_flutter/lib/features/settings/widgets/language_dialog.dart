@@ -34,7 +34,7 @@ Future<void> showLanguageDialog(
                   },
                 ),
                 SelectionOption(
-                  title: '简体中文',
+                  title: l10n.langChineseSimplified,
                   selected: currentLocale?.languageCode == 'zh',
                   onTap: () {
                     ref
@@ -44,12 +44,42 @@ Future<void> showLanguageDialog(
                   },
                 ),
                 SelectionOption(
-                  title: 'English',
+                  title: l10n.langEnglish,
                   selected: currentLocale?.languageCode == 'en',
                   onTap: () {
                     ref
                         .read(localeProvider.notifier)
                         .setLocale(const Locale('en'));
+                    Navigator.of(context).pop();
+                  },
+                ),
+                SelectionOption(
+                  title: l10n.langJapanese,
+                  selected: currentLocale?.languageCode == 'ja',
+                  onTap: () {
+                    ref
+                        .read(localeProvider.notifier)
+                        .setLocale(const Locale('ja'));
+                    Navigator.of(context).pop();
+                  },
+                ),
+                SelectionOption(
+                  title: l10n.langKorean,
+                  selected: currentLocale?.languageCode == 'ko',
+                  onTap: () {
+                    ref
+                        .read(localeProvider.notifier)
+                        .setLocale(const Locale('ko'));
+                    Navigator.of(context).pop();
+                  },
+                ),
+                SelectionOption(
+                  title: l10n.langSpanish,
+                  selected: currentLocale?.languageCode == 'es',
+                  onTap: () {
+                    ref
+                        .read(localeProvider.notifier)
+                        .setLocale(const Locale('es'));
                     Navigator.of(context).pop();
                   },
                 ),

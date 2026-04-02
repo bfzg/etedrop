@@ -1,10 +1,13 @@
 {
+  "@@locale": "en",
   "appName": "Eddy",
   "home": "Home",
   "send": "Send",
   "receive": "Receive",
   "settings": "Settings",
   "cloud": "Cloud",
+  "nearby": "Nearby",
+  "messages": "Messages",
   "deviceInfo": "Device Info",
   "storage": "Storage",
   "desktopIntegration": "Desktop Integration",
@@ -59,5 +62,345 @@
       }
     }
   },
-  "unknownError": "Unknown Error"
+  "unknownError": "Unknown Error",
+  "langChineseSimplified": "Chinese (Simplified)",
+  "langEnglish": "English",
+  "langJapanese": "Japanese",
+  "langKorean": "Korean",
+  "langSpanish": "Spanish",
+  "nearbyDevices": "Nearby devices",
+  "selectedCount": "Selected {count}",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "findingNearbyUsers": "Finding nearby users...",
+  "lookingForNearbyDevices": "Looking for nearby devices...",
+  "offline": "Offline",
+  "weakSignal": "Weak signal",
+  "youLabel": "You",
+  "emptyFolder": "Empty folder",
+  "shareAction": "Share",
+  "deleteAction": "Delete",
+  "columnName": "Name",
+  "columnModified": "Modified",
+  "columnSize": "Size",
+  "columnActions": "Actions",
+  "shareTooltip": "Share",
+  "deleteTooltip": "Delete",
+  "storagePreparingTitle": "Preparing storage",
+  "storagePreparingSubtitle": "Files will be saved to the app directory on this device.",
+  "storageNotSetTitle": "No storage folder yet",
+  "storageNotSetSubtitle": "Choose a folder to use as cloud storage.",
+  "chooseStorageFolder": "Choose storage folder",
+  "loadFailed": "Load failed",
+  "openSystemSettingsForAccess": "Open System Settings for access",
+  "changeStorageDirectory": "Change storage folder",
+  "confirmDelete": "Confirm delete",
+  "deleteEntryConfirm": "Delete \"{name}\"?{suffix}",
+  "@deleteEntryConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteFolderSuffix": "\nAll contents in this folder will be deleted.",
+  "newFolderTooltip": "New folder",
+  "uploadFileTooltip": "Upload files",
+  "refreshTooltip": "Refresh",
+  "cloudDirectoryLabel": "Cloud folder",
+  "downloadDirectoryLabel": "Downloads folder",
+  "clipboardImageSaveFailed": "Could not save clipboard image: {error}",
+  "@clipboardImageSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "enterTextOrAddFiles": "Enter text or add at least one file",
+  "selectOnlineReceiversFirst": "Select online receiver devices above first",
+  "sendFailed": "Send failed: {error}",
+  "@sendFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "inputHintDesktop": "Type text, ⌘V to paste screenshots, or drop files…",
+  "inputHintMobile": "Type text or choose files…",
+  "addFilesTooltip": "Add files",
+  "sendButtonLabel": "Send",
+  "sendingButton": "Sending…",
+  "removeTooltip": "Remove",
+  "shareScreenTitle": "Share",
+  "selectAtLeastOneReceiver": "Select at least one receiver device above",
+  "shareInviteSentSnack": "Invite sent. Transfer starts after the recipient accepts in Messages.",
+  "expireNever": "Never expires",
+  "expireOneHour": "1 hour",
+  "expireOneDay": "24 hours",
+  "expireSevenDays": "7 days",
+  "expireThirtyDays": "30 days",
+  "shareLinkCopied": "Share link copied",
+  "createShareFailed": "Could not create share: {error}",
+  "@createShareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cancelShareTitle": "Stop sharing",
+  "cancelShareBody": "Stop sharing this file? Others will no longer be able to download it with the current link.",
+  "backButton": "Back",
+  "cancelShareButton": "Stop sharing",
+  "shareCancelled": "Sharing stopped",
+  "cancelShareFailed": "Could not stop sharing: {error}",
+  "@cancelShareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareLoadingTitle": "Share \"{name}\"",
+  "@shareLoadingTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "closeButton": "Close",
+  "createShareDialogTitle": "Create share",
+  "fileColon": "File: {name}",
+  "@fileColon": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "setPassword": "Password protect",
+  "enterPassword": "Enter password",
+  "shareCreatedTitle": "Share created",
+  "shareExistingDescription": "This file is already being shared. Copy the code or link below.",
+  "connectForShareLink": "Connect to the server to see the share link in My Shares.",
+  "passwordProtected": "Password enabled",
+  "expiresAt": "Expires: {when}",
+  "@expiresAt": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
+  "doneButton": "Done",
+  "createShareAction": "Create share",
+  "copyShareLinkTooltip": "Copy share link",
+  "pickCloudStorageTitle": "Choose cloud storage folder",
+  "pickDownloadDirTitle": "Choose downloads folder",
+  "messagePageTitle": "Messages",
+  "clearMessagesTooltip": "Clear",
+  "noMessagesYet": "No messages yet",
+  "noMessagesSubtitle": "When a device sends you files, they will appear here.",
+  "waitAcceptInMessage": "Waiting for the recipient to accept in Messages (valid for 2 minutes)",
+  "retrySend": "Retry send",
+  "reject": "Decline",
+  "receiveAction": "Receive",
+  "notifySenderFailed": "Could not notify sender: {error}",
+  "@notifySenderFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "fileNotFoundMaybeMoved": "Local file not found. It may have been moved or deleted.",
+  "revealInFolderNotSupported": "This platform cannot reveal the file in a folder.",
+  "shareRestarted": "Share restarted",
+  "localFileGoneCannotRetry": "Local file is missing or moved; cannot retry.",
+  "retryFailed": "Retry failed: {error}",
+  "@retryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusPending": "Pending",
+  "statusAccepted": "Accepted",
+  "statusReceiving": "Receiving",
+  "statusCompleted": "Completed",
+  "statusRejected": "Declined",
+  "statusFailed": "Failed",
+  "statusExpired": "Expired",
+  "meLabel": "Me",
+  "sendingBadge": "Send",
+  "messageSendToRecipients": "To {names}",
+  "@messageSendToRecipients": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientNDevices": "{count} devices",
+  "@recipientNDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "recipientTwo": "{name1}, {name2}",
+  "@recipientTwo": {
+    "placeholders": {
+      "name1": {
+        "type": "String"
+      },
+      "name2": {
+        "type": "String"
+      }
+    }
+  },
+  "recipientMany": "{name1}, {name2} ({total} devices)",
+  "@recipientMany": {
+    "placeholders": {
+      "name1": {
+        "type": "String"
+      },
+      "name2": {
+        "type": "String"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "sendingPercent": "Sending {percent}%",
+  "@sendingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingPercent": "Receiving {percent}%",
+  "@receivingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "approxSpeed": "~ {speed}",
+  "@approxSpeed": {
+    "placeholders": {
+      "speed": {
+        "type": "String"
+      }
+    }
+  },
+  "totalSizeLine": "Total {size}",
+  "@totalSizeLine": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "shareRecordTitle": "Share",
+  "transferCompleted": "Completed",
+  "transferInProgress": "Transferring",
+  "transferEnded": "Ended",
+  "timeRemaining": "{mm}:{ss} left",
+  "@timeRemaining": {
+    "placeholders": {
+      "mm": {
+        "type": "String"
+      },
+      "ss": {
+        "type": "String"
+      }
+    }
+  },
+  "receiverLabel": "Recipients",
+  "shareAllReceivedHint": "The recipient received all files in this share.",
+  "shareTransferringHint": "Transferring to the recipient. Keep this app open and stay online.",
+  "shareWaitAcceptHint": "The recipient must tap Receive in Messages before transfer starts. Cancels if no one accepts within 2 minutes.",
+  "copiedToClipboard": "Copied to clipboard",
+  "copyAction": "Copy",
+  "closeAction": "Close",
+  "cancelSharingAction": "Cancel share",
+  "processingPercent": "Processing… {percent}%",
+  "@processingPercent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "chooseAvatar": "Choose avatar",
+  "newFolderDialogTitle": "New folder",
+  "folderNameHint": "Folder name",
+  "createFolderButton": "Create",
+  "folderNameEmpty": "Please enter a folder name",
+  "folderNameInvalidChars": "Name cannot contain / or \\",
+  "createFolderFailed": "Could not create folder: {error}",
+  "@createFolderFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "rootDirectory": "Root",
+  "notificationIncomingTitle": "Incoming file request",
+  "notificationIncomingBody": "{sender} is sending: {file}",
+  "@notificationIncomingBody": {
+    "placeholders": {
+      "sender": {
+        "type": "String"
+      },
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "notificationCompleteTitle": "Receive complete",
+  "notificationCompleteBody": "{file} (from {sender})",
+  "@notificationCompleteBody": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      },
+      "sender": {
+        "type": "String"
+      }
+    }
+  },
+  "trayOpenApp": "Open {appName}",
+  "@trayOpenApp": {
+    "placeholders": {
+      "appName": {
+        "type": "String"
+      }
+    }
+  },
+  "trayQuit": "Quit",
+  "showInFolder": "Show in folder",
+  "signalingConnectFailed": "Could not connect to signaling server",
+  "signalingWaitTimeout": "Timed out",
+  "webSocketError": "WebSocket connection error",
+  "invalidPickupCode": "Invalid pickup code"
 }
+

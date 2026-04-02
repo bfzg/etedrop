@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 
 import '../../../core/utils/clipboard_image.dart'
     show readClipboardImageBytes, saveClipboardImageBytesToTempFile;
+import '../../../l10n/app_localizations.dart';
 import '../../../core/config/styles.dart';
 import '../../../core/utils/file_type_icon.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
@@ -148,9 +149,10 @@ class _FileDropCardState extends State<FileDropCard> {
       _addPaths([fp]);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('保存剪贴板图片失败: $e')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.clipboardImageSaveFailed('$e'))),
+        );
       }
     }
   }
@@ -162,18 +164,20 @@ class _FileDropCardState extends State<FileDropCard> {
 
     if (paths.isEmpty && cap.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('请输入文字或添加至少一个文件')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.enterTextOrAddFiles)),
+        );
       }
       return;
     }
 
     if (!widget.hasSelectedDevices) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('请先在上方选择在线的接收设备')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.selectOnlineReceiversFirst)),
+        );
       }
       return;
     }
@@ -191,9 +195,10 @@ class _FileDropCardState extends State<FileDropCard> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('发送失败: $e')));
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.sendFailed('$e'))),
+        );
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -202,6 +207,7 @@ class _FileDropCardState extends State<FileDropCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final borderColor = _dragging
         ? theme.colorScheme.primary
@@ -255,6 +261,7 @@ class _FileDropCardState extends State<FileDropCard> {
                       _AttachmentChip(
                         path: _attachments[i],
                         isImage: _isImagePath(_attachments[i]),
+                        removeTooltip: l10n.removeTooltip,
                         onRemove: () =>
                             setState(() => _attachments.removeAt(i)),
                       ),
@@ -271,8 +278,8 @@ class _FileDropCardState extends State<FileDropCard> {
                 decoration: InputDecoration(
                   isDense: true,
                   hintText: _isDesktop
-                      ? '输入文字，⌘V 粘贴截图，或拖入文件…'
-                      : '输入文字，或选择文件…',
+                      ? l10n.inputHintDesktop
+                      : l10n.inputHintMobile,
                   hintStyle: AppTextStyles.hint(context),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
@@ -285,7 +292,7 @@ class _FileDropCardState extends State<FileDropCard> {
                   IconButton(
                     onPressed: _pickFiles,
                     icon: const Icon(Icons.add),
-                    tooltip: '添加文件',
+                    tooltip: l10n.addFilesTooltip,
                     style: IconButton.styleFrom(
                       backgroundColor: AppStyles.primary,
                       foregroundColor: Colors.white,
@@ -319,7 +326,7 @@ class _FileDropCardState extends State<FileDropCard> {
                             ),
                           )
                         : const Icon(Icons.send_rounded, size: 18),
-                    label: Text(_sending ? '发送中…' : '发送'),
+                    label: Text(_sending ? l10n.sendingButton : l10n.sendButtonLabel),
                   ),
                 ],
               ),
@@ -334,11 +341,13 @@ class _FileDropCardState extends State<FileDropCard> {
 class _AttachmentChip extends StatelessWidget {
   final String path;
   final bool isImage;
+  final String removeTooltip;
   final VoidCallback onRemove;
 
   const _AttachmentChip({
     required this.path,
     required this.isImage,
+    required this.removeTooltip,
     required this.onRemove,
   });
 
@@ -406,7 +415,7 @@ class _AttachmentChip extends StatelessWidget {
             IconButton(
               onPressed: onRemove,
               icon: const Icon(Icons.close, size: 18),
-              tooltip: '移除',
+              tooltip: removeTooltip,
               visualDensity: VisualDensity.compact,
             ),
           ],

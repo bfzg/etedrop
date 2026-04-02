@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/config/styles.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 import '../../device/models/device_config.dart';
 import '../../device/providers/device_provider.dart';
@@ -20,6 +21,7 @@ class NearbyDeviceGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final raw = ref.watch(lanManagerProvider);
     final myDeviceId = ref.watch(deviceIdProvider);
     final theme = Theme.of(context);
@@ -43,7 +45,7 @@ class NearbyDeviceGrid extends ConsumerWidget {
         Row(
           children: [
             Text(
-              '附近的设备',
+              l10n.nearbyDevices,
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: theme.colorScheme.onSurfaceVariant,
@@ -58,7 +60,7 @@ class NearbyDeviceGrid extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  '已选 ${selectedIds.length}',
+                  l10n.selectedCount(selectedIds.length),
                   style: const TextStyle(
                     fontSize: 11,
                     color: AppStyles.primary,
@@ -87,7 +89,10 @@ class NearbyDeviceGrid extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                Text('正在查找用户...', style: AppTextStyles.secondary(context)),
+                Text(
+                  l10n.findingNearbyUsers,
+                  style: AppTextStyles.secondary(context),
+                ),
               ],
             ),
           )
@@ -102,6 +107,9 @@ class NearbyDeviceGrid extends ConsumerWidget {
                 device: device,
                 selected: selected,
                 isSelf: isSelf,
+                offlineLabel: l10n.offline,
+                weakSignalLabel: l10n.weakSignal,
+                youLabel: l10n.youLabel,
                 onTap: isSelf
                     ? null
                     : (!device.isOnline &&
@@ -120,12 +128,18 @@ class _DeviceAvatar extends StatelessWidget {
   final LanDevice device;
   final bool selected;
   final bool isSelf;
+  final String offlineLabel;
+  final String weakSignalLabel;
+  final String youLabel;
   final VoidCallback? onTap;
 
   const _DeviceAvatar({
     required this.device,
     required this.selected,
     required this.isSelf,
+    required this.offlineLabel,
+    required this.weakSignalLabel,
+    required this.youLabel,
     this.onTap,
   });
 
@@ -254,7 +268,7 @@ class _DeviceAvatar extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          'You',
+                          youLabel,
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -306,9 +320,9 @@ class _DeviceAvatar extends StatelessWidget {
             // 系统名称 / 离线
             Text(
               offline
-                  ? '离线'
+                  ? offlineLabel
                   : weak
-                  ? '信号弱'
+                  ? weakSignalLabel
                   : _osLabel(device.os),
               style: TextStyle(
                 fontSize: 12,

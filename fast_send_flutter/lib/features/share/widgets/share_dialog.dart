@@ -5,6 +5,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../device/providers/device_provider.dart';
 import '../models/share_record.dart';
 import '../providers/share_provider.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../widgets/ui/e_button.dart';
 import '../../../widgets/ui/e_dialog.dart';
 
@@ -55,13 +56,13 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
   /// true：打开对话框时该文件已有分享；false：本次会话内刚创建。
   bool _isExistingShare = false;
 
-  static const _expiresOptions = <(String, int?)>[
-    ('永不过期', null),
-    ('1 小时', 3600000),
-    ('24 小时', 86400000),
-    ('7 天', 604800000),
-    ('30 天', 2592000000),
-  ];
+  List<(String, int?)> _expireOptions(AppLocalizations l10n) => [
+        (l10n.expireNever, null),
+        (l10n.expireOneHour, 3600000),
+        (l10n.expireOneDay, 86400000),
+        (l10n.expireSevenDays, 604800000),
+        (l10n.expireThirtyDays, 2592000000),
+      ];
 
   @override
   void initState() {
@@ -92,6 +93,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
   }
 
   Future<void> _createShare() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _loading = true;
       _error = null;
@@ -118,38 +120,39 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
         await Clipboard.setData(ClipboardData(text: link));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('已复制分享链接'),
-              duration: Duration(seconds: 1),
+            SnackBar(
+              content: Text(l10n.shareLinkCopied),
+              duration: const Duration(seconds: 1),
             ),
           );
         }
       }
     } catch (e) {
-      setState(() => _error = '创建分享失败: $e');
+      setState(() => _error = l10n.createShareFailed('$e'));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _confirmCancelShare() async {
+    final l10n = AppLocalizations.of(context)!;
     if (_result == null) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('取消分享'),
-        content: const Text('确定取消分享？他人将无法再通过当前链接下载该文件。'),
+        title: Text(l10n.cancelShareTitle),
+        content: Text(l10n.cancelShareBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('返回'),
+            child: Text(l10n.backButton),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            child: const Text('取消分享'),
+            child: Text(l10n.cancelShareButton),
           ),
         ],
       ),
@@ -168,31 +171,32 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text('已取消分享')));
+        ).showSnackBar(SnackBar(content: Text(l10n.shareCancelled)));
       }
     } catch (e) {
       if (!mounted) return;
       setState(() => _cancelling = false);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('取消分享失败: $e')));
+      ).showSnackBar(SnackBar(content: Text(l10n.cancelShareFailed('$e'))));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     if (_checkingExisting) {
       return EDialog.alert(
-        title: Text('分享「${widget.fileName}」'),
+        title: Text(l10n.shareLoadingTitle(widget.fileName)),
         content: const Padding(
           padding: EdgeInsets.symmetric(vertical: 24),
           child: Center(child: CircularProgressIndicator()),
         ),
         actions: [
           EButton(
-            text: '关闭',
+            text: l10n.closeButton,
             variant: EButtonVariant.secondary,
             onPressed: () => Navigator.of(context).pop(),
           ),
@@ -201,21 +205,26 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     }
 
     if (_result != null) {
-      return _buildResultDialog(theme, isExistingFlow: _isExistingShare);
+      return _buildResultDialog(
+        theme,
+        l10n,
+        isExistingFlow: _isExistingShare,
+      );
     }
 
+    final opts = _expireOptions(l10n);
     return EDialog.alert(
-      title: const Text('创建分享'),
+      title: Text(l10n.createShareDialogTitle),
       content: EDialog.scrollableFormBody(
         context,
         Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('文件: ${widget.fileName}', style: theme.textTheme.bodyMedium),
+            Text(l10n.fileColon(widget.fileName), style: theme.textTheme.bodyMedium),
             const SizedBox(height: 16),
             SwitchListTile(
-              title: const Text('设置密码'),
+              title: Text(l10n.setPassword),
               value: _usePassword,
               contentPadding: EdgeInsets.zero,
               onChanged: (v) => setState(() => _usePassword = v),
@@ -224,9 +233,9 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
               const SizedBox(height: 8),
               TextField(
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  hintText: '输入密码',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: l10n.enterPassword,
+                  border: const OutlineInputBorder(),
                   isDense: true,
                 ),
               ),
@@ -239,7 +248,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                 border: OutlineInputBorder(),
                 isDense: true,
               ),
-              items: _expiresOptions
+              items: opts
                   .map((e) => DropdownMenuItem(value: e.$2, child: Text(e.$1)))
                   .toList(),
               onChanged: (v) => setState(() => _expiresIn = v),
@@ -256,12 +265,12 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       ),
       actions: [
         EButton(
-          text: '关闭',
+          text: l10n.closeButton,
           variant: EButtonVariant.secondary,
           onPressed: _loading ? null : () => Navigator.of(context).pop(),
         ),
         EButton(
-          text: '创建分享',
+          text: l10n.createShareAction,
           loading: _loading,
           onPressed: _loading ? null : _createShare,
         ),
@@ -269,7 +278,11 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     );
   }
 
-  Widget _buildResultDialog(ThemeData theme, {required bool isExistingFlow}) {
+  Widget _buildResultDialog(
+    ThemeData theme,
+    AppLocalizations l10n, {
+    required bool isExistingFlow,
+  }) {
     final info = _result!;
     final deviceId = ref.read(deviceIdProvider);
     final shareService = ref.read(shareServiceProvider);
@@ -278,8 +291,8 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
         : null;
 
     final title = isExistingFlow
-        ? Text('分享「${widget.fileName}」')
-        : const Text('分享已创建');
+        ? Text(l10n.shareLoadingTitle(widget.fileName))
+        : Text(l10n.shareCreatedTitle);
 
     return EDialog.alert(
       title: title,
@@ -291,7 +304,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
           children: [
             if (isExistingFlow) ...[
               Text(
-                '该文件已处于分享状态，可直接复制下方分享码或链接。',
+                l10n.shareExistingDescription,
                 style: TextStyle(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 13,
@@ -299,7 +312,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
               ),
               const SizedBox(height: 12),
             ] else
-              Text('文件: ${widget.fileName}', style: theme.textTheme.bodyMedium),
+              Text(l10n.fileColon(widget.fileName), style: theme.textTheme.bodyMedium),
             if (!isExistingFlow) const SizedBox(height: 16),
             if (shareLink != null)
               Container(
@@ -321,13 +334,13 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.copy),
-                      tooltip: '复制分享链接',
+                      tooltip: l10n.copyShareLinkTooltip,
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: shareLink));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('已复制分享链接'),
-                            duration: Duration(seconds: 1),
+                          SnackBar(
+                            content: Text(l10n.shareLinkCopied),
+                            duration: const Duration(seconds: 1),
                           ),
                         );
                       },
@@ -337,7 +350,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
               )
             else
               Text(
-                '请先连接设备（连接服务端）后，在「我的分享」中可查看分享链接。',
+                l10n.connectForShareLink,
                 style: TextStyle(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 13,
@@ -346,7 +359,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
             if (info.hasPassword) ...[
               const SizedBox(height: 8),
               Text(
-                '已设置访问密码',
+                l10n.passwordProtected,
                 style: TextStyle(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 13,
@@ -356,7 +369,11 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
             if (info.expiresAt != null) ...[
               const SizedBox(height: 8),
               Text(
-                '过期时间: ${DateTime.fromMillisecondsSinceEpoch(info.expiresAt!).toString().substring(0, 16)}',
+                l10n.expiresAt(
+                  DateTime.fromMillisecondsSinceEpoch(info.expiresAt!)
+                      .toString()
+                      .substring(0, 16),
+                ),
                 style: TextStyle(
                   color: theme.colorScheme.onSurfaceVariant,
                   fontSize: 13,
@@ -369,13 +386,13 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       actions: [
         if (isExistingFlow)
           EButton(
-            text: '取消分享',
+            text: l10n.cancelShareButton,
             variant: EButtonVariant.danger,
             loading: _cancelling,
             onPressed: _cancelling ? null : _confirmCancelShare,
           ),
         EButton(
-          text: '完成',
+          text: l10n.doneButton,
           onPressed: _cancelling ? null : () => Navigator.of(context).pop(info),
         ),
       ],

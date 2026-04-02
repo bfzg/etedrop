@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 
 import '../models/fs_entry.dart';
@@ -22,6 +23,7 @@ class CloudPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final hasStorage = ref.watch(hasStorageDirProvider);
     final storagePath = ref.watch(storageDirPathProvider);
     final fileListAsync = ref.watch(cloudFileListProvider);
@@ -47,7 +49,9 @@ class CloudPage extends ConsumerWidget {
           ? EmptyStorageView(
               // Mobile uses an app-owned directory automatically.
               onSelectDir: isDesktopPlatform
-                  ? () => ref.read(fileServiceProvider.notifier).selectStorageDir()
+                  ? () => ref.read(fileServiceProvider.notifier).selectStorageDir(
+                        dialogTitle: l10n.pickCloudStorageTitle,
+                      )
                   : () {},
             )
           : Column(
@@ -102,7 +106,7 @@ class CloudPage extends ConsumerWidget {
                               ),
                               Gap.md,
                               Text(
-                                '加载失败',
+                                l10n.loadFailed,
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                               const SizedBox(height: 8),
@@ -120,7 +124,7 @@ class CloudPage extends ConsumerWidget {
                                 onPressed: () => ref
                                     .read(cloudFileListProvider.notifier)
                                     .refresh(),
-                                child: const Text('重试'),
+                                child: Text(l10n.retry),
                               ),
                               if (Platform.isMacOS) ...[
                                 const SizedBox(height: 8),
@@ -129,15 +133,17 @@ class CloudPage extends ConsumerWidget {
                                     await openMacOsFullDiskAccessSettings();
                                   },
                                   icon: const Icon(Icons.settings, size: 18),
-                                  label: const Text('打开系统设置授权'),
+                                  label: Text(l10n.openSystemSettingsForAccess),
                                 ),
                               ],
                               const SizedBox(height: 8),
                               TextButton(
                                 onPressed: () => ref
                                     .read(fileServiceProvider.notifier)
-                                    .selectStorageDir(),
-                                child: const Text('更换存储目录'),
+                                    .selectStorageDir(
+                                      dialogTitle: l10n.pickCloudStorageTitle,
+                                    ),
+                                child: Text(l10n.changeStorageDirectory),
                               ),
                             ],
                           ),
@@ -169,24 +175,28 @@ class CloudPage extends ConsumerWidget {
     WidgetRef ref,
     FsEntry entry,
   ) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('确认删除'),
+        title: Text(l10n.confirmDelete),
         content: Text(
-          '确定要删除 "${entry.name}" 吗？${entry.isDirectory ? '\n文件夹内所有内容将被删除。' : ''}',
+          l10n.deleteEntryConfirm(
+            entry.name,
+            entry.isDirectory ? l10n.deleteFolderSuffix : '',
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: FilledButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
-            child: const Text('删除'),
+            child: Text(l10n.deleteAction),
           ),
         ],
       ),
@@ -210,6 +220,7 @@ class CloudPage extends ConsumerWidget {
     WidgetRef ref,
     String storagePath,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     const barBtnStyle = ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size(36, 36)),
       padding: WidgetStatePropertyAll(EdgeInsets.zero),
@@ -220,21 +231,21 @@ class CloudPage extends ConsumerWidget {
         style: barBtnStyle,
         iconSize: 20,
         icon: const Icon(Icons.create_new_folder_outlined),
-        tooltip: '新建文件夹',
+        tooltip: l10n.newFolderTooltip,
         onPressed: () => _showNewFolderDialog(context, ref),
       ),
       IconButton(
         style: barBtnStyle,
         iconSize: 20,
         icon: const Icon(Icons.upload_file),
-        tooltip: '上传文件',
+        tooltip: l10n.uploadFileTooltip,
         onPressed: () => ref.read(cloudFileListProvider.notifier).uploadFiles(),
       ),
       IconButton(
         style: barBtnStyle,
         iconSize: 20,
         icon: const Icon(Icons.refresh),
-        tooltip: '刷新',
+        tooltip: l10n.refreshTooltip,
         onPressed: () => ref.read(cloudFileListProvider.notifier).refresh(),
       ),
       PopupMenuButton<String>(
@@ -246,7 +257,9 @@ class CloudPage extends ConsumerWidget {
         ),
         onSelected: (value) {
           if (value == 'change_dir') {
-            ref.read(fileServiceProvider.notifier).selectStorageDir();
+            ref.read(fileServiceProvider.notifier).selectStorageDir(
+                  dialogTitle: l10n.pickCloudStorageTitle,
+                );
           }
         },
         itemBuilder: (_) => [
@@ -260,7 +273,7 @@ class CloudPage extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('更换存储目录'),
+                      Text(l10n.changeStorageDirectory),
                       Text(
                         storagePath,
                         style: TextStyle(

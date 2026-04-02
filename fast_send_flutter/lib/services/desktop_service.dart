@@ -8,7 +8,8 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
 
-import '../../core/config/constants.dart';
+import '../core/config/constants.dart';
+import '../l10n/app_localizations.dart';
 
 class DesktopService with TrayListener, WindowListener {
   static final DesktopService instance = DesktopService._internal();
@@ -67,16 +68,25 @@ class DesktopService with TrayListener, WindowListener {
       await trayManager.setToolTip(AppConstants.appName);
     }
 
-    Menu menu = Menu(
+    await updateTrayMenu(
+      lookupAppLocalizations(const Locale('en')),
+    );
+    trayManager.addListener(this);
+  }
+
+  Future<void> updateTrayMenu(AppLocalizations l10n) async {
+    if (!isDesktop) return;
+    final menu = Menu(
       items: [
-        MenuItem(key: 'show_window', label: '打开 ${AppConstants.appName}'),
+        MenuItem(
+          key: 'show_window',
+          label: l10n.trayOpenApp(AppConstants.appName),
+        ),
         MenuItem.separator(),
-        MenuItem(key: 'quit_app', label: '退出'),
+        MenuItem(key: 'quit_app', label: l10n.trayQuit),
       ],
     );
-
     await trayManager.setContextMenu(menu);
-    trayManager.addListener(this);
   }
 
   @override

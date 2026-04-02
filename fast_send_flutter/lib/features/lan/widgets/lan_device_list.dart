@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../l10n/app_localizations.dart';
 import '../providers/lan_provider.dart';
 import '../models/lan_device.dart';
 
@@ -11,6 +12,7 @@ class LanDeviceList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final raw = ref.watch(lanManagerProvider);
     final devices = [...raw]..sort((a, b) {
         if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
@@ -25,11 +27,11 @@ class LanDeviceList extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
           child: Text(
-            '附近的设备',
-            style: TextStyle(
+            l10n.nearbyDevices,
+            style: const TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: Colors.black54,
@@ -50,7 +52,7 @@ class LanDeviceList extends ConsumerWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  '正在寻找附近的设备...',
+                  l10n.lookingForNearbyDevices,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: 13,
@@ -70,6 +72,8 @@ class LanDeviceList extends ConsumerWidget {
                 final device = devices[index];
                 return _DeviceItem(
                   device: device,
+                  offlineLabel: l10n.offline,
+                  weakSignalLabel: l10n.weakSignal,
                   onTap: device.isOnline ? () => onDeviceSelected(device) : null,
                 );
               },
@@ -82,9 +86,16 @@ class LanDeviceList extends ConsumerWidget {
 
 class _DeviceItem extends StatelessWidget {
   final LanDevice device;
+  final String offlineLabel;
+  final String weakSignalLabel;
   final VoidCallback? onTap;
 
-  const _DeviceItem({required this.device, required this.onTap});
+  const _DeviceItem({
+    required this.device,
+    required this.offlineLabel,
+    required this.weakSignalLabel,
+    required this.onTap,
+  });
 
   static const ColorFilter _grayscale = ColorFilter.matrix(<double>[
     0.2126, 0.7152, 0.0722, 0, 0,
@@ -145,7 +156,7 @@ class _DeviceItem extends StatelessWidget {
             ),
             if (offline)
               Text(
-                '离线',
+                offlineLabel,
                 style: TextStyle(
                   fontSize: 10,
                   color: theme.colorScheme.onSurfaceVariant.withValues(
@@ -155,7 +166,7 @@ class _DeviceItem extends StatelessWidget {
               )
             else if (weak)
               Text(
-                '信号弱',
+                weakSignalLabel,
                 style: TextStyle(
                   fontSize: 10,
                   color: theme.colorScheme.onSurfaceVariant.withValues(

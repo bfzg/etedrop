@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../../../core/utils/file_type_icon.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/utils/reveal_file_in_explorer.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 import '../../cloud/providers/cloud_provider.dart';
 import '../../device/models/device_config.dart';
@@ -89,7 +90,11 @@ class MessageCard extends ConsumerWidget {
     }
   }
 
-  String _outgoingTargetSummary(WidgetRef ref, TransferMessage m) {
+  String _outgoingTargetRecipientsLine(
+    WidgetRef ref,
+    TransferMessage m,
+    AppLocalizations l10n,
+  ) {
     if (!m.isOutgoing || m.targetDeviceIdsJson == null) return '';
     try {
       final ids = (jsonDecode(m.targetDeviceIdsJson!) as List)
@@ -107,9 +112,20 @@ class MessageCard extends ConsumerWidget {
         }
         if (found != null) names.add(found.deviceName);
       }
-      if (names.isEmpty) return '${ids.length} 台设备';
-      if (names.length <= 2) return names.join('、');
-      return '${names.take(2).join('、')} 等 ${ids.length} 台';
+      if (names.isEmpty) {
+        return l10n.messageSendToRecipients(l10n.recipientNDevices(ids.length));
+      }
+      if (names.length == 1) {
+        return l10n.messageSendToRecipients(names[0]);
+      }
+      if (names.length == 2) {
+        return l10n.messageSendToRecipients(
+          l10n.recipientTwo(names[0], names[1]),
+        );
+      }
+      return l10n.messageSendToRecipients(
+        l10n.recipientMany(names[0], names[1], ids.length),
+      );
     } catch (_) {
       return '';
     }
@@ -117,6 +133,7 @@ class MessageCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final receiveSpeeds = ref.watch(transferReceiveSpeedProvider);
     final receiveSpeedKey = message.shareId ?? message.id;
@@ -172,7 +189,7 @@ class MessageCard extends ConsumerWidget {
                         children: [
                           Flexible(
                             child: Text(
-                              message.isOutgoing ? '我' : message.senderName,
+                              message.isOutgoing ? l10n.meLabel : message.senderName,
                               style: AppTextStyles.secondary(context),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -191,7 +208,7 @@ class MessageCard extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Text(
-                                '发送',
+                                l10n.sendingBadge,
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
@@ -205,7 +222,7 @@ class MessageCard extends ConsumerWidget {
                       if (message.isOutgoing && message.isBatch) ...[
                         const SizedBox(height: 4),
                         Text(
-                          '发给 ${_outgoingTargetSummary(ref, message)}',
+                          _outgoingTargetRecipientsLine(ref, message, l10n),
                           style: AppTextStyles.hint(context),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -219,7 +236,7 @@ class MessageCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                _StatusBadge(status: message.status),
+                _StatusBadge(status: message.status, l10n: l10n),
               ],
             ),
             const SizedBox(height: 12),
@@ -242,6 +259,7 @@ class MessageCard extends ConsumerWidget {
                       context,
                       ref,
                       theme,
+                      l10n,
                       canRevealInFolder,
                       fileIndex: i,
                       fileName: batch[i]['name'] as String? ?? '',
@@ -272,7 +290,7 @@ class MessageCard extends ConsumerWidget {
               ],
               const SizedBox(height: 4),
               Text(
-                '合计 ${FormatUtils.fileSize(message.fileSize)}',
+                l10n.totalSizeLine(FormatUtils.fileSize(message.fileSize)),
                 style: AppTextStyles.hint(context),
               ),
             ] else if (!message.isBatch) ...[
@@ -280,6 +298,7 @@ class MessageCard extends ConsumerWidget {
                 context,
                 ref,
                 theme,
+                l10n,
                 canRevealInFolder,
                 message: message,
                 localPreviewPath: MessageCard._pathAt(
@@ -301,14 +320,18 @@ class MessageCard extends ConsumerWidget {
                   const SizedBox(height: 4),
                   Text(
                     message.isOutgoing
-                        ? '发送中 ${(message.progress * 100).toStringAsFixed(0)}%'
-                        : '接收中 ${(message.progress * 100).toStringAsFixed(0)}%',
+                        ? l10n.sendingPercent(
+                            (message.progress * 100).toStringAsFixed(0),
+                          )
+                        : l10n.receivingPercent(
+                            (message.progress * 100).toStringAsFixed(0),
+                          ),
                     style: AppTextStyles.secondary(context),
                   ),
                   if (receiveBps != null && receiveBps > 0) ...[
                     const SizedBox(height: 2),
                     Text(
-                      '约 ${FormatUtils.transferSpeed(receiveBps)}',
+                      l10n.approxSpeed(FormatUtils.transferSpeed(receiveBps)),
                       style: AppTextStyles.hint(context),
                     ),
                   ],
@@ -331,7 +354,10 @@ class MessageCard extends ConsumerWidget {
             if (message.isOutgoing &&
                 message.status == TransferMessageStatus.pending) ...[
               const SizedBox(height: 8),
-              Text('等待对方在消息内接受（2 分钟内有效）', style: AppTextStyles.hint(context)),
+              Text(
+                l10n.waitAcceptInMessage,
+                style: AppTextStyles.hint(context),
+              ),
             ],
             if (message.isOutgoing &&
                 message.status == TransferMessageStatus.expired &&
@@ -343,7 +369,7 @@ class MessageCard extends ConsumerWidget {
                 child: FilledButton.icon(
                   onPressed: () => _retryOutgoingShare(context, ref, message),
                   icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('重试发送'),
+                  label: Text(l10n.retrySend),
                 ),
               ),
             ],
@@ -376,7 +402,7 @@ class MessageCard extends ConsumerWidget {
                       foregroundColor: theme.colorScheme.error,
                       side: BorderSide(color: theme.colorScheme.error),
                     ),
-                    child: const Text('拒绝'),
+                    child: Text(l10n.reject),
                   ),
                   const SizedBox(width: 8),
                   FilledButton.icon(
@@ -413,7 +439,13 @@ class MessageCard extends ConsumerWidget {
                           );
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('无法通知发送方: $e')),
+                              SnackBar(
+                                content: Text(
+                                  AppLocalizations.of(context)!.notifySenderFailed(
+                                    '$e',
+                                  ),
+                                ),
+                              ),
                             );
                           }
                         }
@@ -425,7 +457,7 @@ class MessageCard extends ConsumerWidget {
                       }
                     },
                     icon: const Icon(Icons.download, size: 18),
-                    label: const Text('接收'),
+                    label: Text(l10n.receiveAction),
                   ),
                 ],
               ),
@@ -535,6 +567,7 @@ Widget _revealableFileChip(
   BuildContext context,
   WidgetRef ref,
   ThemeData theme,
+  AppLocalizations l10n,
   bool canReveal, {
   required int fileIndex,
   required String fileName,
@@ -590,7 +623,7 @@ Widget _revealableFileChip(
   return MouseRegion(
     cursor: SystemMouseCursors.click,
     child: Tooltip(
-      message: '在文件夹中显示',
+      message: l10n.showInFolder,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -613,6 +646,7 @@ Widget _revealableSingleFileBlock(
   BuildContext context,
   WidgetRef ref,
   ThemeData theme,
+  AppLocalizations l10n,
   bool canReveal, {
   required TransferMessage message,
   String? localPreviewPath,
@@ -690,7 +724,7 @@ Widget _revealableSingleFileBlock(
   return MouseRegion(
     cursor: SystemMouseCursors.click,
     child: Tooltip(
-      message: '在文件夹中显示',
+      message: l10n.showInFolder,
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -721,17 +755,19 @@ Future<void> _openMessageFileInExplorer(
   );
   if (path == null) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('找不到本地文件，可能已移动或删除')));
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.fileNotFoundMaybeMoved)),
+      );
     }
     return;
   }
   final ok = await revealFileInExplorer(path);
   if (!ok && context.mounted) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('当前平台无法在文件夹中定位文件')));
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.revealInFolderNotSupported)),
+    );
   }
 }
 
@@ -772,6 +808,7 @@ Future<void> _retryOutgoingShare(
   WidgetRef ref,
   TransferMessage message,
 ) async {
+  final l10n = AppLocalizations.of(context)!;
   final pathsRaw = message.localFilePathsJson;
   final idsRaw = message.targetDeviceIdsJson;
   if (pathsRaw == null || idsRaw == null) return;
@@ -798,16 +835,16 @@ Future<void> _retryOutgoingShare(
           caption: capOnly,
         );
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('已重新发起分享')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.shareRestarted)),
+          );
         }
         return;
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('本地文件已不存在或已移动，无法重试')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.localFileGoneCannotRetry)),
+        );
       }
       return;
     }
@@ -819,47 +856,48 @@ Future<void> _retryOutgoingShare(
       caption: cap != null && cap.isNotEmpty ? cap : null,
     );
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('已重新发起分享')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.shareRestarted)),
+      );
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('重试失败: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.retryFailed('$e'))),
+      );
     }
   }
 }
 
 class _StatusBadge extends StatelessWidget {
   final TransferMessageStatus status;
+  final AppLocalizations l10n;
 
-  const _StatusBadge({required this.status});
+  const _StatusBadge({required this.status, required this.l10n});
 
   @override
   Widget build(BuildContext context) {
     final (label, color) = switch (status) {
       TransferMessageStatus.pending => (
-        '待处理',
+        l10n.statusPending,
         Theme.of(context).colorScheme.primary,
       ),
-      TransferMessageStatus.accepted => ('已接受', Colors.green),
+      TransferMessageStatus.accepted => (l10n.statusAccepted, Colors.green),
       TransferMessageStatus.receiving => (
-        '接收中',
+        l10n.statusReceiving,
         Theme.of(context).colorScheme.primary,
       ),
-      TransferMessageStatus.completed => ('已完成', Colors.green),
+      TransferMessageStatus.completed => (l10n.statusCompleted, Colors.green),
       TransferMessageStatus.rejected => (
-        '已拒绝',
+        l10n.statusRejected,
         Theme.of(context).colorScheme.onSurfaceVariant,
       ),
       TransferMessageStatus.failed => (
-        '失败',
+        l10n.statusFailed,
         Theme.of(context).colorScheme.error,
       ),
       TransferMessageStatus.expired => (
-        '已过期',
+        l10n.statusExpired,
         Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     };
