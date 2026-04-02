@@ -48,6 +48,37 @@ class AppLocalizationsEs extends AppLocalizations {
   String get about => 'Acerca de';
 
   @override
+  String get checkForUpdates => 'Buscar actualizaciones';
+
+  @override
+  String get checkForUpdatesDesc => 'Descarga e instala la última versión';
+
+  @override
+  String get updateCheckFailed => 'No se pudo comprobar si hay actualizaciones';
+
+  @override
+  String get updateAvailableTitle => 'Actualización disponible';
+
+  @override
+  String updateAvailableBody(String current, String latest) {
+    return 'Actual: $current\nÚltima: $latest';
+  }
+
+  @override
+  String updateAlreadyLatest(String version) {
+    return 'Ya está actualizado (v$version)';
+  }
+
+  @override
+  String get updateNow => 'Actualizar';
+
+  @override
+  String get later => 'Más tarde';
+
+  @override
+  String get openLinkFailed => 'No se pudo abrir el enlace';
+
+  @override
   String get connected => 'Conectado';
 
   @override

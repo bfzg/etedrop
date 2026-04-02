@@ -182,6 +182,60 @@ abstract class AppLocalizations {
   /// **'About'**
   String get about;
 
+  /// No description provided for @checkForUpdates.
+  ///
+  /// In en, this message translates to:
+  /// **'Check for updates'**
+  String get checkForUpdates;
+
+  /// No description provided for @checkForUpdatesDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Download and install the latest version'**
+  String get checkForUpdatesDesc;
+
+  /// No description provided for @updateCheckFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to check for updates'**
+  String get updateCheckFailed;
+
+  /// No description provided for @updateAvailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update available'**
+  String get updateAvailableTitle;
+
+  /// No description provided for @updateAvailableBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Current: {current}\nLatest: {latest}'**
+  String updateAvailableBody(String current, String latest);
+
+  /// No description provided for @updateAlreadyLatest.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re up to date (v{version})'**
+  String updateAlreadyLatest(String version);
+
+  /// No description provided for @updateNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateNow;
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
+
+  /// No description provided for @openLinkFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to open link'**
+  String get openLinkFailed;
+
   /// No description provided for @connected.
   ///
   /// In en, this message translates to:

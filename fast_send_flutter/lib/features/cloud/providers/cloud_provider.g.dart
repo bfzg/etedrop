@@ -54,7 +54,7 @@ final class FileServiceNotifierProvider
 }
 
 String _$fileServiceNotifierHash() =>
-    r'ae1d6312eb13c1b21cb439bc0718195b752f020c';
+    r'23854a75427078bd6be4ef8b9d4e99aa9d7418f2';
 
 /// 文件服务单例 Provider
 ///
@@ -107,7 +107,7 @@ final class DownloadDirProvider
   DownloadDir create() => DownloadDir();
 }
 
-String _$downloadDirHash() => r'09ad6849b7ae038f30577ded36435847a621e63d';
+String _$downloadDirHash() => r'a1e503fae0924109be7790404bca70ee6d0b4012';
 
 /// 下载目录（用于接收文件保存位置）
 

@@ -13,6 +13,26 @@
   "desktopIntegration": "Desktop Integration",
   "appearance": "Appearance",
   "about": "About",
+  "checkForUpdates": "Check for updates",
+  "checkForUpdatesDesc": "Download and install the latest version",
+  "updateCheckFailed": "Failed to check for updates",
+  "updateAvailableTitle": "Update available",
+  "updateAvailableBody": "Current: {current}\nLatest: {latest}",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "latest": { "type": "String" }
+    }
+  },
+  "updateAlreadyLatest": "You're up to date (v{version})",
+  "@updateAlreadyLatest": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "updateNow": "Update",
+  "later": "Later",
+  "openLinkFailed": "Failed to open link",
   "connected": "Connected",
   "disconnected": "Disconnected",
   "connect": "Connect",

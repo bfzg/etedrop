@@ -13,6 +13,26 @@
   "desktopIntegration": "데스크톱 연동",
   "appearance": "모양",
   "about": "정보",
+  "checkForUpdates": "업데이트 확인",
+  "checkForUpdatesDesc": "최신 버전을 다운로드하여 설치",
+  "updateCheckFailed": "업데이트 확인에 실패했습니다",
+  "updateAvailableTitle": "업데이트가 있습니다",
+  "updateAvailableBody": "현재: {current}\n최신: {latest}",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "latest": { "type": "String" }
+    }
+  },
+  "updateAlreadyLatest": "최신 버전입니다 (v{version})",
+  "@updateAlreadyLatest": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "updateNow": "업데이트",
+  "later": "나중에",
+  "openLinkFailed": "링크를 열 수 없습니다",
   "connected": "연결됨",
   "disconnected": "연결 안 됨",
   "connect": "연결",

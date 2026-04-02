@@ -1,0 +1,8 @@
+{
+  "latestVersion": "1.0.1",
+  "windowsDownloadUrl": "https://your-domain.com/download/Eddy-1.0.1.exe",
+  "macDownloadUrl": "https://your-domain.com/download/Eddy-1.0.1.dmg",
+  "releaseNotes": "- Fix: ...\n- Feat: ...",
+  "releasePageUrl": "https://github.com/your-org/eddy/releases/tag/v1.0.1"
+}
+

@@ -48,6 +48,37 @@ class AppLocalizationsKo extends AppLocalizations {
   String get about => '정보';
 
   @override
+  String get checkForUpdates => '업데이트 확인';
+
+  @override
+  String get checkForUpdatesDesc => '최신 버전을 다운로드하여 설치';
+
+  @override
+  String get updateCheckFailed => '업데이트 확인에 실패했습니다';
+
+  @override
+  String get updateAvailableTitle => '업데이트가 있습니다';
+
+  @override
+  String updateAvailableBody(String current, String latest) {
+    return '현재: $current\n최신: $latest';
+  }
+
+  @override
+  String updateAlreadyLatest(String version) {
+    return '최신 버전입니다 (v$version)';
+  }
+
+  @override
+  String get updateNow => '업데이트';
+
+  @override
+  String get later => '나중에';
+
+  @override
+  String get openLinkFailed => '링크를 열 수 없습니다';
+
+  @override
   String get connected => '연결됨';
 
   @override

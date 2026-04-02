@@ -48,6 +48,37 @@ class AppLocalizationsZh extends AppLocalizations {
   String get about => '关于';
 
   @override
+  String get checkForUpdates => '检查更新';
+
+  @override
+  String get checkForUpdatesDesc => '下载并安装最新版本';
+
+  @override
+  String get updateCheckFailed => '检查更新失败';
+
+  @override
+  String get updateAvailableTitle => '发现新版本';
+
+  @override
+  String updateAvailableBody(String current, String latest) {
+    return '当前版本：$current\n最新版本：$latest';
+  }
+
+  @override
+  String updateAlreadyLatest(String version) {
+    return '已是最新版本（v$version）';
+  }
+
+  @override
+  String get updateNow => '立即更新';
+
+  @override
+  String get later => '稍后';
+
+  @override
+  String get openLinkFailed => '打开链接失败';
+
+  @override
   String get connected => '已连接';
 
   @override

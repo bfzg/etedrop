@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/config/styles.dart';
+// (No Riverpod usage here)
 
 // 导航项配置模型
 class NavItemConfig {
@@ -8,12 +9,14 @@ class NavItemConfig {
   final IconData outlinedIcon;
   final IconData roundedIcon;
   final String path;
+  final bool showBadge;
 
   const NavItemConfig({
     required this.label,
     required this.outlinedIcon,
     required this.roundedIcon,
     required this.path,
+    this.showBadge = false,
   });
 }
 
@@ -75,7 +78,6 @@ class AnimatedNavIcon extends StatelessWidget {
   final bool isSelected;
   final IconData outlinedIcon;
   final IconData roundedIcon;
-
   const AnimatedNavIcon({
     super.key,
     required this.index,

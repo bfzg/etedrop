@@ -8,6 +8,8 @@ import 'l10n/app_localizations.dart';
 import 'l10n/l10n_utils.dart';
 import 'core/config/styles.dart';
 import 'core/router/router_provider.dart';
+import 'core/update/update_service.dart';
+import 'core/update/update_state.dart';
 import 'features/device/providers/device_auto_connect.dart';
 import 'features/settings/providers/locale_provider.dart';
 import 'features/lan/providers/lan_provider.dart';
@@ -21,10 +23,15 @@ class App extends ConsumerStatefulWidget {
 }
 
 class _AppState extends ConsumerState<App> {
+  bool _didCheckUpdate = false;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _syncTray());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncTray();
+      _checkUpdateOnStartup();
+    });
   }
 
   void _syncTray() {
@@ -57,5 +64,20 @@ class _AppState extends ConsumerState<App> {
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: router,
     );
+  }
+
+  Future<void> _checkUpdateOnStartup() async {
+    if (_didCheckUpdate) return;
+    _didCheckUpdate = true;
+
+    // 1) Silent check to update badge state.
+    await UpdateService.instance.checkSilentlyAndUpdateBadge(ref);
+    if (!mounted) return;
+
+    // 2) If update available, prompt immediately with default UI.
+    final hasUpdate = ref.read(updateStateProvider).hasUpdate;
+    if (!hasUpdate) return;
+
+    await UpdateService.instance.checkAndPrompt(context, ref: ref);
   }
 }

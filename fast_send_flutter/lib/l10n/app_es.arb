@@ -13,6 +13,26 @@
   "desktopIntegration": "Integración de escritorio",
   "appearance": "Apariencia",
   "about": "Acerca de",
+  "checkForUpdates": "Buscar actualizaciones",
+  "checkForUpdatesDesc": "Descarga e instala la última versión",
+  "updateCheckFailed": "No se pudo comprobar si hay actualizaciones",
+  "updateAvailableTitle": "Actualización disponible",
+  "updateAvailableBody": "Actual: {current}\nÚltima: {latest}",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "latest": { "type": "String" }
+    }
+  },
+  "updateAlreadyLatest": "Ya está actualizado (v{version})",
+  "@updateAlreadyLatest": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "updateNow": "Actualizar",
+  "later": "Más tarde",
+  "openLinkFailed": "No se pudo abrir el enlace",
   "connected": "Conectado",
   "disconnected": "Desconectado",
   "connect": "Conectar",

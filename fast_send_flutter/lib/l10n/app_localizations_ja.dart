@@ -48,6 +48,37 @@ class AppLocalizationsJa extends AppLocalizations {
   String get about => 'について';
 
   @override
+  String get checkForUpdates => 'アップデートを確認';
+
+  @override
+  String get checkForUpdatesDesc => '最新バージョンをダウンロードしてインストール';
+
+  @override
+  String get updateCheckFailed => 'アップデートの確認に失敗しました';
+
+  @override
+  String get updateAvailableTitle => 'アップデートがあります';
+
+  @override
+  String updateAvailableBody(String current, String latest) {
+    return '現在：$current\n最新：$latest';
+  }
+
+  @override
+  String updateAlreadyLatest(String version) {
+    return '最新です（v$version）';
+  }
+
+  @override
+  String get updateNow => '更新';
+
+  @override
+  String get later => '後で';
+
+  @override
+  String get openLinkFailed => 'リンクを開けませんでした';
+
+  @override
   String get connected => '接続済み';
 
   @override

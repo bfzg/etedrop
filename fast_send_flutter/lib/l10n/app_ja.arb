@@ -13,6 +13,26 @@
   "desktopIntegration": "デスクトップ連携",
   "appearance": "外観",
   "about": "について",
+  "checkForUpdates": "アップデートを確認",
+  "checkForUpdatesDesc": "最新バージョンをダウンロードしてインストール",
+  "updateCheckFailed": "アップデートの確認に失敗しました",
+  "updateAvailableTitle": "アップデートがあります",
+  "updateAvailableBody": "現在：{current}\n最新：{latest}",
+  "@updateAvailableBody": {
+    "placeholders": {
+      "current": { "type": "String" },
+      "latest": { "type": "String" }
+    }
+  },
+  "updateAlreadyLatest": "最新です（v{version}）",
+  "@updateAlreadyLatest": {
+    "placeholders": {
+      "version": { "type": "String" }
+    }
+  },
+  "updateNow": "更新",
+  "later": "後で",
+  "openLinkFailed": "リンクを開けませんでした",
   "connected": "接続済み",
   "disconnected": "未接続",
   "connect": "接続",
