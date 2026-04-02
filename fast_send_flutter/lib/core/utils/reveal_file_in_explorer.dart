@@ -15,8 +15,11 @@ Future<bool> revealFileInExplorer(String absoluteFilePath) async {
       return r.exitCode == 0;
     }
     if (Platform.isWindows) {
-      final r = await Process.run('explorer', ['/select,', file.absolute.path]);
-      return r.exitCode == 0;
+      // explorer.exe 常在已成功打开并选中文件时仍返回非零退出码，不能据此判断失败。
+      // 语法为 /select,<路径>（逗号后无空格），需作为单个参数传入。
+      final selectArg = '/select,${file.absolute.path}';
+      await Process.run('explorer', [selectArg]);
+      return true;
     }
     if (Platform.isLinux) {
       final dir = p.dirname(file.absolute.path);
