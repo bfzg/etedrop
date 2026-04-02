@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
@@ -9,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../core/config/constants.dart';
+import '../../../core/utils/nickname_utils.dart';
 import '../models/device_config.dart';
 import 'share_p2p_handler.dart';
 
@@ -28,6 +30,18 @@ class DeviceManager {
 
   final _stateController = StreamController<int>.broadcast();
   int _stateTick = 0;
+
+  String _randomNicknameForSystemLocale() {
+    final lang = PlatformDispatcher.instance.locale.languageCode;
+    return generateRandomNicknameForLanguageCode(lang);
+  }
+
+  bool _looksLikeDefaultPlaceholderName(String? name) {
+    final n = name?.trim().toLowerCase();
+    if (n == null || n.isEmpty) return true;
+    // Current app default was Platform.localHostname (commonly "localhost").
+    return n == 'localhost' || n == 'unknown';
+  }
 
   /// UI 通过此 stream 监听状态变化
   Stream<int> get stateStream => _stateController.stream;
@@ -58,6 +72,13 @@ class DeviceManager {
       if (await file.exists()) {
         final data = await file.readAsString();
         _config = DeviceConfig.fromJson(jsonDecode(data));
+        if (_looksLikeDefaultPlaceholderName(_config?.deviceName)) {
+          // Replace the default placeholder name with a locale-based nickname.
+          _config = _config!.copyWith(
+            deviceName: _randomNicknameForSystemLocale(),
+          );
+          await _saveConfig();
+        }
         _setState(_state);
         return _config!;
       }
@@ -65,7 +86,7 @@ class DeviceManager {
 
     _config = DeviceConfig(
       deviceId: const Uuid().v4(),
-      deviceName: Platform.localHostname,
+      deviceName: _randomNicknameForSystemLocale(),
       createdAt: DateTime.now().millisecondsSinceEpoch,
       avatar: Random().nextInt(kMemojiCount) + 1,
     );
