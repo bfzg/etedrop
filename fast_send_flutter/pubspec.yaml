@@ -159,5 +159,6 @@ flutter_launcher_icons:
     image_path: assets/images/app_icon.png
   windows:
     generate: true
-    image_path: assets/images/app_icon.png
+    # Windows 标题栏/任务栏图标（.ico 由 flutter_launcher_icons 生成）
+    image_path: assets/images/windows_icon_state_bar.png
     icon_size: 48

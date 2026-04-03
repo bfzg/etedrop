@@ -58,13 +58,14 @@ class DesktopService with TrayListener, WindowListener {
   }
 
   Future<void> _initSystemTray() async {
-    // Windows：托盘区用专用 PNG；macOS：菜单栏 PNG + isTemplate。
+    // Windows：托盘图标必须是 .ico（tray_manager 内部用 LoadImage IMAGE_ICON）。
+    // macOS：菜单栏 PNG + isTemplate（系统按深浅色着色，观感接近系统图标）。
     await trayManager.setIcon(
       Platform.isWindows
-          ? 'assets/images/windows_icon_stat_bar.png'
+          ? 'assets/images/windows_tray_icon.ico'
           : Platform.isMacOS
-              ? 'assets/images/mac_icon_state_bar.png'
-              : 'assets/images/app_icon.png',
+          ? 'assets/images/mac_icon_state_bar.png'
+          : 'assets/images/app_icon.png',
       isTemplate: Platform.isMacOS,
     );
 
@@ -72,9 +73,7 @@ class DesktopService with TrayListener, WindowListener {
       await trayManager.setToolTip(AppConstants.appName);
     }
 
-    await updateTrayMenu(
-      lookupAppLocalizations(const Locale('en')),
-    );
+    await updateTrayMenu(lookupAppLocalizations(const Locale('en')));
     trayManager.addListener(this);
   }
 
