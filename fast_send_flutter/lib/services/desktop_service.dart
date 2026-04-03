@@ -58,10 +58,14 @@ class DesktopService with TrayListener, WindowListener {
   }
 
   Future<void> _initSystemTray() async {
+    // Windows：托盘区用专用 PNG；macOS：菜单栏 PNG + isTemplate。
     await trayManager.setIcon(
       Platform.isWindows
-          ? 'assets/images/app_icon.ico'
-          : 'assets/images/app_icon.png',
+          ? 'assets/images/windows_icon_stat_bar.png'
+          : Platform.isMacOS
+              ? 'assets/images/mac_icon_state_bar.png'
+              : 'assets/images/app_icon.png',
+      isTemplate: Platform.isMacOS,
     );
 
     if (!Platform.isLinux) {

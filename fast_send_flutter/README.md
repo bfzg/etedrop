@@ -217,6 +217,16 @@ flutter clean
 flutter pub get
 ```
 
+#### 生成应用图标（flutter_launcher_icons）
+
+如果你修改了 `assets/images/app_icon.png`，或需要重新生成各平台的 launcher icon：
+
+```bash
+flutter pub run flutter_launcher_icons
+```
+
+该命令会读取 `pubspec.yaml` 里的 `flutter_launcher_icons` 配置，为 Android / iOS / Windows / macOS 生成对应图标资源。
+
 ## 10. macOS 运行报错：CocoaPods not installed
 
 如果执行 `flutter run -d macos` 报错：

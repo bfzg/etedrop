@@ -145,6 +145,9 @@ flutter:
         - asset: assets/fonts/Inter-Italic-VariableFont_opsz,wght.ttf
           style: italic
 
+  # 生成平台图标（会读取下面的 flutter_launcher_icons 配置）：
+  # flutter pub run flutter_launcher_icons
+
 flutter_launcher_icons:
   android: true
   ios: true
