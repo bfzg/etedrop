@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
+import '../../../widgets/ui/e_button.dart';
 import '../../lan/providers/transfer_receive_speed_provider.dart';
 import '../models/transfer_message.dart';
 import 'message_card_actions.dart';
@@ -169,10 +170,13 @@ class MessageCard extends ConsumerWidget {
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
-                child: FilledButton.icon(
+                child: EButton(
+                  variant: EButtonVariant.primary,
+                  icon: Icons.refresh,
+                  radius: 99,
+                  size: EButtonSize.sm,
+                  text: l10n.retrySend,
                   onPressed: () => retryOutgoingShare(context, ref, message),
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: Text(l10n.retrySend),
                 ),
               ),
             ],

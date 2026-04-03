@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../../widgets/ui/e_button.dart';
 import '../../lan/providers/lan_provider.dart';
 import '../models/transfer_message.dart';
 import '../providers/message_provider.dart';
@@ -82,11 +83,13 @@ class MessageCardIncomingActions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        OutlinedButton(
+        EButton(
+          variant: EButtonVariant.outlined,
+          destructive: true,
+          text: l10n.reject,
           onPressed: () async {
             final msgNotifier = ref.read(messageListProvider.notifier);
             final lanNotifier = ref.read(lanManagerProvider.notifier);
@@ -100,14 +103,12 @@ class MessageCardIncomingActions extends ConsumerWidget {
               TransferMessageStatus.rejected,
             );
           },
-          style: OutlinedButton.styleFrom(
-            foregroundColor: theme.colorScheme.error,
-            side: BorderSide(color: theme.colorScheme.error),
-          ),
-          child: Text(l10n.reject),
         ),
         const SizedBox(width: 8),
-        FilledButton.icon(
+        EButton(
+          variant: EButtonVariant.primary,
+          icon: Icons.download,
+          text: l10n.receiveAction,
           onPressed: () async {
             final msgNotifier = ref.read(messageListProvider.notifier);
             final lanNotifier = ref.read(lanManagerProvider.notifier);
@@ -151,8 +152,6 @@ class MessageCardIncomingActions extends ConsumerWidget {
               );
             }
           },
-          icon: const Icon(Icons.download, size: 18),
-          label: Text(l10n.receiveAction),
         ),
       ],
     );

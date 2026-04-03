@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
+import '../../../widgets/ui/e_button.dart';
 
 class SendErrorView extends StatelessWidget {
   final String errorMsg;
@@ -27,7 +28,11 @@ class SendErrorView extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         Gap.md,
-        FilledButton(onPressed: onRetry, child: Text(l10n.retry)),
+        EButton(
+          variant: EButtonVariant.primary,
+          text: l10n.retry,
+          onPressed: onRetry,
+        ),
       ],
     );
   }

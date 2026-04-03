@@ -10,7 +10,7 @@ import 'package:path/path.dart' as p;
 import '../../../core/utils/clipboard_image.dart'
     show readClipboardImageBytes, saveClipboardImageBytesToTempFile;
 import '../../../l10n/app_localizations.dart';
-import '../../../core/config/styles.dart';
+import '../../../widgets/ui/e_button.dart';
 import '../../../core/utils/file_type_icon.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
 import '../../../styles/styles.dart';
@@ -165,9 +165,9 @@ class _FileDropCardState extends State<FileDropCard> {
     if (paths.isEmpty && cap.isEmpty) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.enterTextOrAddFiles)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.enterTextOrAddFiles)));
       }
       return;
     }
@@ -196,9 +196,9 @@ class _FileDropCardState extends State<FileDropCard> {
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.sendFailed('$e'))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.sendFailed('$e'))));
       }
     } finally {
       if (mounted) setState(() => _sending = false);
@@ -289,44 +289,23 @@ class _FileDropCardState extends State<FileDropCard> {
               const SizedBox(height: Spacing.sm),
               Row(
                 children: [
-                  IconButton(
-                    onPressed: _pickFiles,
-                    icon: const Icon(Icons.add),
+                  EIconButton(
+                    icon: Icons.add,
                     tooltip: l10n.addFilesTooltip,
-                    style: IconButton.styleFrom(
-                      backgroundColor: AppStyles.primary,
-                      foregroundColor: Colors.white,
-                      hoverColor: Colors.white.withValues(alpha: 0.12),
-                    ),
+                    onPressed: _pickFiles,
                   ),
                   const Spacer(),
-                  FilledButton.icon(
-                    onPressed: _sending ? null : _send,
-                    style: FilledButton.styleFrom(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: _isDesktop ? 16 : 0,
-                      ),
-                      backgroundColor: AppStyles.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppStyles.primary.withValues(
-                        alpha: 0.38,
-                      ),
-                      disabledForegroundColor: Colors.white.withValues(
-                        alpha: 0.7,
-                      ),
+                  EButton(
+                    variant: EButtonVariant.primary,
+                    icon: Icons.send_rounded,
+                    text: _sending ? l10n.sendingButton : l10n.sendButtonLabel,
+                    loading: _sending,
+                    onPressed: _send,
+                    radius: 99,
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 22,
+                      vertical: _isDesktop ? 14 : 12,
                     ),
-                    icon: _sending
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Icon(Icons.send_rounded, size: 18),
-                    label: Text(_sending ? l10n.sendingButton : l10n.sendButtonLabel),
                   ),
                 ],
               ),

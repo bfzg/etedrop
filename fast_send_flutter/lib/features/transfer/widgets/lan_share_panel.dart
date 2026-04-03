@@ -6,6 +6,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
+import '../../../widgets/ui/e_button.dart';
 import '../../device/models/device_config.dart';
 import '../../lan/models/lan_device.dart';
 import '../../lan/providers/lan_provider.dart';
@@ -16,8 +17,10 @@ import '../../message/providers/message_provider.dart';
 class LanSharePanel extends ConsumerStatefulWidget {
   final String shareId;
   final DateTime expiresAt;
+
   /// 取消进行中的分享（通知对端 + 清空会话）
   final VoidCallback onCancelSharing;
+
   /// 仅关闭本卡片（已完成或无需再取消时）
   final VoidCallback onDismissRecord;
 
@@ -118,16 +121,16 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
     final statusText = completed
         ? l10n.transferCompleted
         : receiving
-            ? l10n.transferInProgress
-            : (_left == Duration.zero
-                ? l10n.transferEnded
-                : l10n.timeRemaining(mm, ss));
+        ? l10n.transferInProgress
+        : (_left == Duration.zero
+              ? l10n.transferEnded
+              : l10n.timeRemaining(mm, ss));
 
     final statusColor = completed
         ? Colors.green
         : receiving
-            ? theme.colorScheme.primary
-            : theme.colorScheme.onSurfaceVariant;
+        ? theme.colorScheme.primary
+        : theme.colorScheme.onSurfaceVariant;
 
     return Card(
       elevation: 0,
@@ -153,10 +156,9 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
                 const Spacer(),
                 Text(
                   statusText,
-                  style: AppTextStyles.hint(context).copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.hint(
+                    context,
+                  ).copyWith(color: statusColor, fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -177,40 +179,42 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
               completed
                   ? l10n.shareAllReceivedHint
                   : receiving
-                      ? l10n.shareTransferringHint
-                      : l10n.shareWaitAcceptHint,
+                  ? l10n.shareTransferringHint
+                  : l10n.shareWaitAcceptHint,
               style: AppTextStyles.secondary(context),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                OutlinedButton.icon(
+                EButton(
+                  variant: EButtonVariant.outlined,
+                  icon: Icons.copy,
+                  text: l10n.copyAction,
+                  radius: 99,
                   onPressed: () async {
                     await Clipboard.setData(ClipboardData(text: _linkText()));
                     if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(
+                      ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l10n.copiedToClipboard)),
                       );
                     }
                   },
-                  icon: const Icon(Icons.copy, size: 18),
-                  label: Text(l10n.copyAction),
                 ),
                 const SizedBox(width: 8),
                 if (completed)
-                  FilledButton.tonal(
+                  EButton(
+                    variant: EButtonVariant.tonal,
+                    radius: 99,
+                    text: l10n.closeAction,
                     onPressed: widget.onDismissRecord,
-                    child: Text(l10n.closeAction),
                   )
                 else
-                  TextButton(
+                  EButton(
+                    variant: EButtonVariant.text,
+                    destructive: true,
+                    radius: 99,
+                    text: l10n.cancelSharingAction,
                     onPressed: widget.onCancelSharing,
-                    child: Text(
-                      l10n.cancelSharingAction,
-                      style: TextStyle(color: theme.colorScheme.error),
-                    ),
                   ),
               ],
             ),
