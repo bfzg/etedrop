@@ -273,6 +273,14 @@
       }
     }
   },
+  "messageOutgoingHeaderLine": "To {names}",
+  "@messageOutgoingHeaderLine": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "recipientNDevices": "{count} devices",
   "@recipientNDevices": {
     "placeholders": {

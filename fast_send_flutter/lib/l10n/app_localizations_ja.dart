@@ -544,6 +544,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String messageOutgoingHeaderLine(String names) {
+    return '自分から $names へ送信';
+  }
+
+  @override
   String recipientNDevices(int count) {
     return '$count 台';
   }

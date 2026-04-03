@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
+import '../../message/providers/incoming_transfer_toast_provider.dart';
 import '../../message/providers/message_provider.dart';
 import '../../../core/http/cancel_token.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
@@ -315,7 +316,7 @@ class LanManager extends _$LanManager {
     if (DateTime.now().millisecondsSinceEpoch > offer.expiresAtMs) return;
 
     final files = offer.files.map((e) => e.toJson()).toList();
-    ref
+    final added = ref
         .read(messageListProvider.notifier)
         .addIncomingBatchOffer(
           shareId: offer.shareId,
@@ -327,6 +328,9 @@ class LanManager extends _$LanManager {
           senderHttpPort: offer.senderPort,
           caption: offer.caption,
         );
+    ref
+        .read(incomingTransferToastMessageIdProvider.notifier)
+        .setMessageId(added.id);
 
     final waitMs = offer.expiresAtMs - DateTime.now().millisecondsSinceEpoch;
     if (waitMs > 0) {
@@ -722,6 +726,9 @@ class LanManager extends _$LanManager {
       senderDeviceId: ctx.senderDeviceId,
       senderAvatar: ctx.senderAvatar,
     );
+    ref
+        .read(incomingTransferToastMessageIdProvider.notifier)
+        .setMessageId(msg.id);
     NotificationService.instance.showIncomingTransfer(
       senderName: ctx.senderName,
       fileName: ctx.fileName,

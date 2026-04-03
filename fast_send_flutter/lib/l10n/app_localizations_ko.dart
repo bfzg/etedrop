@@ -543,6 +543,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String messageOutgoingHeaderLine(String names) {
+    return '나 → $names(으)로 보내기';
+  }
+
+  @override
   String recipientNDevices(int count) {
     return '기기 $count대';
   }

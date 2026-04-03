@@ -3,6 +3,7 @@ import 'package:eddy/core/utils/is_utils.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
 import 'package:go_router/go_router.dart';
 
+import '../features/message/widgets/incoming_transfer_toast.dart';
 import 'bottom_nav_bar.dart';
 import 'sidebar_nav_bar.dart';
 
@@ -76,26 +77,41 @@ class _AppLayoutState extends State<AppLayout> {
                         ? Theme.of(context).scaffoldBackgroundColor
                         : Colors.transparent,
                   ),
-                  child: Row(
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      AppSidebarNavBar(
-                        items: widget.items,
-                        currentIndex: widget.navigationShell.currentIndex,
-                        onSelect: (index) => _onTap(context, index),
-                      ),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.horizontal(
-                            left: isWindowsPlatform()
-                                ? Radius.circular(0)
-                                : Radius.circular(14),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppSidebarNavBar(
+                            items: widget.items,
+                            currentIndex: widget.navigationShell.currentIndex,
+                            onSelect: (index) => _onTap(context, index),
                           ),
-                          child: DecoratedBox(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).scaffoldBackgroundColor,
+                          Expanded(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.horizontal(
+                                left: isWindowsPlatform()
+                                    ? Radius.circular(0)
+                                    : Radius.circular(14),
+                              ),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).scaffoldBackgroundColor,
+                                ),
+                                child: widget.navigationShell,
+                              ),
                             ),
-                            child: widget.navigationShell,
                           ),
+                        ],
+                      ),
+                      const Positioned(
+                        right: 16,
+                        bottom: 16,
+                        child: SafeArea(
+                          child: IncomingTransferToast(),
                         ),
                       ),
                     ],
@@ -108,7 +124,18 @@ class _AppLayoutState extends State<AppLayout> {
 
         // 窄屏模式（手机）使用底部导航栏
         return Scaffold(
-          body: widget.navigationShell,
+          body: Stack(
+            children: [
+              widget.navigationShell,
+              const Positioned(
+                right: 12,
+                bottom: 12,
+                child: SafeArea(
+                  child: IncomingTransferToast(),
+                ),
+              ),
+            ],
+          ),
           bottomNavigationBar: AppBottomNavBar(
             currentIndex: widget.navigationShell.currentIndex,
             items: widget.items,

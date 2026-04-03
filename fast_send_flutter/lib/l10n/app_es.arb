@@ -273,6 +273,14 @@
       }
     }
   },
+  "messageOutgoingHeaderLine": "Para {names}",
+  "@messageOutgoingHeaderLine": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "recipientNDevices": "{count} dispositivos",
   "@recipientNDevices": {
     "placeholders": {

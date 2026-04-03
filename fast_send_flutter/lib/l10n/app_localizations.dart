@@ -1112,6 +1112,12 @@ abstract class AppLocalizations {
   /// **'To {names}'**
   String messageSendToRecipients(String names);
 
+  /// No description provided for @messageOutgoingHeaderLine.
+  ///
+  /// In en, this message translates to:
+  /// **'To {names}'**
+  String messageOutgoingHeaderLine(String names);
+
   /// No description provided for @recipientNDevices.
   ///
   /// In en, this message translates to:

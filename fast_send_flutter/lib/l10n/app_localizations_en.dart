@@ -558,6 +558,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String messageOutgoingHeaderLine(String names) {
+    return 'To $names';
+  }
+
+  @override
   String recipientNDevices(int count) {
     return '$count devices';
   }

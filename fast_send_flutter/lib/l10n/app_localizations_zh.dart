@@ -543,6 +543,11 @@ class AppLocalizationsZh extends AppLocalizations {
   }
 
   @override
+  String messageOutgoingHeaderLine(String names) {
+    return '我发给 $names';
+  }
+
+  @override
   String recipientNDevices(int count) {
     return '$count 台设备';
   }

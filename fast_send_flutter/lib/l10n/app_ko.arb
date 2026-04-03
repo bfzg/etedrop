@@ -273,6 +273,14 @@
       }
     }
   },
+  "messageOutgoingHeaderLine": "나 → {names}(으)로 보내기",
+  "@messageOutgoingHeaderLine": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "recipientNDevices": "기기 {count}대",
   "@recipientNDevices": {
     "placeholders": {

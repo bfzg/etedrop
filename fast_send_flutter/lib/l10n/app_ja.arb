@@ -273,6 +273,14 @@
       }
     }
   },
+  "messageOutgoingHeaderLine": "自分から {names} へ送信",
+  "@messageOutgoingHeaderLine": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "recipientNDevices": "{count} 台",
   "@recipientNDevices": {
     "placeholders": {

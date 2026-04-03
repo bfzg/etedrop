@@ -273,6 +273,14 @@
       }
     }
   },
+  "messageOutgoingHeaderLine": "我发给 {names}",
+  "@messageOutgoingHeaderLine": {
+    "placeholders": {
+      "names": {
+        "type": "String"
+      }
+    }
+  },
   "recipientNDevices": "{count} 台设备",
   "@recipientNDevices": {
     "placeholders": {
