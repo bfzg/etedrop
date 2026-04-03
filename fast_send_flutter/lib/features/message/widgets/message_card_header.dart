@@ -98,7 +98,7 @@ class MessageCardHeader extends ConsumerWidget {
             ],
           ),
         ),
-        MessageCardStatusBadge(status: message.status, l10n: l10n),
+        MessageCardStatusBadge(message: message, l10n: l10n),
       ],
     );
   }

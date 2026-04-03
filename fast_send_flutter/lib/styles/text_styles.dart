@@ -61,8 +61,8 @@ class AppTextStyles {
 
   /// 完成标题 - 大号、加粗
   static TextStyle completeTitle(BuildContext context) =>
-      const TextStyle(
-        fontSize: 18,
-        fontWeight: FontWeight.bold,
-      );
+      Theme.of(context).textTheme.titleLarge!.copyWith(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          );
 }

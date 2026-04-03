@@ -4,17 +4,18 @@ import '../../../l10n/app_localizations.dart';
 import '../models/transfer_message.dart';
 
 class MessageCardStatusBadge extends StatelessWidget {
-  final TransferMessageStatus status;
+  final TransferMessage message;
   final AppLocalizations l10n;
 
   const MessageCardStatusBadge({
     super.key,
-    required this.status,
+    required this.message,
     required this.l10n,
   });
 
   @override
   Widget build(BuildContext context) {
+    final status = message.status;
     final (label, color) = switch (status) {
       TransferMessageStatus.pending => (
         l10n.statusPending,
@@ -35,7 +36,7 @@ class MessageCardStatusBadge extends StatelessWidget {
         Theme.of(context).colorScheme.error,
       ),
       TransferMessageStatus.expired => (
-        l10n.statusExpired,
+        _expiredBadgeLabel(message),
         Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     };
@@ -55,5 +56,14 @@ class MessageCardStatusBadge extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// 过期原因（已超时 / 已取消 / 等待超时等）只在角标展示，与 [l10n.statusExpired] 二选一。
+  String _expiredBadgeLabel(TransferMessage m) {
+    final detail = m.errorMessage?.trim();
+    if (detail != null && detail.isNotEmpty) {
+      return detail;
+    }
+    return l10n.statusExpired;
   }
 }

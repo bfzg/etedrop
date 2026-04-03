@@ -147,14 +147,6 @@ class MessageCard extends ConsumerWidget {
               const SizedBox(height: 8),
               Text(message.errorMessage!, style: AppTextStyles.error(context)),
             ],
-            if (message.status == TransferMessageStatus.expired &&
-                message.errorMessage != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                message.errorMessage!,
-                style: AppTextStyles.secondary(context),
-              ),
-            ],
             if (message.isOutgoing &&
                 message.status == TransferMessageStatus.pending) ...[
               const SizedBox(height: 8),

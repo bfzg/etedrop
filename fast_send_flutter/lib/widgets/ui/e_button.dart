@@ -132,7 +132,8 @@ class EButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
     final spec = _EButtonSizeSpec.of(size);
     final effectiveHeight = height ?? spec.minHeight;
     final effectiveRadius = radius ?? spec.radius;
@@ -141,7 +142,7 @@ class EButton extends StatelessWidget {
 
     final primaryFg = destructive ? scheme.error : AppStyles.primary;
 
-    TextStyle labelStyle(Color fg) => TextStyle(
+    TextStyle labelStyle(Color fg) => theme.textTheme.bodyMedium!.copyWith(
           fontSize: spec.fontSize,
           fontWeight: FontWeight.w600,
           color: fg,
