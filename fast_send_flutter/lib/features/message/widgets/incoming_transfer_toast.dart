@@ -119,19 +119,16 @@ class IncomingTransferToast extends ConsumerWidget {
                     variant: EButtonVariant.outlined,
                     destructive: true,
                     text: l10n.reject,
+                    size: EButtonSize.sm,
+                    radius: 99,
                     onPressed: () async {
                       final msgNotifier = ref.read(
                         messageListProvider.notifier,
                       );
-                      final lanNotifier = ref.read(
-                        lanManagerProvider.notifier,
-                      );
+                      final lanNotifier = ref.read(lanManagerProvider.notifier);
                       if (msg!.isBatch && msg.shareId != null) {
                         try {
-                          await lanNotifier.receiverRespondToShare(
-                            msg,
-                            false,
-                          );
+                          await lanNotifier.receiverRespondToShare(msg, false);
                         } catch (_) {}
                       }
                       msgNotifier.updateStatus(
@@ -147,14 +144,14 @@ class IncomingTransferToast extends ConsumerWidget {
                   EButton(
                     variant: EButtonVariant.primary,
                     icon: Icons.download,
+                    radius: 99,
+                    size: EButtonSize.sm,
                     text: l10n.receiveAction,
                     onPressed: () async {
                       final msgNotifier = ref.read(
                         messageListProvider.notifier,
                       );
-                      final lanNotifier = ref.read(
-                        lanManagerProvider.notifier,
-                      );
+                      final lanNotifier = ref.read(lanManagerProvider.notifier);
                       final m = msg!;
                       if (m.isBatch && m.shareId != null) {
                         msgNotifier.updateStatus(
@@ -182,9 +179,7 @@ class IncomingTransferToast extends ConsumerWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(
-                                  l10n.notifySenderFailed('$e'),
-                                ),
+                                content: Text(l10n.notifySenderFailed('$e')),
                               ),
                             );
                           }

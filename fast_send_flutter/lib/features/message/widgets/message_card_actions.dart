@@ -40,16 +40,16 @@ Future<void> retryOutgoingShare(
           caption: capOnly,
         );
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.shareRestarted)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.shareRestarted)));
         }
         return;
       }
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.localFileGoneCannotRetry)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.localFileGoneCannotRetry)));
       }
       return;
     }
@@ -61,15 +61,15 @@ Future<void> retryOutgoingShare(
       caption: cap != null && cap.isNotEmpty ? cap : null,
     );
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.shareRestarted)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.shareRestarted)));
     }
   } catch (e) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.retryFailed('$e'))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.retryFailed('$e'))));
     }
   }
 }
@@ -89,6 +89,8 @@ class MessageCardIncomingActions extends ConsumerWidget {
         EButton(
           variant: EButtonVariant.outlined,
           destructive: true,
+          size: EButtonSize.sm,
+          radius: 99,
           text: l10n.reject,
           onPressed: () async {
             final msgNotifier = ref.read(messageListProvider.notifier);
@@ -109,6 +111,8 @@ class MessageCardIncomingActions extends ConsumerWidget {
           variant: EButtonVariant.primary,
           icon: Icons.download,
           text: l10n.receiveAction,
+          size: EButtonSize.sm,
+          radius: 99,
           onPressed: () async {
             final msgNotifier = ref.read(messageListProvider.notifier);
             final lanNotifier = ref.read(lanManagerProvider.notifier);
