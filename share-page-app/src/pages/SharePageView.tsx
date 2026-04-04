@@ -143,22 +143,41 @@ export function SharePageView() {
         className={`flex items-center justify-center ${isWechatMobile ? "px-5" : "min-h-screen p-5"}`}
       >
         <div className="max-w-[440px] w-full">
-          <div className="flex items-center gap-3 mb-1 min-w-0">
-            <img
-              src={`${import.meta.env.BASE_URL}img/app_icon.png`}
-              alt=""
-              className="w-10 h-10 rounded-2xl shrink-0 object-contain"
-              width={40}
-              height={40}
-              decoding="async"
-            />
-            <div className="text-2xl font-bold text-gray-800 truncate">
-              {t("share.brand")}
+          <div className="flex items-center justify-between gap-3 mb-6 min-w-0">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <img
+                src={`${import.meta.env.BASE_URL}img/app_icon.png`}
+                alt=""
+                className="w-10 h-10 rounded-2xl shrink-0 object-contain"
+                width={40}
+                height={40}
+                decoding="async"
+              />
+              <div className="text-2xl font-bold text-gray-800 truncate">
+                {t("share.brand")}
+              </div>
+            </div>
+            <div className="relative shrink-0">
+              <select
+                className="appearance-none cursor-pointer min-w-30 rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                aria-label={t("share.language")}
+                value={currentLng}
+                onChange={(e) => changeLanguage(e.target.value)}
+              >
+                {SUPPORTED.map((lng) => (
+                  <option key={lng} value={lng}>
+                    {LANG_LABELS[lng] ?? lng}
+                  </option>
+                ))}
+              </select>
+              <span
+                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] leading-none"
+                aria-hidden
+              >
+                ▼
+              </span>
             </div>
           </div>
-          <p className="text-[13px] text-gray-500 mb-6">
-            {t("share.shareCode", { code: shareCode })}
-          </p>
 
           {inWeChat && (
             <div className="mb-4">
@@ -356,22 +375,6 @@ export function SharePageView() {
             </button>
           )}
 
-          <div className="mt-8 pt-4 border-t border-slate-200">
-            <label className="flex items-center justify-between gap-3 text-[13px] text-slate-600">
-              <span>{t("share.language")}</span>
-              <select
-                className="rounded-lg border border-slate-200 bg-white py-1.5 px-2 text-sm text-slate-800"
-                value={currentLng}
-                onChange={(e) => changeLanguage(e.target.value)}
-              >
-                {SUPPORTED.map((lng) => (
-                  <option key={lng} value={lng}>
-                    {LANG_LABELS[lng] ?? lng}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
         </div>
       </div>
     </>

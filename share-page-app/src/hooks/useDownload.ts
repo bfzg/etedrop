@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileMeta } from "../types";
+import streamSaver from "streamsaver";
 import {
   clearPartialFile,
   clearSessionMeta,
@@ -10,9 +11,14 @@ import {
   parseOffsetPrefixedChunk,
   readSessionMeta,
 } from "../utils/shareDownloadStorage";
+import { shouldUseStreamSaverSink } from "../utils/downloadSink";
 
 export type DownloadIntent = "download" | "play";
-type BinaryMode = "legacy" | "prefixed-opfs" | "prefixed-memory";
+type BinaryMode =
+  | "legacy"
+  | "prefixed-opfs"
+  | "prefixed-memory"
+  | "prefixed-streamsaver";
 
 const FLOW_PAUSE_PENDING_BYTES = 8 * 1024 * 1024;
 const FLOW_RESUME_PENDING_BYTES = 2 * 1024 * 1024;
@@ -37,6 +43,8 @@ export function useDownload(
   const expectedNextOffsetRef = useRef(0);
   const binaryModeRef = useRef<BinaryMode>("legacy");
   const opfsWriterRef = useRef<OpfsChunkWriter | null>(null);
+  const streamSaverWriterRef =
+    useRef<WritableStreamDefaultWriter<Uint8Array> | null>(null);
   const opfsGateRef = useRef(Promise.resolve());
   const writeChainRef = useRef(Promise.resolve());
   const pendingWriteBytesRef = useRef(0);
@@ -73,6 +81,11 @@ export function useDownload(
 
   const resetDownload = useCallback(() => {
     void closeOpfsWriter();
+    const sw = streamSaverWriterRef.current;
+    streamSaverWriterRef.current = null;
+    if (sw) {
+      void sw.abort().catch(() => {});
+    }
     writeChainRef.current = Promise.resolve();
     opfsGateRef.current = Promise.resolve();
     pendingWriteBytesRef.current = 0;
@@ -139,7 +152,40 @@ export function useDownload(
           releaseGate = r;
         });
 
-        if (hasOpfs()) {
+        const wantStreamSaver = shouldUseStreamSaverSink();
+
+        if (wantStreamSaver) {
+          binaryModeRef.current = "prefixed-streamsaver";
+          void (async () => {
+            try {
+              await closeOpfsWriter();
+              const fi = fileInfoRef.current;
+              const name = fi?.fileName ?? "download";
+              const ws = streamSaver.createWriteStream(name, {
+                size: m.fileSize,
+              });
+              streamSaverWriterRef.current = ws.getWriter();
+            } catch (e) {
+              console.error("[fastsend] streamSaver init failed", e);
+              streamSaverWriterRef.current = null;
+              try {
+                if (hasOpfs()) {
+                  binaryModeRef.current = "prefixed-opfs";
+                  const w = new OpfsChunkWriter(deviceId, shareCode);
+                  await w.open(resumeEcho === 0);
+                  opfsWriterRef.current = w;
+                } else {
+                  binaryModeRef.current = "prefixed-memory";
+                }
+              } catch {
+                binaryModeRef.current = "prefixed-memory";
+                opfsWriterRef.current = null;
+              }
+            } finally {
+              releaseGate();
+            }
+          })();
+        } else if (hasOpfs()) {
           binaryModeRef.current = "prefixed-opfs";
           void (async () => {
             try {
@@ -205,6 +251,13 @@ export function useDownload(
           const w = opfsWriterRef.current;
           if (w) {
             await w.writeAt(offset, data);
+          } else {
+            memoryDataChunksRef.current.push(data);
+          }
+        } else if (binaryModeRef.current === "prefixed-streamsaver") {
+          const w = streamSaverWriterRef.current;
+          if (w) {
+            await w.write(new Uint8Array(data));
           } else {
             memoryDataChunksRef.current.push(data);
           }
@@ -284,7 +337,19 @@ export function useDownload(
         setPlayUrl(url);
       };
 
-      if (mode === "prefixed-opfs" && opfsWriterRef.current && hasOpfs()) {
+      if (mode === "prefixed-streamsaver") {
+        const w = streamSaverWriterRef.current;
+        streamSaverWriterRef.current = null;
+        if (w) {
+          try {
+            await w.close();
+          } catch {
+            /* ignore */
+          }
+        }
+        await clearPartialFile(deviceId, shareCode);
+        clearSessionMeta(deviceId, shareCode);
+      } else if (mode === "prefixed-opfs" && opfsWriterRef.current && hasOpfs()) {
         const w = opfsWriterRef.current;
         opfsWriterRef.current = null;
         await w.close();

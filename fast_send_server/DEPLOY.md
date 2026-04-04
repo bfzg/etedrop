@@ -163,15 +163,15 @@ PORT=40321 npm run start:prod
 
 ```bash
 npm install -g pm2
-PORT=40321 pm2 start dist/main.js --name fast-send-server
+PORT=40321 pm2 start dist/main.js --name etedrop-server
 pm2 save && pm2 startup
 ```
 
 | 操作 | 命令 |
 |------|------|
-| 停止 | `pm2 stop fast-send-server` |
-| 重启 | `pm2 restart fast-send-server` |
-| 日志 | `pm2 logs fast-send-server` |
+| 停止 | `pm2 stop etedrop-server` |
+| 重启 | `pm2 restart etedrop-server` |
+| 日志 | `pm2 logs etedrop-server` |
 
 ---
 
