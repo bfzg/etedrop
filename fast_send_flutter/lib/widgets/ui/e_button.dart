@@ -65,7 +65,7 @@ class _EButtonSizeSpec {
   static const _sm = _EButtonSizeSpec(
     minHeight: 34,
     radius: 8,
-    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
     fontSize: 13,
     iconSize: 16,
     progressSide: 14,
@@ -77,7 +77,7 @@ class _EButtonSizeSpec {
   static const _md = _EButtonSizeSpec(
     minHeight: 44,
     radius: 10,
-    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 10),
     fontSize: 15,
     iconSize: 18,
     progressSide: 16,
@@ -89,7 +89,7 @@ class _EButtonSizeSpec {
   static const _lg = _EButtonSizeSpec(
     minHeight: 52,
     radius: 12,
-    padding: EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+    padding: EdgeInsets.symmetric(horizontal: 28, vertical: 14),
     fontSize: 16,
     iconSize: 20,
     progressSide: 18,
@@ -144,7 +144,7 @@ class EButton extends StatelessWidget {
 
     TextStyle labelStyle(Color fg) => theme.textTheme.bodyMedium!.copyWith(
           fontSize: spec.fontSize,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w500,
           color: fg,
         );
 

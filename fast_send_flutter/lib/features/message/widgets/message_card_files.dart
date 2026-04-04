@@ -138,6 +138,7 @@ Widget revealableFileChip(
             borderRadius: BorderRadius.circular(4),
             child: Image.file(
               File(path),
+              key: ValueKey(path),
               width: 40,
               height: 40,
               fit: BoxFit.cover,
@@ -208,6 +209,7 @@ Widget revealableSingleFileBlock(
           borderRadius: BorderRadius.circular(10),
           child: Image.file(
             File(path),
+            key: ValueKey(path),
             width: 160,
             height: 160,
             fit: BoxFit.cover,

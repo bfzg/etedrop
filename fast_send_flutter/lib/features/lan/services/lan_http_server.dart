@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/utils/resumable_transfer.dart';
+import '../../../core/utils/unique_file_path.dart';
 import '../models/lan_share_payload.dart';
 import 'lan_http_context.dart';
 
@@ -13,6 +14,12 @@ class LanHttpServer {
   HttpServer? _server;
   final String saveDirectory;
   final String deviceId;
+
+  /// 同一批次上传：首次写入时选定不冲突的落盘路径，续传与重试 offset=0 时复用，完成后移除。
+  final Map<String, String> _receiveSavePathByKey = {};
+
+  static String _uploadSessionKey(String? shareId, int fileIndex, String fileName) =>
+      '${shareId ?? '_'}|$fileIndex|$fileName';
 
   /// 收到分享邀约（仅元数据，不含文件）
   final Future<void> Function(LanShareOfferPayload offer)? onShareOffer;
@@ -268,7 +275,16 @@ class LanHttpServer {
       }
     }
 
-    final savePath = p.join(saveDirectory, fileName);
+    final pathKey = _uploadSessionKey(shareId, fileIndex, fileName);
+    late final String savePath;
+    if (resumeOffset > 0) {
+      savePath =
+          _receiveSavePathByKey[pathKey] ?? p.join(saveDirectory, fileName);
+    } else {
+      savePath = _receiveSavePathByKey[pathKey] ??
+          await uniquePathInDirectory(saveDirectory, fileName);
+      _receiveSavePathByKey[pathKey] = savePath;
+    }
     final file = File(savePath);
 
     late final IOSink sink;
@@ -279,6 +295,9 @@ class LanHttpServer {
         declaredTotalSize: fileSize,
       );
     } on ResumableTransferException catch (e) {
+      if (resumeOffset == 0) {
+        _receiveSavePathByKey.remove(pathKey);
+      }
       debugPrint(
         '[LAN /upload][recv] conflict peer=$peer file=$fileName: ${e.message}',
       );
@@ -390,6 +409,7 @@ class LanHttpServer {
           savedAbsolutePath: file.absolute.path,
         ),
       );
+      _receiveSavePathByKey.remove(pathKey);
     } catch (e, st) {
       // 文件已落盘且 HTTP 200 已发出；此处失败不应再写 response，也不应把整次接收标为失败。
       debugPrint('LAN upload onComplete error: $e\n$st');

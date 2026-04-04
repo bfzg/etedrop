@@ -121,7 +121,10 @@ class NotificationService {
       windows: WindowsNotificationDetails(),
     );
 
-    final id = _safeNotificationId('done|$senderName|$fileName');
+    // 同文件名连续传输时避免与上一条通知 id 冲突（系统可能仍显示旧预览）。
+    final id = _safeNotificationId(
+      'done|$senderName|$fileName|${DateTime.now().millisecondsSinceEpoch}',
+    );
     final l10n = loadAppLocalizationsSync();
     await _plugin.show(
       id: id,

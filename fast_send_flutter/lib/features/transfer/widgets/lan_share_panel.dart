@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -9,7 +8,6 @@ import '../../../styles/styles.dart';
 import '../../../widgets/ui/e_button.dart';
 import '../../device/models/device_config.dart';
 import '../../lan/models/lan_device.dart';
-import '../../lan/providers/lan_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/message_provider.dart';
 
@@ -102,11 +100,6 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
     super.dispose();
   }
 
-  String _linkText() {
-    final port = ref.read(lanManagerProvider.notifier).localHttpPort;
-    return 'lan-share://${widget.shareId}?port=$port';
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -168,13 +161,6 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
               _RecipientAvatarStack(devices: widget.recipients),
               const SizedBox(height: 12),
             ],
-            SelectableText(
-              _linkText(),
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontFamily: 'monospace',
-              ),
-            ),
-            const SizedBox(height: 4),
             Text(
               completed
                   ? l10n.shareAllReceivedHint
@@ -184,39 +170,22 @@ class _LanSharePanelState extends ConsumerState<LanSharePanel> {
               style: AppTextStyles.secondary(context),
             ),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                EButton(
-                  variant: EButtonVariant.outlined,
-                  icon: Icons.copy,
-                  text: l10n.copyAction,
-                  radius: 99,
-                  onPressed: () async {
-                    await Clipboard.setData(ClipboardData(text: _linkText()));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.copiedToClipboard)),
-                      );
-                    }
-                  },
-                ),
-                const SizedBox(width: 8),
-                if (completed)
-                  EButton(
-                    variant: EButtonVariant.tonal,
-                    radius: 99,
-                    text: l10n.closeAction,
-                    onPressed: widget.onDismissRecord,
-                  )
-                else
-                  EButton(
-                    variant: EButtonVariant.text,
-                    destructive: true,
-                    radius: 99,
-                    text: l10n.cancelSharingAction,
-                    onPressed: widget.onCancelSharing,
-                  ),
-              ],
+            Align(
+              alignment: Alignment.centerRight,
+              child: completed
+                  ? EButton(
+                      variant: EButtonVariant.tonal,
+                      radius: 99,
+                      text: l10n.closeAction,
+                      onPressed: widget.onDismissRecord,
+                    )
+                  : EButton(
+                      variant: EButtonVariant.text,
+                      destructive: true,
+                      radius: 99,
+                      text: l10n.cancelSharingAction,
+                      onPressed: widget.onCancelSharing,
+                    ),
             ),
           ],
         ),
