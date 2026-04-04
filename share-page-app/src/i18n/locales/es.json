@@ -1,6 +1,6 @@
 {
   "share": {
-    "brand": "Eddy",
+    "brand": "EteDrop",
     "missingParams": "Falta el ID del dispositivo o el código de compartición",
     "shareCode": "Código: {{code}}",
     "wechatAlt": "Abrir en el navegador",
@@ -47,7 +47,7 @@
     "stalled": "La descarga parece detenida (sin progreso en 12+ s). iOS puede pausar WebRTC en segundo plano. Mantén la página visible, prueba Safari o pulsa Reconectar."
   },
   "dev": {
-    "title": "Página de compartición Eddy",
+    "title": "Página de compartición EteDrop",
     "useFullLink": "Usa un enlace completo:",
     "debugVisit": "Vista previa de desarrollo:"
   }

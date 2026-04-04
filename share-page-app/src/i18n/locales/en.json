@@ -1,6 +1,6 @@
 {
   "share": {
-    "brand": "Eddy",
+    "brand": "EteDrop",
     "missingParams": "Missing device ID or share code",
     "shareCode": "Share code: {{code}}",
     "wechatAlt": "Open in system browser",
@@ -47,7 +47,7 @@
     "stalled": "Download seems stalled (no progress for 12+ seconds). iOS may pause WebRTC when backgrounded or locked. Keep the page in the foreground, try Safari, or tap Reconnect."
   },
   "dev": {
-    "title": "Eddy share page",
+    "title": "EteDrop share page",
     "useFullLink": "Use a full share link:",
     "debugVisit": "Dev preview:"
   }

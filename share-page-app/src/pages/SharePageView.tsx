@@ -143,8 +143,18 @@ export function SharePageView() {
         className={`flex items-center justify-center ${isWechatMobile ? "px-5" : "min-h-screen p-5"}`}
       >
         <div className="max-w-[440px] w-full">
-          <div className="text-2xl font-bold text-gray-800 mb-1">
-            {t("share.brand")}
+          <div className="flex items-center gap-3 mb-1 min-w-0">
+            <img
+              src={`${import.meta.env.BASE_URL}img/app_icon.png`}
+              alt=""
+              className="w-10 h-10 rounded-2xl shrink-0 object-contain"
+              width={40}
+              height={40}
+              decoding="async"
+            />
+            <div className="text-2xl font-bold text-gray-800 truncate">
+              {t("share.brand")}
+            </div>
           </div>
           <p className="text-[13px] text-gray-500 mb-6">
             {t("share.shareCode", { code: shareCode })}
@@ -209,12 +219,20 @@ export function SharePageView() {
 
           {showPassword && (
             <div className="mb-4">
-              <label className="block text-[13px] text-slate-600 mb-1.5 font-medium">
+              <label
+                className="block text-[13px] text-slate-600 mb-1.5 font-medium"
+                htmlFor="share-password-input"
+              >
                 {t("share.passwordRequired")}
               </label>
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-2">
                 <input
+                  id="share-password-input"
                   type="password"
+                  name="password"
+                  autoComplete="current-password"
+                  enterKeyHint="go"
+                  inputMode="text"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -222,13 +240,13 @@ export function SharePageView() {
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                   placeholder={t("share.passwordPlaceholder")}
-                  className="flex-1 py-2.5 px-3.5 bg-gray-100 rounded-lg text-sm outline-none"
+                  className="w-full min-w-0 min-h-[44px] py-2.5 px-3.5 bg-gray-100 rounded-lg text-base outline-none border border-transparent focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 sm:flex-1"
                 />
                 <button
                   type="button"
                   disabled={verifyLoading}
                   onClick={handleVerify}
-                  className="inline-flex items-center justify-center gap-1.5 py-2.5 px-5 rounded-lg text-sm font-medium bg-indigo-600 text-white cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-2.5 px-5 rounded-lg text-base font-medium bg-indigo-600 text-white cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto sm:min-w-[100px] sm:shrink-0"
                 >
                   {t("share.verify")}
                 </button>

@@ -1,6 +1,6 @@
 {
   "share": {
-    "brand": "Eddy",
+    "brand": "EteDrop",
     "missingParams": "缺少设备 ID 或分享码",
     "shareCode": "分享码: {{code}}",
     "wechatAlt": "请在浏览器打开",
@@ -47,7 +47,7 @@
     "stalled": "下载似乎已停止（超过 12 秒无进度）。iOS 浏览器可能会在切后台/锁屏/省电时暂停 WebRTC 或限制内存。建议保持前台亮屏，或在 Safari 打开再试；也可点「重新连接」。"
   },
   "dev": {
-    "title": "Eddy 分享页",
+    "title": "EteDrop 分享页",
     "useFullLink": "请使用完整分享链接：",
     "debugVisit": "开发调试可访问："
   }

@@ -1,6 +1,6 @@
 {
   "share": {
-    "brand": "Eddy",
+    "brand": "EteDrop",
     "missingParams": "デバイス ID または共有コードがありません",
     "shareCode": "共有コード: {{code}}",
     "wechatAlt": "ブラウザで開く",
@@ -47,7 +47,7 @@
     "stalled": "ダウンロードが停止しているようです（12秒以上進捗なし）。iOSではバックグラウンドやロックでWebRTCが一時停止することがあります。前面表示のままにするかSafariで試すか、「再接続」をタップしてください。"
   },
   "dev": {
-    "title": "Eddy 共有ページ",
+    "title": "EteDrop 共有ページ",
     "useFullLink": "完全な共有リンクを使用してください：",
     "debugVisit": "開発用プレビュー："
   }
