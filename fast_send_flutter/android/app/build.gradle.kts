@@ -7,7 +7,7 @@ plugins {
 
 android {
     // TODO 这里修改成自己的
-    namespace = "com.fasteddy.app"
+    namespace = "com.etedrop.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.fasteddy.app"
+        applicationId = "com.etedrop.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -36,9 +36,9 @@ class NotificationService {
       ),
       linux: LinuxInitializationSettings(defaultActionName: 'Open'),
       windows: WindowsInitializationSettings(
-        appName: 'Eddy',
-        appUserModelId: 'com.fasteddy.app',
-        guid: '0f1e6f52-2b6d-4dcb-b7ab-2bc5e54c9b61',
+        appName: 'EteDrop',
+        appUserModelId: 'com.etedrop.app',
+        guid: '7c8d9e0f-1a2b-4c3d-9e8f-7a6b5c4d3e2f',
       ),
     );
 

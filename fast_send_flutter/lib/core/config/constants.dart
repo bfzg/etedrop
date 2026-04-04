@@ -16,7 +16,7 @@ class AppConstants {
   static const String shareServerUrl = 'ws://192.168.1.9:3000/api/share';
 
   /// 应用名称
-  static const String appName = 'Eddy';
+  static const String appName = 'EteDrop';
 
   /// 应用版本
   static const String version = '1.0.0';

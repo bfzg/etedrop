@@ -31,7 +31,7 @@ class LanDiscoveryService {
   static final Random _rng = Random();
 
   static const MethodChannel _androidMulticastLockChannel =
-      MethodChannel('com.fasteddy.app/lan_multicast_lock');
+      MethodChannel('com.etedrop.app/lan_multicast_lock');
   static const bool _androidForceUnifiedBind = true;
 
   final String deviceId;

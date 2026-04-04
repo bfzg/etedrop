@@ -1,4 +1,4 @@
-package com.fasteddy.app
+package com.etedrop.app
 
 import android.content.Context
 import android.net.wifi.WifiManager
@@ -9,13 +9,13 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var multicastLock: WifiManager.MulticastLock? = null
-    private val logTag = "EddyLan"
+    private val logTag = "EteDropLan"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "com.fasteddy.app/lan_multicast_lock",
+            "com.etedrop.app/lan_multicast_lock",
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "acquire" -> {
@@ -42,7 +42,7 @@ class MainActivity : FlutterActivity() {
         if (multicastLock?.isHeld == true) return
         if (multicastLock == null) {
             val wifi = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
-            multicastLock = wifi.createMulticastLock("eddy_lan_discovery").apply {
+            multicastLock = wifi.createMulticastLock("etedrop_lan_discovery").apply {
                 setReferenceCounted(false)
             }
         }

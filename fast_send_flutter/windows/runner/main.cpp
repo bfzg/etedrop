@@ -20,7 +20,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
 
   // Set AUMID for Windows toast notifications (flutter_local_notifications).
   // Must match the appUserModelId used in NotificationService.
-  ::SetCurrentProcessExplicitAppUserModelID(L"com.fasteddy.app");
+  ::SetCurrentProcessExplicitAppUserModelID(L"com.etedrop.app");
 
   flutter::DartProject project(L"data");
 
@@ -32,7 +32,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"Eddy", origin, size)) {
+  if (!window.Create(L"EteDrop", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

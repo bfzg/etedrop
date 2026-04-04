@@ -1,4 +1,4 @@
-import 'package:eddy/core/utils/is_utils.dart';
+import 'package:etedrop/core/utils/is_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:window_manager/window_manager.dart';

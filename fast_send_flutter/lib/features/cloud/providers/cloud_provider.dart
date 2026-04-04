@@ -16,7 +16,7 @@ import '../services/macos_cloud_storage_access.dart';
 part 'cloud_provider.g.dart';
 
 const _downloadDirKey = 'download_dir';
-const _mobileDefaultCloudSubdir = 'eddy';
+const _mobileDefaultCloudSubdir = 'etedrop';
 
 bool _isDesktopPlatform() {
   return Platform.isMacOS || Platform.isWindows || Platform.isLinux;

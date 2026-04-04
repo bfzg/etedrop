@@ -89,13 +89,13 @@ BEGIN
     BEGIN
         BLOCK "040904e4"
         BEGIN
-            VALUE "CompanyName", "fasteddy" "\0"
-            VALUE "FileDescription", "Eddy" "\0"
+            VALUE "CompanyName", "EteDrop" "\0"
+            VALUE "FileDescription", "EteDrop" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "Eddy" "\0"
-            VALUE "LegalCopyright", "Copyright (C) 2026 fasteddy. All rights reserved." "\0"
-            VALUE "OriginalFilename", "Eddy.exe" "\0"
-            VALUE "ProductName", "Eddy" "\0"
+            VALUE "InternalName", "EteDrop" "\0"
+            VALUE "LegalCopyright", "Copyright (C) 2026 EteDrop. All rights reserved." "\0"
+            VALUE "OriginalFilename", "EteDrop.exe" "\0"
+            VALUE "ProductName", "EteDrop" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
