@@ -32,7 +32,8 @@
     "connectionError": "接続エラー",
     "parseFailed": "メッセージの解析に失敗しました",
     "networkFailed": "ネットワーク接続に失敗しました",
-    "connectionClosed": "接続が閉じられました"
+    "connectionClosed": "接続が閉じられました",
+    "reestablishingP2p": "P2P接続を再確立しています…"
   },
   "p2p": {
     "disconnected": "P2Pが切断されました（再接続して続行できます）"

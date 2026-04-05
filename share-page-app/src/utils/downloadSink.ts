@@ -1,4 +1,3 @@
-import { isMobile } from "./env";
 import { hasOpfs } from "./shareDownloadStorage";
 
 /**
@@ -15,11 +14,35 @@ export function isStreamSaverEnvironmentOk(): boolean {
 }
 
 /**
- * 下载落盘策略：
- * - 桌面且支持 OPFS：优先 OPFS。
- * - 手机或无 OPFS：在**环境支持 SW**时用自托管 StreamSaver；否则 OPFS 或内存。
+ * 当前环境是否使用 StreamSaver（mitm + SW）作为分片下载落盘。
+ * **优先 OPFS**：有 OPFS 时一律不用 StreamSaver；仅在无 OPFS 且安全上下文 + SW 可用时用 StreamSaver，否则再走内存分片。
+ * StreamSaver 不做断点续传；每次下载结束或 `resetDownload` 时须 `resetMitmTransporter()`（见 `src/lib/streamSaver`）。
  */
 export function shouldUseStreamSaverSink(): boolean {
   if (!isStreamSaverEnvironmentOk()) return false;
-  return isMobile() || !hasOpfs();
+  if (hasOpfs()) return false;
+  return true;
+}
+
+/**
+ * 是否允许使用 OPFS 半成品 + `resumeFrom` 断点续传（仅当本次实际走 OPFS 落盘时）。
+ * StreamSaver 路径为 false：不下发续传字节、`download-start` 始终 `resumeFrom: 0`。
+ */
+export function shouldUseOpfsResumeFromPartial(): boolean {
+  if (!hasOpfs()) return false;
+  if (shouldUseStreamSaverSink()) return false;
+  return true;
+}
+
+/**
+ * 为 StreamSaver 下载名加时间戳，避免与「下载」目录已有同名文件冲突。
+ * 否则 Android Chrome 等会弹出「是否再次下载」并可能挂起页面或打断 WritableStream。
+ */
+export function uniqueStreamSaverFileName(baseName: string): string {
+  const ts = Date.now();
+  const i = baseName.lastIndexOf(".");
+  if (i <= 0 || i === baseName.length - 1) {
+    return `${baseName}_${ts}`;
+  }
+  return `${baseName.slice(0, i)}_${ts}${baseName.slice(i)}`;
 }

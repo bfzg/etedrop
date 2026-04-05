@@ -32,7 +32,8 @@
     "connectionError": "Connection error",
     "parseFailed": "Failed to parse message",
     "networkFailed": "Network connection failed",
-    "connectionClosed": "Connection closed"
+    "connectionClosed": "Connection closed",
+    "reestablishingP2p": "Re-establishing P2P…"
   },
   "p2p": {
     "disconnected": "P2P disconnected (you can reconnect to resume)"

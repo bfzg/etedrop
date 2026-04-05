@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileMeta } from "../types";
-import streamSaver from "streamsaver";
+import streamSaver from "../lib/streamSaver";
 import {
   clearPartialFile,
   clearSessionMeta,
+  DOWNLOAD_ACTIVITY_TOUCH_INTERVAL_MS,
   getOpfsPartialSize,
   hasOpfs,
   OpfsChunkWriter,
   parseOffsetPrefixedChunk,
   readSessionMeta,
+  touchDownloadSessionActivity,
 } from "../utils/shareDownloadStorage";
-import { shouldUseStreamSaverSink } from "../utils/downloadSink";
+import { DOWNLOAD_ACK_WINDOW_BYTES } from "../constants/downloadAck";
+import {
+  shouldUseOpfsResumeFromPartial,
+  shouldUseStreamSaverSink,
+  uniqueStreamSaverFileName,
+} from "../utils/downloadSink";
 
 export type DownloadIntent = "download" | "play";
 type BinaryMode =
@@ -20,8 +27,16 @@ type BinaryMode =
   | "prefixed-memory"
   | "prefixed-streamsaver";
 
+/** 待写入队列超过此值则通知发送端 pause（与 Flutter `_downloadFlowGate` 对应） */
 const FLOW_PAUSE_PENDING_BYTES = 8 * 1024 * 1024;
-const FLOW_RESUME_PENDING_BYTES = 2 * 1024 * 1024;
+/**
+ * resume 低于 pause，留滞后带，避免在 8MB 边界上 pause/resume 来回抖动。
+ * 若 resume 过小（如 4MB），慢写入时 pending 会长期停在 4～8MB 无法 resume（旧问题）。
+ * 若 resume 与 pause 同为 8MB（pending<=8 即 resume），易高频震荡，且端到端易出现「差几 MB 卡住」。
+ */
+const FLOW_RESUME_PENDING_BYTES = 6 * 1024 * 1024;
+/** 仍显示 paused 但 pending 已低于 pause 线时，周期性补发 resume（信令丢失或 6～8MB 死区） */
+const FLOW_RESUME_WATCHDOG_MS = 800;
 
 export function useDownload(
   deviceId: string,
@@ -59,6 +74,12 @@ export function useDownload(
     hasPassword: boolean;
   } | null>(null);
   const playUrlRef = useRef<string>("");
+  /** 节流刷新 OPFS 会话 lastActivityAt，避免长下载被 TTL 清理 */
+  const lastOpfsActivityTouchAtRef = useRef(0);
+  const flowPauseBytesRef = useRef(FLOW_PAUSE_PENDING_BYTES);
+  const flowResumeBytesRef = useRef(FLOW_RESUME_PENDING_BYTES);
+  /** 与 Flutter `_downloadAckWindowBytes` 对齐；落盘后回传 `download-ack` */
+  const bytesSinceAckRef = useRef(0);
 
   const closeOpfsWriter = useCallback(async () => {
     const w = opfsWriterRef.current;
@@ -69,14 +90,37 @@ export function useDownload(
   }, []);
 
   const updateFlowControl = useCallback(() => {
+    if (binaryModeRef.current === "prefixed-streamsaver") {
+      return;
+    }
     const pending = pendingWriteBytesRef.current;
-    if (!downloadPausedRef.current && pending > FLOW_PAUSE_PENDING_BYTES) {
+    const pauseAt = flowPauseBytesRef.current;
+    const resumeBelow = flowResumeBytesRef.current;
+    if (!downloadPausedRef.current && pending > pauseAt) {
       downloadPausedRef.current = true;
       sendJson({ type: "download-pause" });
-    } else if (downloadPausedRef.current && pending < FLOW_RESUME_PENDING_BYTES) {
+    } else if (
+      downloadPausedRef.current &&
+      pending < resumeBelow
+    ) {
       downloadPausedRef.current = false;
       sendJson({ type: "download-resume" });
     }
+  }, [sendJson]);
+
+  /** 补发 resume：避免 pause/resume JSON 丢失；主逻辑仅在 pending<6MB 时 resume，6～8MB 区间靠此兜底 */
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      if (downloadCompletedRef.current) return;
+      if (totalBytesRef.current <= 0) return;
+      if (!downloadPausedRef.current) return;
+      const pending = pendingWriteBytesRef.current;
+      if (pending < flowPauseBytesRef.current) {
+        downloadPausedRef.current = false;
+        sendJson({ type: "download-resume" });
+      }
+    }, FLOW_RESUME_WATCHDOG_MS);
+    return () => window.clearInterval(id);
   }, [sendJson]);
 
   const resetDownload = useCallback(() => {
@@ -86,6 +130,10 @@ export function useDownload(
     if (sw) {
       void sw.abort().catch(() => {});
     }
+    streamSaver.resetMitmTransporter();
+    flowPauseBytesRef.current = FLOW_PAUSE_PENDING_BYTES;
+    flowResumeBytesRef.current = FLOW_RESUME_PENDING_BYTES;
+    bytesSinceAckRef.current = 0;
     writeChainRef.current = Promise.resolve();
     opfsGateRef.current = Promise.resolve();
     pendingWriteBytesRef.current = 0;
@@ -111,25 +159,26 @@ export function useDownload(
     }
     playUrlRef.current = "";
     setPlayUrl("");
+    lastOpfsActivityTouchAtRef.current = 0;
   }, [closeOpfsWriter]);
 
   const handleShareInfo = useCallback(
     (m: { fileName: string; fileSize: number; hasPassword: boolean }) => {
       fileInfoRef.current = m;
-      if (hasOpfs()) {
-        void (async () => {
-          const meta = readSessionMeta(deviceId, shareCode);
-          const fi = fileInfoRef.current;
-          if (!fi || !meta || meta.fileName !== fi.fileName || meta.fileSize !== fi.fileSize) {
-            setResumeHintBytes(0);
-            return;
-          }
-          const n = await getOpfsPartialSize(deviceId, shareCode);
-          setResumeHintBytes(n > 0 && n < fi.fileSize ? n : 0);
-        })();
-      } else {
+      if (!shouldUseOpfsResumeFromPartial()) {
         setResumeHintBytes(0);
+        return;
       }
+      void (async () => {
+        const meta = readSessionMeta(deviceId, shareCode);
+        const fi = fileInfoRef.current;
+        if (!fi || !meta || meta.fileName !== fi.fileName || meta.fileSize !== fi.fileSize) {
+          setResumeHintBytes(0);
+          return;
+        }
+        const n = await getOpfsPartialSize(deviceId, shareCode);
+        setResumeHintBytes(n > 0 && n < fi.fileSize ? n : 0);
+      })();
     },
     [deviceId, shareCode],
   );
@@ -137,7 +186,10 @@ export function useDownload(
   const handleFileMeta = useCallback(
     (m: FileMeta) => {
       const prefix = m.chunkPrefixBytes ?? 0;
-      const resumeEcho = m.resumeFrom ?? 0;
+      /** StreamSaver 不做续传：忽略对端的 resumeFrom，始终从 0 接收 */
+      const resumeEcho = shouldUseStreamSaverSink()
+        ? 0
+        : (m.resumeFrom ?? 0);
       totalBytesRef.current = m.fileSize;
       expectedNextOffsetRef.current = resumeEcho;
       setProgress({ received: resumeEcho, total: m.fileSize });
@@ -146,6 +198,7 @@ export function useDownload(
       setDownloadError("");
 
       if (prefix === 8) {
+        bytesSinceAckRef.current = 0;
         memoryDataChunksRef.current = [];
         let releaseGate!: () => void;
         opfsGateRef.current = new Promise<void>((r) => {
@@ -160,7 +213,7 @@ export function useDownload(
             try {
               await closeOpfsWriter();
               const fi = fileInfoRef.current;
-              const name = fi?.fileName ?? "download";
+              const name = uniqueStreamSaverFileName(fi?.fileName ?? "download");
               const ws = streamSaver.createWriteStream(name, {
                 size: m.fileSize,
               });
@@ -168,17 +221,24 @@ export function useDownload(
             } catch (e) {
               console.error("[fastsend] streamSaver init failed", e);
               streamSaverWriterRef.current = null;
+              streamSaver.resetMitmTransporter();
               try {
                 if (hasOpfs()) {
                   binaryModeRef.current = "prefixed-opfs";
+                  flowPauseBytesRef.current = FLOW_PAUSE_PENDING_BYTES;
+                  flowResumeBytesRef.current = FLOW_RESUME_PENDING_BYTES;
                   const w = new OpfsChunkWriter(deviceId, shareCode);
                   await w.open(resumeEcho === 0);
                   opfsWriterRef.current = w;
                 } else {
                   binaryModeRef.current = "prefixed-memory";
+                  flowPauseBytesRef.current = FLOW_PAUSE_PENDING_BYTES;
+                  flowResumeBytesRef.current = FLOW_RESUME_PENDING_BYTES;
                 }
               } catch {
                 binaryModeRef.current = "prefixed-memory";
+                flowPauseBytesRef.current = FLOW_PAUSE_PENDING_BYTES;
+                flowResumeBytesRef.current = FLOW_RESUME_PENDING_BYTES;
                 opfsWriterRef.current = null;
               }
             } finally {
@@ -187,6 +247,8 @@ export function useDownload(
           })();
         } else if (hasOpfs()) {
           binaryModeRef.current = "prefixed-opfs";
+          flowPauseBytesRef.current = FLOW_PAUSE_PENDING_BYTES;
+          flowResumeBytesRef.current = FLOW_RESUME_PENDING_BYTES;
           void (async () => {
             try {
               await closeOpfsWriter();
@@ -202,6 +264,8 @@ export function useDownload(
           })();
         } else {
           binaryModeRef.current = "prefixed-memory";
+          flowPauseBytesRef.current = FLOW_PAUSE_PENDING_BYTES;
+          flowResumeBytesRef.current = FLOW_RESUME_PENDING_BYTES;
           releaseGate();
         }
       } else {
@@ -231,7 +295,8 @@ export function useDownload(
       return;
     }
 
-    pendingWriteBytesRef.current += buf.byteLength;
+    const pendingWeight = buf.byteLength;
+    pendingWriteBytesRef.current += pendingWeight;
     updateFlowControl();
     writeChainRef.current = writeChainRef.current
       .then(async () => {
@@ -269,6 +334,37 @@ export function useDownload(
         setProgress({ received: expectedNextOffsetRef.current, total: totalBytes });
         lastProgressAtMsRef.current = Date.now();
         lastProgressBytesRef.current = expectedNextOffsetRef.current;
+
+        const ackMode = binaryModeRef.current;
+        if (
+          ackMode === "prefixed-opfs" ||
+          ackMode === "prefixed-streamsaver" ||
+          ackMode === "prefixed-memory"
+        ) {
+          bytesSinceAckRef.current += data.byteLength;
+          if (bytesSinceAckRef.current >= DOWNLOAD_ACK_WINDOW_BYTES) {
+            sendJson({ type: "download-ack" });
+            bytesSinceAckRef.current = 0;
+          }
+          if (
+            expectedNextOffsetRef.current >= totalBytes &&
+            bytesSinceAckRef.current > 0
+          ) {
+            sendJson({ type: "download-ack" });
+            bytesSinceAckRef.current = 0;
+          }
+        }
+
+        if (binaryModeRef.current === "prefixed-opfs") {
+          const now = Date.now();
+          if (
+            now - lastOpfsActivityTouchAtRef.current >=
+            DOWNLOAD_ACTIVITY_TOUCH_INTERVAL_MS
+          ) {
+            lastOpfsActivityTouchAtRef.current = now;
+            touchDownloadSessionActivity(deviceId, shareCode);
+          }
+        }
       })
       .catch((e) => {
         console.error("[fastsend] write chunk", e);
@@ -282,11 +378,11 @@ export function useDownload(
         );
       })
       .finally(() => {
-        pendingWriteBytesRef.current -= buf.byteLength;
+        pendingWriteBytesRef.current -= pendingWeight;
         if (pendingWriteBytesRef.current < 0) pendingWriteBytesRef.current = 0;
         updateFlowControl();
       });
-  }, [updateFlowControl, t]);
+  }, [deviceId, shareCode, updateFlowControl, t, sendJson]);
 
   // Watchdog: if progress stops increasing for too long, surface it in UI.
   useEffect(() => {
@@ -347,6 +443,7 @@ export function useDownload(
             /* ignore */
           }
         }
+        streamSaver.resetMitmTransporter();
         await clearPartialFile(deviceId, shareCode);
         clearSessionMeta(deviceId, shareCode);
       } else if (mode === "prefixed-opfs" && opfsWriterRef.current && hasOpfs()) {

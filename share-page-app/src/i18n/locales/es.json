@@ -32,7 +32,8 @@
     "connectionError": "Error de conexión",
     "parseFailed": "No se pudo analizar el mensaje",
     "networkFailed": "Error de red",
-    "connectionClosed": "Conexión cerrada"
+    "connectionClosed": "Conexión cerrada",
+    "reestablishingP2p": "Restableciendo P2P…"
   },
   "p2p": {
     "disconnected": "P2P desconectado (puedes reconectar para continuar)"

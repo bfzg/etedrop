@@ -1,4 +1,4 @@
-import streamSaver from "streamsaver";
+import streamSaver from "./streamSaver";
 
 /**
  * mitm 必须用绝对 base。`new URL(rel, '/share/')` 在部分环境下会抛 Invalid base URL；

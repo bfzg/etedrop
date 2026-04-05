@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DataChannelMessage } from "../types";
-import { ensureMetaMatchesOrClear, getOpfsPartialSize, hasOpfs, readSessionMeta } from "../utils/shareDownloadStorage";
+import { ensureMetaMatchesOrClear, getOpfsPartialSize, readSessionMeta } from "../utils/shareDownloadStorage";
+import { shouldUseOpfsResumeFromPartial } from "../utils/downloadSink";
 import { useSignaling } from "./useSignaling";
 import { useDownload, type DownloadIntent } from "./useDownload";
 import { useStreamPlayer } from "./useStreamPlayer";
@@ -123,7 +124,13 @@ export function useSharePage(deviceId: string, shareCode: string) {
     });
   }, [deviceId, shareCode, signaling, download, stream, t]);
 
-  const sendVerify = useCallback((password: string) => {
+  const sendVerify = useCallback(async (password: string) => {
+    try {
+      await signaling.ensureP2PReady();
+    } catch {
+      setVerifyLoading(false);
+      return;
+    }
     setVerifyLoading(true);
     setPasswordError("");
     signaling.sendJson({ type: "share-verify", password });
@@ -134,6 +141,11 @@ export function useSharePage(deviceId: string, shareCode: string) {
     remuxFmp4?: boolean;
     stream?: boolean;
   }) => {
+    try {
+      await signaling.ensureP2PReady();
+    } catch {
+      return;
+    }
     // Reset download state on each user action so mobile browsers don't get stuck
     // due to leftover queues/writers/paused state from the previous attempt.
     download.resetDownload();
@@ -156,7 +168,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
 
     let resume = 0;
     const fi = download.fileInfoRef.current;
-    if (fi && hasOpfs()) {
+    if (fi && shouldUseOpfsResumeFromPartial()) {
       const meta = readSessionMeta(deviceId, shareCode);
       if (meta && meta.fileName === fi.fileName && meta.fileSize === fi.fileSize) {
         resume = await getOpfsPartialSize(deviceId, shareCode);

@@ -92,12 +92,13 @@ export function SharePageView() {
   const mediaSourceAvailable =
     typeof window !== "undefined" && "MediaSource" in window;
   const wechatDownloadSoftLimitBytes = 10 * 1024 * 1024;
-  const fileSize = fileInfo?.fileSize ?? 0;
-  const wechatCanDownload =
-    !isWechatMobile ||
-    opfsAvailable ||
-    fileSize <= wechatDownloadSoftLimitBytes;
   const wechatCanPlay = mediaSourceAvailable;
+  /** 微信内置浏览器无法可靠触发系统下载，不展示下载按钮（已有顶部引导用系统浏览器打开） */
+  const showDownloadAction = showDownloadBtn && !inWeChat;
+  const showPlayAction =
+    showDownloadBtn &&
+    isLikelyVideo(fileInfo?.fileName ?? "") &&
+    (!inWeChat || wechatCanPlay);
   const canPlayWithoutMse = isIOS() && !mediaSourceAvailable;
 
   const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error;
@@ -125,9 +126,7 @@ export function SharePageView() {
     const base = (i18n.resolvedLanguage ?? i18n.language)
       .split("-")[0]
       .toLowerCase();
-    return SUPPORTED.includes(base as (typeof SUPPORTED)[number])
-      ? base
-      : "en";
+    return SUPPORTED.includes(base as (typeof SUPPORTED)[number]) ? base : "en";
   }, [i18n.resolvedLanguage, i18n.language]);
 
   return (
@@ -159,7 +158,7 @@ export function SharePageView() {
             </div>
             <div className="relative shrink-0">
               <select
-                className="appearance-none cursor-pointer min-w-30 rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm font-medium text-slate-800 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                className="cursor-pointer rounded-xl bg-white py-2 w-22 text-sm font-medium text-slate-800 transition "
                 aria-label={t("share.language")}
                 value={currentLng}
                 onChange={(e) => changeLanguage(e.target.value)}
@@ -170,12 +169,6 @@ export function SharePageView() {
                   </option>
                 ))}
               </select>
-              <span
-                className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] leading-none"
-                aria-hidden
-              >
-                ▼
-              </span>
             </div>
           </div>
 
@@ -278,29 +271,28 @@ export function SharePageView() {
             </div>
           )}
 
-          {showDownloadBtn && (
-            <div className="grid grid-cols-2 gap-2">
-              {(!inWeChat || wechatCanPlay) &&
-                isLikelyVideo(fileInfo?.fileName ?? "") && (
-                  <button
-                    type="button"
-                    disabled={
-                      !fileInfo || !isLikelyVideo(fileInfo?.fileName ?? "")
-                    }
-                    onClick={() => {
-                      void sendDownloadStart({
-                        intent: "play",
-                        remuxFmp4: true,
-                        stream: !canPlayWithoutMse,
-                      });
-                    }}
-                    className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {t("share.play")}
-                  </button>
-                )}
+          {(showPlayAction || showDownloadAction) && (
+            <div
+              className={`grid gap-2 ${showPlayAction && showDownloadAction ? "grid-cols-2" : "grid-cols-1"}`}
+            >
+              {showPlayAction && (
+                <button
+                  type="button"
+                  disabled={!fileInfo || !isLikelyVideo(fileInfo?.fileName ?? "")}
+                  onClick={() => {
+                    void sendDownloadStart({
+                      intent: "play",
+                      remuxFmp4: true,
+                      stream: !canPlayWithoutMse,
+                    });
+                  }}
+                  className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {t("share.play")}
+                </button>
+              )}
 
-              {(!inWeChat || wechatCanDownload) && (
+              {showDownloadAction && (
                 <button
                   type="button"
                   onClick={() => {
@@ -374,7 +366,6 @@ export function SharePageView() {
               {t("share.reconnect")}
             </button>
           )}
-
         </div>
       </div>
     </>

@@ -5,6 +5,11 @@ export type StatusKind = "pending" | "online" | "error";
 
 export type DcMessageHandler = (ev: MessageEvent) => void;
 
+/** 浏览器侧 WebSocket 保活（代理/网关空闲断连） */
+const BROWSER_WS_HEARTBEAT_MS = 25_000;
+/** 等待 DataChannel open */
+const P2P_READY_TIMEOUT_MS = 45_000;
+
 export function useSignaling(deviceId: string, shareCode: string) {
   const { t } = useTranslation();
   const [status, setStatus] = useState<{ kind: StatusKind; text: string }>({
@@ -19,6 +24,11 @@ export function useSignaling(deviceId: string, shareCode: string) {
   const dcRef = useRef<RTCDataChannel | null>(null);
   const statusKindRef = useRef<StatusKind>("pending");
   const dcMessageHandlerRef = useRef<DcMessageHandler | null>(null);
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pendingDcOpenRef = useRef<{
+    resolve: () => void;
+    reject: (e: Error) => void;
+  } | null>(null);
 
   const setStatusState = useCallback((kind: StatusKind, text: string) => {
     statusKindRef.current = kind;
@@ -30,21 +40,105 @@ export function useSignaling(deviceId: string, shareCode: string) {
     dcMessageHandlerRef.current = handler;
   }, []);
 
+  const stopBrowserHeartbeat = useCallback(() => {
+    if (heartbeatTimerRef.current != null) {
+      window.clearInterval(heartbeatTimerRef.current);
+      heartbeatTimerRef.current = null;
+    }
+  }, []);
+
+  const startBrowserHeartbeat = useCallback(
+    (ws: WebSocket) => {
+      stopBrowserHeartbeat();
+      heartbeatTimerRef.current = window.setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          try {
+            ws.send(JSON.stringify({ type: "heartbeat" }));
+          } catch {
+            /* ignore */
+          }
+        }
+      }, BROWSER_WS_HEARTBEAT_MS);
+    },
+    [stopBrowserHeartbeat],
+  );
+
+  const rejectPendingDcOpen = useCallback((reason: string) => {
+    const p = pendingDcOpenRef.current;
+    if (p) {
+      pendingDcOpenRef.current = null;
+      p.reject(new Error(reason));
+    }
+  }, []);
+
+  const resolvePendingDcOpen = useCallback(() => {
+    const p = pendingDcOpenRef.current;
+    if (p) {
+      pendingDcOpenRef.current = null;
+      p.resolve();
+    }
+  }, []);
+
+  const closePcDcOnly = useCallback(() => {
+    stopBrowserHeartbeat();
+    if (dcRef.current) {
+      try {
+        dcRef.current.close();
+      } catch {
+        /* ignore */
+      }
+      dcRef.current = null;
+    }
+    if (pcRef.current) {
+      try {
+        pcRef.current.close();
+      } catch {
+        /* ignore */
+      }
+      pcRef.current = null;
+    }
+  }, [stopBrowserHeartbeat]);
+
+  const armPendingDcOpen = useCallback((): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      const timer = window.setTimeout(() => {
+        if (pendingDcOpenRef.current?.reject) {
+          pendingDcOpenRef.current.reject(new Error("P2P open timeout"));
+          pendingDcOpenRef.current = null;
+        }
+      }, P2P_READY_TIMEOUT_MS);
+      pendingDcOpenRef.current = {
+        resolve: () => {
+          window.clearTimeout(timer);
+          pendingDcOpenRef.current = null;
+          resolve();
+        },
+        reject: (e: Error) => {
+          window.clearTimeout(timer);
+          pendingDcOpenRef.current = null;
+          reject(e);
+        },
+      };
+    });
+  }, []);
+
   const startRTC = useCallback(
     (ws: WebSocket) => {
-      if (dcRef.current) {
-        try { dcRef.current.close(); } catch { /* ignore */ }
-        dcRef.current = null;
-      }
-      if (pcRef.current) {
-        try { pcRef.current.close(); } catch { /* ignore */ }
-        pcRef.current = null;
-      }
+      closePcDcOnly();
 
       const pc = new RTCPeerConnection({
         iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
       });
       pcRef.current = pc;
+
+      pc.onconnectionstatechange = () => {
+        // 故意 closePcDcOnly 再 startRTC 时也会经过 closed，不能据此 reject
+        if (pc.connectionState === "failed") {
+          setStatusState("error", t("status.p2pFailed"));
+          setShowReconnect(true);
+          rejectPendingDcOpen("pc failed");
+        }
+      };
 
       const dc = pc.createDataChannel("share", { ordered: true });
       dc.binaryType = "arraybuffer";
@@ -53,6 +147,8 @@ export function useSignaling(deviceId: string, shareCode: string) {
       dc.onopen = () => {
         setStatusState("online", t("status.p2pConnected"));
         dc.send(JSON.stringify({ type: "share-request", shareCode }));
+        startBrowserHeartbeat(ws);
+        resolvePendingDcOpen();
       };
 
       dc.onmessage = (ev) => {
@@ -66,7 +162,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
       };
 
       pc.onicecandidate = (ev) => {
-        if (ev.candidate && ws.readyState === 1) {
+        if (ev.candidate && ws.readyState === WebSocket.OPEN) {
           ws.send(
             JSON.stringify({
               type: "ice-candidate",
@@ -84,10 +180,12 @@ export function useSignaling(deviceId: string, shareCode: string) {
         if (pc.iceConnectionState === "failed") {
           setStatusState("error", t("status.p2pFailed"));
           setShowReconnect(true);
+          rejectPendingDcOpen("ice failed");
         }
       };
 
-      pc.createOffer()
+      pc
+        .createOffer()
         .then((offer) => pc.setLocalDescription(offer))
         .then(() => {
           ws.send(
@@ -103,10 +201,74 @@ export function useSignaling(deviceId: string, shareCode: string) {
         .catch(() => {
           setStatusState("error", t("status.createOfferFailed"));
           setShowReconnect(true);
+          rejectPendingDcOpen("createOffer failed");
         });
     },
-    [shareCode, setStatusState, t],
+    [
+      closePcDcOnly,
+      rejectPendingDcOpen,
+      resolvePendingDcOpen,
+      setStatusState,
+      shareCode,
+      startBrowserHeartbeat,
+      t,
+    ],
   );
+
+  const waitForDcConnecting = useCallback((): Promise<boolean> => {
+    const dc = dcRef.current;
+    if (!dc || dc.readyState !== "connecting") return Promise.resolve(false);
+    return new Promise((resolve) => {
+      const to = window.setTimeout(() => resolve(false), P2P_READY_TIMEOUT_MS);
+      const done = (ok: boolean) => {
+        window.clearTimeout(to);
+        dc.removeEventListener("open", onOpen);
+        dc.removeEventListener("close", onClose);
+        resolve(ok);
+      };
+      const onOpen = () => done(true);
+      const onClose = () => done(false);
+      dc.addEventListener("open", onOpen, { once: true });
+      dc.addEventListener("close", onClose, { once: true });
+    });
+  }, []);
+
+  const isP2pUsable = useCallback((): boolean => {
+    const dc = dcRef.current;
+    const pc = pcRef.current;
+    if (!dc || dc.readyState !== "open") return false;
+    if (!pc) return false;
+    const s = pc.connectionState;
+    return s !== "closed" && s !== "failed";
+  }, []);
+
+  const cleanup = useCallback(() => {
+    stopBrowserHeartbeat();
+    if (dcRef.current) {
+      try {
+        dcRef.current.close();
+      } catch {
+        /* ignore */
+      }
+      dcRef.current = null;
+    }
+    if (pcRef.current) {
+      try {
+        pcRef.current.close();
+      } catch {
+        /* ignore */
+      }
+      pcRef.current = null;
+    }
+    if (wsRef.current) {
+      try {
+        wsRef.current.close();
+      } catch {
+        /* ignore */
+      }
+      wsRef.current = null;
+    }
+  }, [stopBrowserHeartbeat]);
 
   const connect = useCallback(() => {
     setStatusState("pending", t("status.connecting"));
@@ -143,6 +305,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
             }
             break;
           case "err":
+            rejectPendingDcOpen(m.msg as string);
             setStatusState(
               "error",
               m.code === "OFFLINE"
@@ -153,43 +316,72 @@ export function useSignaling(deviceId: string, shareCode: string) {
             break;
         }
       } catch {
+        rejectPendingDcOpen("parse failed");
         setStatusState("error", t("status.parseFailed"));
         setShowReconnect(true);
       }
     };
 
     ws.onerror = () => {
+      rejectPendingDcOpen("ws error");
       setStatusState("error", t("status.networkFailed"));
       setShowReconnect(true);
     };
 
     ws.onclose = () => {
+      rejectPendingDcOpen("ws closed");
       if (statusKindRef.current === "pending") {
         setStatusState("error", t("status.connectionClosed"));
         setShowReconnect(true);
       }
     };
-  }, [deviceId, setStatusState, startRTC, t]);
+  }, [deviceId, rejectPendingDcOpen, setStatusState, startRTC, t]);
 
-  const cleanup = useCallback(() => {
-    if (dcRef.current) {
-      try { dcRef.current.close(); } catch { /* ignore */ }
-      dcRef.current = null;
+  const ensureP2PReady = useCallback(async (): Promise<void> => {
+    if (isP2pUsable()) return;
+
+    const d = dcRef.current;
+    if (d?.readyState === "connecting") {
+      const ok = await waitForDcConnecting();
+      if (ok && isP2pUsable()) return;
     }
-    if (pcRef.current) {
-      try { pcRef.current.close(); } catch { /* ignore */ }
-      pcRef.current = null;
+
+    setStatusState("pending", t("status.reestablishingP2p"));
+    setShowReconnect(false);
+
+    const p = armPendingDcOpen();
+
+    try {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        closePcDcOnly();
+        startRTC(wsRef.current);
+      } else {
+        cleanup();
+        connect();
+      }
+      await p;
+    } catch {
+      setStatusState("error", t("status.p2pFailed"));
+      setShowReconnect(true);
+      throw new Error("ensureP2PReady failed");
     }
-    if (wsRef.current) {
-      try { wsRef.current.close(); } catch { /* ignore */ }
-      wsRef.current = null;
-    }
-  }, []);
+  }, [
+    armPendingDcOpen,
+    cleanup,
+    closePcDcOnly,
+    connect,
+    isP2pUsable,
+    setStatusState,
+    startRTC,
+    t,
+    waitForDcConnecting,
+  ]);
 
   const reconnect = useCallback(() => {
+    rejectPendingDcOpen("reconnect");
     cleanup();
     connect();
-  }, [cleanup, connect]);
+  }, [cleanup, connect, rejectPendingDcOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -199,9 +391,10 @@ export function useSignaling(deviceId: string, shareCode: string) {
     return () => {
       cancelled = true;
       window.clearTimeout(tmr);
+      rejectPendingDcOpen("unmount");
       cleanup();
     };
-  }, [connect, cleanup]);
+  }, [cleanup, connect, rejectPendingDcOpen]);
 
   const sendJson = useCallback((data: unknown) => {
     const dc = dcRef.current;
@@ -220,5 +413,6 @@ export function useSignaling(deviceId: string, shareCode: string) {
     setStatusState,
     sendJson,
     setDcMessageHandler,
+    ensureP2PReady,
   };
 }

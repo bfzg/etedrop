@@ -32,7 +32,8 @@
     "connectionError": "연결 오류",
     "parseFailed": "메시지 파싱 실패",
     "networkFailed": "네트워크 연결 실패",
-    "connectionClosed": "연결이 닫혔습니다"
+    "connectionClosed": "연결이 닫혔습니다",
+    "reestablishingP2p": "P2P 연결 재설정 중…"
   },
   "p2p": {
     "disconnected": "P2P 연결이 끊겼습니다(다시 연결해 이어받을 수 있음)"

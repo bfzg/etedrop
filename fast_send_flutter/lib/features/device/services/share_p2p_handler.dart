@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:path/path.dart' as p;
 
@@ -25,6 +26,23 @@ const int _smallFileSingleSendMaxBytes = 128 * 1024;
 
 /// 快速路径下无头分片的负载大小（可略大于带前缀路径）。
 const int _smallFileLegacyChunkBytes = 64 * 1024;
+
+/// 分片下载时发送侧 `bufferedAmount` 超过此值则等待再发下一包。
+/// 对端走 StreamSaver+SW 等无真实背压路径时须保持较小，否则 SCTP 堆积易断连（原 `chunkCap*24` 约 786KB 仍偏大）。
+const int _downloadMaxBufferedBytes = 256 * 1024;
+
+/// 与 share-page-app `DOWNLOAD_ACK_WINDOW_BYTES` 一致：网页每落盘此量 payload 后回传 `download-ack`，发送端再发下一窗口。
+const int _downloadAckWindowBytes = 512 * 1024;
+
+/// 分享下载诊断日志：debug 默认开；release 排查时加 `--dart-define=SHARE_P2P_DL_LOG=true`
+bool get _shareDownloadDiagEnabled =>
+    kDebugMode ||
+    const bool.fromEnvironment('SHARE_P2P_DL_LOG', defaultValue: false);
+
+void _shareDownloadLog(String message) {
+  if (!_shareDownloadDiagEnabled) return;
+  debugPrint('[ShareP2P][download] $message');
+}
 
 /// 分享页（share-page-app）经 WebRTC DataChannel 从本机「网盘」存储目录拉取文件；
 /// 小文件可走无头快速路径；大文件或断点续传走 8 字节偏移前缀分片（与 share-page-app 一致）。
@@ -48,6 +66,9 @@ class ShareP2PHandler {
   Completer<void>? _streamFlowGate;
   Completer<void>? _downloadFlowGate;
 
+  /// 应用层窗口：网页确认已落盘 `download-ack` 后再继续发送（与 StreamSaver/SW 路径配合，避免 SCTP 撑爆）。
+  Completer<void>? _downloadAckCompleter;
+
   /// Debounce rapid seek requests — only act on the latest one.
   Timer? _seekDebounceTimer;
   Map<String, dynamic>? _pendingSeekMsg;
@@ -67,6 +88,22 @@ class ShareP2PHandler {
   Future<void> handleOffer(Map<String, dynamic> data) async {
     await _ensureInit();
 
+    // 同一 Handler 不应收到第二次 offer；若发生则先关旧 PC（勿调 dispose，以免 _disposeRequested 阻断后续逻辑）
+    if (_pc != null) {
+      _shareDownloadLog('handleOffer: closing existing PC (re-offer on same handler)');
+      _downloadFlowGate = null;
+      _streamFlowGate = null;
+      if (_downloadAckCompleter != null && !_downloadAckCompleter!.isCompleted) {
+        _downloadAckCompleter!.complete();
+      }
+      _downloadAckCompleter = null;
+      _dc?.close();
+      await _pc?.close();
+      _dc = null;
+      _pc = null;
+      _pendingCandidates.clear();
+    }
+
     _pc = await createPeerConnection({
       'iceServers': [
         {'urls': 'stun:stun.l.google.com:19302'},
@@ -75,6 +112,7 @@ class ShareP2PHandler {
 
     _pc!.onConnectionState = (RTCPeerConnectionState state) {
       if (_disposeRequested) return;
+      _shareDownloadLog('pc connectionState=$state');
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
           state ==
               RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
@@ -147,6 +185,9 @@ class ShareP2PHandler {
   }
 
   void _setupDataChannel() {
+    _dc!.onDataChannelState = (RTCDataChannelState state) {
+      _shareDownloadLog('dc state=$state');
+    };
     _dc!.onMessage = (RTCDataChannelMessage msg) {
       if (msg.isBinary) return;
       try {
@@ -192,16 +233,44 @@ class ShareP2PHandler {
         _streamFlowGate = null;
         break;
       case 'download-pause':
+        _shareDownloadLog(
+          'rx download-pause (gateWas=${_downloadFlowGate == null ? "null" : (_downloadFlowGate!.isCompleted ? "done" : "waiting")})',
+        );
         if (_downloadFlowGate == null || _downloadFlowGate!.isCompleted) {
           _downloadFlowGate = Completer<void>();
         }
         break;
       case 'download-resume':
+        _shareDownloadLog('rx download-resume');
         if (_downloadFlowGate != null && !_downloadFlowGate!.isCompleted) {
           _downloadFlowGate!.complete();
         }
         _downloadFlowGate = null;
         break;
+      case 'download-ack':
+        _shareDownloadLog('rx download-ack');
+        final ack = _downloadAckCompleter;
+        if (ack != null && !ack.isCompleted) {
+          ack.complete();
+        }
+        _downloadAckCompleter = null;
+        break;
+    }
+  }
+
+  Future<void> _awaitDownloadAck() async {
+    _shareDownloadLog('await download-ack');
+    final c = Completer<void>();
+    _downloadAckCompleter = c;
+    try {
+      await c.future.timeout(
+        const Duration(seconds: 120),
+        onTimeout: () => throw TimeoutException('download-ack'),
+      );
+    } finally {
+      if (identical(_downloadAckCompleter, c)) {
+        _downloadAckCompleter = null;
+      }
     }
   }
 
@@ -691,7 +760,7 @@ class ShareP2PHandler {
       final end = math.min(offset + cap, len);
       _dc!.send(RTCDataChannelMessage.fromBinary(bytes.sublist(offset, end)));
       offset = end;
-      while ((_dc?.bufferedAmount ?? 0) > cap * 24) {
+      while ((_dc?.bufferedAmount ?? 0) > _downloadMaxBufferedBytes) {
         await Future.delayed(const Duration(milliseconds: 5));
       }
     }
@@ -699,6 +768,16 @@ class ShareP2PHandler {
 
   Future<void> _onDownloadStart(Map<String, dynamic> msg) async {
     if (_currentShareCode == null) return;
+
+    // New transfer: drop any stale pause gate (e.g. lost download-resume on the web).
+    if (_downloadFlowGate != null && !_downloadFlowGate!.isCompleted) {
+      _downloadFlowGate!.complete();
+    }
+    _downloadFlowGate = null;
+    if (_downloadAckCompleter != null && !_downloadAckCompleter!.isCompleted) {
+      _downloadAckCompleter!.complete();
+    }
+    _downloadAckCompleter = null;
 
     var resumeFrom = 0;
     final rf = msg['resumeFrom'];
@@ -782,13 +861,25 @@ class ShareP2PHandler {
     }
 
     if (useSmallFileFastPath) {
+      _shareDownloadLog(
+        'small-file path size=$fileSize bytes (≤${_smallFileFastPathMaxBytes ~/ (1024 * 1024)}MB cap)',
+      );
       final bytes = await file.readAsBytes();
       await _sendSmallFileFastPath(bytes);
       if (_dc?.state == RTCDataChannelState.RTCDataChannelOpen) {
+        _shareDownloadLog('small-file sent → file-done');
         _sendJson({'type': 'file-done'});
+      } else {
+        _shareDownloadLog(
+          'small-file abort: dc closed before file-done state=${_dc?.state}',
+        );
       }
       return;
     }
+
+    _shareDownloadLog(
+      'chunked path fileSize=$fileSize resumeFrom=$resumeFrom chunkCap=$_dataChunkSize',
+    );
 
     RandomAccessFile? raf;
     try {
@@ -796,14 +887,33 @@ class ShareP2PHandler {
       await raf.setPosition(resumeFrom);
       var pos = resumeFrom;
       final chunkCap = _dataChunkSize;
+      var lastLogPos = pos;
+      const logEveryBytes = 5 * 1024 * 1024;
+      var sentSinceAck = 0;
 
       while (pos < fileSize) {
-        if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
+        if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) {
+          _shareDownloadLog(
+            'abort send loop: dc not open at pos=$pos/$fileSize state=${_dc?.state}',
+          );
+          return;
+        }
         final gate = _downloadFlowGate;
         if (gate != null && !gate.isCompleted) {
+          _shareDownloadLog(
+            'await downloadFlowGate pos=$pos/$fileSize buffered=${_dc?.bufferedAmount ?? -1}',
+          );
           await gate.future;
+          _shareDownloadLog(
+            'gate released pos=$pos/$fileSize buffered=${_dc?.bufferedAmount ?? -1}',
+          );
         }
-        if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) return;
+        if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) {
+          _shareDownloadLog(
+            'abort send loop after gate: dc not open at pos=$pos/$fileSize',
+          );
+          return;
+        }
 
         final toRead = math.min(chunkCap, fileSize - pos);
         final payload = await raf.read(toRead);
@@ -812,9 +922,48 @@ class ShareP2PHandler {
         final packet = _encodeOffsetPrefixedChunk(pos, payload);
         _dc!.send(RTCDataChannelMessage.fromBinary(packet));
         pos += payload.length;
+        sentSinceAck += payload.length;
 
-        while ((_dc?.bufferedAmount ?? 0) > chunkCap * 24) {
+        var spin = 0;
+        while ((_dc?.bufferedAmount ?? 0) > _downloadMaxBufferedBytes) {
+          if (spin == 200) {
+            _shareDownloadLog(
+              'bufferedAmount spin ~1s pos=$pos/$fileSize buf=${_dc?.bufferedAmount}',
+            );
+          }
+          spin++;
           await Future.delayed(const Duration(milliseconds: 5));
+        }
+
+        if (sentSinceAck >= _downloadAckWindowBytes) {
+          try {
+            await _awaitDownloadAck();
+          } catch (e) {
+            _shareDownloadLog('download-ack failed: $e');
+            if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) {
+              return;
+            }
+            rethrow;
+          }
+          sentSinceAck = 0;
+        }
+
+        if (pos - lastLogPos >= logEveryBytes || pos >= fileSize) {
+          _shareDownloadLog(
+            'progress pos=$pos/$fileSize buffered=${_dc?.bufferedAmount ?? -1}',
+          );
+          lastLogPos = pos;
+        }
+      }
+      if (sentSinceAck > 0) {
+        try {
+          await _awaitDownloadAck();
+        } catch (e) {
+          _shareDownloadLog('final download-ack failed: $e');
+          if (_dc?.state != RTCDataChannelState.RTCDataChannelOpen) {
+            return;
+          }
+          rethrow;
         }
       }
     } finally {
@@ -822,7 +971,12 @@ class ShareP2PHandler {
     }
 
     if (_dc?.state == RTCDataChannelState.RTCDataChannelOpen) {
+      _shareDownloadLog('send loop finished → file-done (fileSize=$fileSize)');
       _sendJson({'type': 'file-done'});
+    } else {
+      _shareDownloadLog(
+        'skip file-done: dc not open state=${_dc?.state} (sent may be incomplete)',
+      );
     }
   }
 
@@ -837,6 +991,10 @@ class ShareP2PHandler {
     _disposeRequested = true;
     onSessionEnded = null;
     _killActiveStream();
+    if (_downloadAckCompleter != null && !_downloadAckCompleter!.isCompleted) {
+      _downloadAckCompleter!.complete();
+    }
+    _downloadAckCompleter = null;
     _dc?.close();
     await _pc?.close();
     _dc = null;

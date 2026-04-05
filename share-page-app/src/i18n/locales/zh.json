@@ -32,7 +32,8 @@
     "connectionError": "连接异常",
     "parseFailed": "消息解析失败",
     "networkFailed": "网络连接失败",
-    "connectionClosed": "连接已关闭"
+    "connectionClosed": "连接已关闭",
+    "reestablishingP2p": "正在重建 P2P 连接…"
   },
   "p2p": {
     "disconnected": "P2P 连接已断开（可重新连接后续传）"
