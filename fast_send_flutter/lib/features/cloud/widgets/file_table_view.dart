@@ -102,7 +102,7 @@ class FileTableView extends StatelessWidget {
                                   fileTypePngForEntry(entry),
                                   width: 20,
                                   height: 20,
-                                  filterQuality: FilterQuality.high,
+                                  filterQuality: FilterQuality.low,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(

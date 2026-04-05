@@ -45,6 +45,27 @@ class AppLocalizationsKo extends AppLocalizations {
   String get appearance => '모양';
 
   @override
+  String get networkLine => '서버 경로';
+
+  @override
+  String get serverLineAuto => '자동';
+
+  @override
+  String get serverLineAutoDesc => '중국어(홍콩·대만·마카오 제외)는 대륙 노드, 그 외는 글로벌.';
+
+  @override
+  String get serverLineGlobal => '글로벌';
+
+  @override
+  String get serverLineGlobalDesc => 'api.etedrop.com';
+
+  @override
+  String get serverLineMainland => '중국 본토';
+
+  @override
+  String get serverLineMainlandDesc => 'api-cn.etedrop.com';
+
+  @override
   String get about => '정보';
 
   @override

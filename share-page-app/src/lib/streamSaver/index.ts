@@ -1,1 +1,1 @@
-export { default } from "./streamSaver.js";
+export { default } from "./streamSaver";

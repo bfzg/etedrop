@@ -272,7 +272,8 @@ class ShareService {
 
   /// 生成分享链接（格式：{apiBaseUrl}/share/{deviceId}/{shareCode}）
   /// 对应 Electron: getShareUrl / getShareLink
-  String getShareUrl(String shareCode, String deviceId) {
-    return '${AppConstants.apiBaseUrl}/share/$deviceId/$shareCode';
+  /// [apiBaseUrl] 与当前线路一致，由调用方传入 [ServerEndpoints.apiBaseUrl]。
+  String getShareUrl(String shareCode, String deviceId, String apiBaseUrl) {
+    return '$apiBaseUrl/share/$deviceId/$shareCode';
   }
 }

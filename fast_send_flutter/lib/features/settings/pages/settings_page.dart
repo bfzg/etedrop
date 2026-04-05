@@ -11,6 +11,7 @@ import '../widgets/about_section.dart';
 import '../widgets/appearance_section.dart';
 import '../widgets/desktop_integration_section.dart';
 import '../widgets/device_info_section.dart';
+import '../widgets/network_line_section.dart';
 import '../widgets/storage_section.dart';
 
 /// 设置页面
@@ -59,7 +60,10 @@ class SettingsPage extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            StorageSection(storagePath: storagePath, downloadPath: downloadPath),
+            StorageSection(
+              storagePath: storagePath,
+              downloadPath: downloadPath,
+            ),
 
             const SizedBox(height: 16),
 
@@ -74,7 +78,8 @@ class SettingsPage extends ConsumerWidget {
             AppearanceSection(locale: locale),
 
             const SizedBox(height: 16),
-
+            const NetworkLineSection(),
+            const SizedBox(height: 16),
             const AboutSection(),
             const SizedBox(height: 32),
           ],

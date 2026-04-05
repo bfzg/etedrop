@@ -1,17 +1,24 @@
 /// 全局常量配置
+///
+/// 生产环境 HTTPS 线路由 [ServerEndpoints] / 设置「服务器线路」解析；
+/// 此处 [apiBaseUrl] 仅作未注入前的占位及本地调试（与 [DeviceManager] 初始值一致）。
 class AppConstants {
   AppConstants._();
 
-  /// REST API 基础地址（如需要调用服务端 HTTP 接口）
-  static const String apiBaseUrl = 'https://api.etedrop.com';
+  /// REST API 基础地址（本地调试；生产见 `ServerEndpoints`）
+  // static const String apiBaseUrl = 'https://api.etedrop.com';
+  static const String apiBaseUrl = 'http://43.153.143.37:40321';
   // static const String apiBaseUrl = 'http://192.168.1.9:3000';
 
   /// 信令服务器地址（WebRTC 文件传输用）
-  static const String signalingServerUrl = 'wss://api.etedrop.com/api/connect';
+  // static const String signalingServerUrl = 'wss://api.etedrop.com/api/connect';
+  static const String signalingServerUrl =
+      'ws://43.153.143.37:40321/api/connect';
   // static const String signalingServerUrl = 'ws://192.168.1.9:3000/api/connect';
 
   /// 设备管理 WebSocket 地址（分享功能用）
-  static const String shareServerUrl = 'wss://api.etedrop.com/api/share';
+  // static const String shareServerUrl = 'wss://api.etedrop.com/api/share';
+  static const String shareServerUrl = 'ws://43.153.143.37:40321/api/share';
   // static const String shareServerUrl = 'ws://192.168.1.9:3000/api/share';
 
   /// 应用名称

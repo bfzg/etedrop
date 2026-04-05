@@ -45,6 +45,28 @@ class AppLocalizationsEs extends AppLocalizations {
   String get appearance => 'Apariencia';
 
   @override
+  String get networkLine => 'Ruta del servidor';
+
+  @override
+  String get serverLineAuto => 'Automático';
+
+  @override
+  String get serverLineAutoDesc =>
+      'Chino (excepto HK/MO/TW) usa nodo China continental; resto global.';
+
+  @override
+  String get serverLineGlobal => 'Global';
+
+  @override
+  String get serverLineGlobalDesc => 'api.etedrop.com';
+
+  @override
+  String get serverLineMainland => 'China continental';
+
+  @override
+  String get serverLineMainlandDesc => 'api-cn.etedrop.com';
+
+  @override
   String get about => 'Acerca de';
 
   @override

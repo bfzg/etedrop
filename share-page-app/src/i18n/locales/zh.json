@@ -20,7 +20,14 @@
     "wechatNoPlay": "（当前环境不支持在线播放）",
     "downloadComplete": "下载完成",
     "reconnect": "重新连接",
-    "language": "语言"
+    "language": "语言",
+    "compatibilityTipsTitle": "使用提示",
+    "compatibilityTip1": "优先使用 Chrome 访问；其他浏览器不保证播放正常；如遇问题请下载 EteDrop 客户端打开。",
+    "compatibilityTip2": "网页预览仅支持 MP4；其他格式请下载后用本地播放器。",
+    "compatibilityTip3": "iOS 建议使用 EteDrop App。",
+    "compatibilityTip4a": "下载客户端：",
+    "compatibilityTip4b": "（多格式、通常比浏览器更稳定）",
+    "compatibilityTip5": "可复制分享链接，在 EteDrop 客户端内打开即可自动识别。"
   },
   "status": {
     "connecting": "正在连接设备…",

@@ -45,6 +45,27 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appearance => '外观';
 
   @override
+  String get networkLine => '服务器线路';
+
+  @override
+  String get serverLineAuto => '自动';
+
+  @override
+  String get serverLineAutoDesc => '简体中文（不含港澳台）走大陆优化节点，其余走全球节点。';
+
+  @override
+  String get serverLineGlobal => '全球';
+
+  @override
+  String get serverLineGlobalDesc => 'api.etedrop.com，海外或默认推荐。';
+
+  @override
+  String get serverLineMainland => '大陆';
+
+  @override
+  String get serverLineMainlandDesc => 'api-cn.etedrop.com，大陆访问通常更快。';
+
+  @override
   String get about => '关于';
 
   @override

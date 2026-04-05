@@ -30,7 +30,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nearby => 'Nearby';
 
   @override
-  String get messages => 'Messages';
+  String get messages => 'Msgs';
 
   @override
   String get deviceInfo => 'Device Info';
@@ -43,6 +43,30 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get appearance => 'Appearance';
+
+  @override
+  String get networkLine => 'Server route';
+
+  @override
+  String get serverLineAuto => 'Auto';
+
+  @override
+  String get serverLineAutoDesc =>
+      'Mainland-optimized when using Chinese (except HK/MO/TW); otherwise global.';
+
+  @override
+  String get serverLineGlobal => 'Global';
+
+  @override
+  String get serverLineGlobalDesc =>
+      'api.etedrop.com — recommended outside mainland.';
+
+  @override
+  String get serverLineMainland => 'Mainland';
+
+  @override
+  String get serverLineMainlandDesc =>
+      'api-cn.etedrop.com — better routing for mainland China.';
 
   @override
   String get about => 'About';

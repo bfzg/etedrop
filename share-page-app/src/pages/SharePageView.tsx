@@ -41,6 +41,8 @@ const LANG_LABELS: Record<string, string> = {
   es: "Español",
 };
 
+const ETEDROP_DOWNLOAD_URL = "https://etedrop.com/download/";
+
 export function SharePageView() {
   const { t, i18n } = useTranslation();
   const { deviceId, shareCode } = useParams<{
@@ -136,6 +138,7 @@ export function SharePageView() {
           src={`${import.meta.env.BASE_URL}img/wechat.png`}
           alt={t("share.wechatAlt")}
           className="w-full rounded-xl bg-white"
+          fetchPriority="high"
         />
       )}
       <div
@@ -150,7 +153,8 @@ export function SharePageView() {
                 className="w-10 h-10 rounded-2xl shrink-0 object-contain"
                 width={40}
                 height={40}
-                decoding="async"
+                fetchPriority="high"
+                decoding="sync"
               />
               <div className="text-2xl font-bold text-gray-800 truncate">
                 {t("share.brand")}
@@ -366,6 +370,30 @@ export function SharePageView() {
               {t("share.reconnect")}
             </button>
           )}
+
+          <div className="mt-6 pt-4 border-t border-slate-200/80">
+            <p className="text-base font-medium text-slate-700 mb-2.5">
+              {t("share.compatibilityTipsTitle")}
+            </p>
+            <ol className="list-decimal pl-4 space-y-2 text-base leading-relaxed text-slate-600 marker:text-slate-400">
+              <li>{t("share.compatibilityTip1")}</li>
+              <li>{t("share.compatibilityTip2")}</li>
+              <li>{t("share.compatibilityTip3")}</li>
+              <li>
+                <span>{t("share.compatibilityTip4a")}</span>
+                <a
+                  href={ETEDROP_DOWNLOAD_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-indigo-600 underline underline-offset-2 break-all"
+                >
+                  {ETEDROP_DOWNLOAD_URL}
+                </a>
+                <span>{t("share.compatibilityTip4b")}</span>
+              </li>
+              <li>{t("share.compatibilityTip5")}</li>
+            </ol>
+          </div>
         </div>
       </div>
     </>

@@ -149,7 +149,7 @@ abstract class AppLocalizations {
   /// No description provided for @messages.
   ///
   /// In en, this message translates to:
-  /// **'Messages'**
+  /// **'Msgs'**
   String get messages;
 
   /// No description provided for @deviceInfo.
@@ -175,6 +175,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Appearance'**
   String get appearance;
+
+  /// No description provided for @networkLine.
+  ///
+  /// In en, this message translates to:
+  /// **'Server route'**
+  String get networkLine;
+
+  /// No description provided for @serverLineAuto.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto'**
+  String get serverLineAuto;
+
+  /// No description provided for @serverLineAutoDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'Mainland-optimized when using Chinese (except HK/MO/TW); otherwise global.'**
+  String get serverLineAutoDesc;
+
+  /// No description provided for @serverLineGlobal.
+  ///
+  /// In en, this message translates to:
+  /// **'Global'**
+  String get serverLineGlobal;
+
+  /// No description provided for @serverLineGlobalDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'api.etedrop.com — recommended outside mainland.'**
+  String get serverLineGlobalDesc;
+
+  /// No description provided for @serverLineMainland.
+  ///
+  /// In en, this message translates to:
+  /// **'Mainland'**
+  String get serverLineMainland;
+
+  /// No description provided for @serverLineMainlandDesc.
+  ///
+  /// In en, this message translates to:
+  /// **'api-cn.etedrop.com — better routing for mainland China.'**
+  String get serverLineMainlandDesc;
 
   /// No description provided for @about.
   ///

@@ -11,7 +11,9 @@ import 'core/router/router_provider.dart';
 import 'core/update/update_service.dart';
 import 'core/update/update_state.dart';
 import 'features/device/providers/device_auto_connect.dart';
+import 'features/device/providers/device_provider.dart';
 import 'features/settings/providers/locale_provider.dart';
+import 'features/settings/providers/server_line_provider.dart';
 import 'features/lan/providers/lan_provider.dart';
 import 'services/desktop_service.dart';
 
@@ -45,6 +47,10 @@ class _AppState extends ConsumerState<App> {
   Widget build(BuildContext context) {
     ref.read(deviceAutoConnectProvider);
     ref.read(lanManagerProvider);
+
+    ref.listen(serverEndpointsProvider, (previous, next) {
+      ref.read(deviceManagerProvider).applyEndpoints(next);
+    });
 
     ref.listen<Locale?>(localeProvider, (previous, next) => _syncTray());
 

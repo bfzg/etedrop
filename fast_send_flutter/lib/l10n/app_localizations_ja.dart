@@ -45,6 +45,27 @@ class AppLocalizationsJa extends AppLocalizations {
   String get appearance => '外観';
 
   @override
+  String get networkLine => 'サーバー経路';
+
+  @override
+  String get serverLineAuto => '自動';
+
+  @override
+  String get serverLineAutoDesc => '中国語（香港・台湾・マカオ除く）は大陸向け、その他はグローバル。';
+
+  @override
+  String get serverLineGlobal => 'グローバル';
+
+  @override
+  String get serverLineGlobalDesc => 'api.etedrop.com';
+
+  @override
+  String get serverLineMainland => '中国大陸';
+
+  @override
+  String get serverLineMainlandDesc => 'api-cn.etedrop.com';
+
+  @override
   String get about => 'について';
 
   @override

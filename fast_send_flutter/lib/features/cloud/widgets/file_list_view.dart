@@ -95,7 +95,7 @@ class _FileListTile extends StatelessWidget {
         fileTypePngForEntry(entry),
         width: 32,
         height: 32,
-        filterQuality: FilterQuality.high,
+        filterQuality: FilterQuality.low,
       ),
       title: Text(
         entry.name,

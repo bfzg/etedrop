@@ -1,28 +1,43 @@
 # =============================================================================
-# api.etedrop.com — 可直接粘贴进 /etc/nginx/sites-available/ 下的单站点文件
-# （Debian/Ubuntu 默认 include 在 http{} 内，故 map/upstream/server 可同文件）
+# fast_send_server — Nginx 反代示例（支持全球 / 大陆 两条域名分流到同一后端）
+#
+# 「分流」在这里指：用户访问 api 或 api-cn 不同域名，Nginx 都把请求转到本机同一进程
+# （127.0.0.1:40321）。大陆用户 DNS 把 api-cn 指到离大陆近的 VPS；全球用户用 api。
 #
 # 使用前：
 #   1. 若你已在 /etc/nginx/nginx.conf 的 http{} 里定义过同名 map，请删掉下面「map」整段，避免重复。
-#   2. sudo nginx -t && sudo systemctl reload nginx
+#   2. 证书：可为两域名分别申请，或一张证书 SAN 同时包含 api + api-cn（见文末说明）。
+#   3. sudo nginx -t && sudo systemctl reload nginx
 #
-# WebSocket：wss://api.etedrop.com/api/share、/api/connect 依赖 Upgrade 头，已包含在 location / 中。
+# WebSocket：wss://.../api/share、/api/connect 依赖 Upgrade 头，已包含在 location / 中。
 # =============================================================================
 
+# ---------- WebSocket 升级（HTTP/1.1）----------
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
 }
 
+# ---------- 后端上游：本机 fast_send_server ----------
+#
+# fast_send_backend：自定义名称，表示「一组上游服务器」。这里只有一台 127.0.0.1:40321。
+# 为何用 upstream 而不是直接 proxy_pass http://127.0.0.1:40321？
+#   - 多域名多个 server{} 可共写一处，改端口只改一行；
+#   - keepalive 与后端长连接对 WebSocket 更友好；
+#   - 以后若要多实例负载，只需在 upstream 里加 server 行。
+#
 upstream fast_send_backend {
     server 127.0.0.1:40321;
     keepalive 32;
 }
 
-# ---------- HTTP：证书续期 + 其余跳转 HTTPS ----------
+# ---------- 共用片段：反代到 fast_send_backend（两域名相同逻辑）----------
+# 若你用的 Nginx 版本较旧不支持 include 内用变量，可把下面 location 复制到各 server 里。
+
+# ---------- HTTP：证书续期 + 跳转 HTTPS（两域名写在同一个 server，省重复）----------
 server {
     listen 80;
-    server_name api.etedrop.com;
+    server_name api.etedrop.com api-cn.etedrop.com;
 
     location /.well-known/acme-challenge/ {
         root /var/www/html;
@@ -33,9 +48,17 @@ server {
     }
 }
 
-# ---------- HTTPS：反代 fast_send_server（含 WSS）----------
+# ---------- HTTPS：全球线 api.etedrop.com ----------
 server {
+    listen 443 ssl;
     server_name api.etedrop.com;
+
+    ssl_certificate /etc/letsencrypt/live/api.etedrop.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.etedrop.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 500m;
 
     location / {
         proxy_pass http://fast_send_backend;
@@ -53,12 +76,54 @@ server {
         proxy_send_timeout 86400s;
         proxy_buffering off;
     }
+}
+
+# ---------- HTTPS：大陆线 api-cn.etedrop.com（同一 upstream，仅域名/证书不同）----------
+server {
+    listen 443 ssl;
+    server_name api-cn.etedrop.com;
+
+    # 若使用「单独为 api-cn 申请」的证书，路径通常是：
+    ssl_certificate /etc/letsencrypt/live/api-cn.etedrop.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api-cn.etedrop.com/privkey.pem;
+    # 若使用一张 SAN 证书同时包含 api + api-cn，Certbot 可能只生成一个 live 目录，
+    # 请把上面两行改成与 api 相同的 fullchain.pem / privkey.pem，并删掉上一个 server 里重复的 listen（
+    # 或合并为「一个 server_name api.etedrop.com api-cn.etedrop.com」单 server，见下方注释）。
+
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
     client_max_body_size 500m;
 
-    listen 443 ssl; # managed by Certbot
-    ssl_certificate /etc/letsencrypt/live/api.etedrop.com/fullchain.pem; # managed by Certbot
-    ssl_certificate_key /etc/letsencrypt/live/api.etedrop.com/privkey.pem; # managed by Certbot
-    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+    location / {
+        proxy_pass http://fast_send_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+        proxy_buffering off;
+    }
 }
+
+# =============================================================================
+# 可选：一张证书覆盖两个域名（SAN）时，可合并为一个 HTTPS server，避免重复 location：
+#
+#   server {
+#       listen 443 ssl;
+#       server_name api.etedrop.com api-cn.etedrop.com;
+#       ssl_certificate     /etc/letsencrypt/live/api.etedrop.com/fullchain.pem;
+#       ssl_certificate_key /etc/letsencrypt/live/api.etedrop.com/privkey.pem;
+#       ...
+#       location / { ... proxy_pass http://fast_send_backend; ... }
+#   }
+#
+# 申请示例：sudo certbot --nginx -d api.etedrop.com -d api-cn.etedrop.com
+# =============================================================================

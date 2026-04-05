@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../core/config/constants.dart';
+import '../../../core/config/server_endpoints.dart';
 import '../../../core/utils/nickname_utils.dart';
 import '../models/device_config.dart';
 import 'share_p2p_handler.dart';
@@ -27,6 +28,10 @@ class DeviceManager {
   StreamSubscription? _wsSubscription;
   bool _disposed = false;
   final Map<String, ShareP2PHandler> _p2pHandlers = {};
+
+  /// 由 [ServerEndpoints] 注入，默认与首次 [applyEndpoints] 前使用 [AppConstants] 行为一致需由启动流程赋值
+  String _apiBaseUrl = AppConstants.apiBaseUrl;
+  String _shareServerUrl = AppConstants.shareServerUrl;
 
   final _stateController = StreamController<int>.broadcast();
   int _stateTick = 0;
@@ -117,6 +122,20 @@ class DeviceManager {
     _setState(_state);
   }
 
+  /// 切换线路（设置页 / 启动时调用）。地址变化且当前已连接时会断开并重连。
+  void applyEndpoints(ServerEndpoints endpoints) {
+    final changed =
+        _apiBaseUrl != endpoints.apiBaseUrl ||
+        _shareServerUrl != endpoints.shareServerUrl;
+    _apiBaseUrl = endpoints.apiBaseUrl;
+    _shareServerUrl = endpoints.shareServerUrl;
+    if (!changed) return;
+    if (isConnected || isConnecting) {
+      disconnect();
+      unawaited(connectToServer());
+    }
+  }
+
   /// 连接到信令服务器
   Future<void> connectToServer() async {
     if (_state == DeviceConnectionState.connected ||
@@ -131,7 +150,7 @@ class DeviceManager {
     final config = await loadConfig();
 
     try {
-      _ws = WebSocketChannel.connect(Uri.parse(AppConstants.shareServerUrl));
+      _ws = WebSocketChannel.connect(Uri.parse(_shareServerUrl));
 
       // WebSocketChannel.connect 不会抛同步异常，需要等 ready
       await _ws!.ready;
@@ -276,14 +295,14 @@ class DeviceManager {
 
   String getShareUrl(String shareCode) {
     if (_config == null) return '';
-    return '${AppConstants.apiBaseUrl}/share/${_config!.deviceId}/$shareCode';
+    return '$_apiBaseUrl/share/${_config!.deviceId}/$shareCode';
   }
 
   /// 把原始异常转为用户友好文案
-  static String _friendlyError(Object e) {
+  String _friendlyError(Object e) {
     final s = e.toString();
     if (s.contains('Connection refused')) {
-      return '无法连接服务器 (${AppConstants.shareServerUrl})';
+      return '无法连接服务器 ($_shareServerUrl)';
     }
     if (s.contains('SocketException')) {
       return '网络错误: $s';

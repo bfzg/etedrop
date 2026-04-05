@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../device/providers/device_provider.dart';
+import '../../settings/providers/server_line_provider.dart';
 import '../models/share_record.dart';
 import '../providers/share_provider.dart';
 import '../../../l10n/app_localizations.dart';
@@ -133,7 +134,8 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       final deviceId = ref.read(deviceIdProvider);
       if (deviceId != null && deviceId.isNotEmpty && mounted) {
         final shareService = ref.read(shareServiceProvider);
-        final link = shareService.getShareUrl(info.code, deviceId);
+        final apiBase = ref.read(serverEndpointsProvider).apiBaseUrl;
+        final link = shareService.getShareUrl(info.code, deviceId, apiBase);
         await Clipboard.setData(ClipboardData(text: link));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -314,8 +316,9 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     final info = _result!;
     final deviceId = ref.read(deviceIdProvider);
     final shareService = ref.read(shareServiceProvider);
+    final apiBase = ref.read(serverEndpointsProvider).apiBaseUrl;
     final shareLink = deviceId != null && deviceId.isNotEmpty
-        ? shareService.getShareUrl(info.code, deviceId)
+        ? shareService.getShareUrl(info.code, deviceId, apiBase)
         : null;
 
     final title = isExistingFlow

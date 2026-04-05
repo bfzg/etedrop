@@ -20,7 +20,14 @@
     "wechatNoPlay": "(Reproducción en la app no disponible en este entorno)",
     "downloadComplete": "Descarga completada",
     "reconnect": "Volver a conectar",
-    "language": "Idioma"
+    "language": "Idioma",
+    "compatibilityTipsTitle": "Avisos",
+    "compatibilityTip1": "Usa Chrome en esta página. Otros navegadores pueden fallar; si pasa, abre con el cliente EteDrop.",
+    "compatibilityTip2": "Vista previa en web: solo MP4. Otros formatos: descarga y reproductor local.",
+    "compatibilityTip3": "En iOS, usa la app EteDrop.",
+    "compatibilityTip4a": "Cliente: ",
+    "compatibilityTip4b": "(más formatos, suele ser más estable que el navegador)",
+    "compatibilityTip5": "Copia el enlace de compartir y ábrelo en la app EteDrop; se reconocerá automáticamente."
   },
   "status": {
     "connecting": "Conectando al dispositivo…",
