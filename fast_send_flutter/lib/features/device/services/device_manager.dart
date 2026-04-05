@@ -229,19 +229,22 @@ class DeviceManager {
     }
   }
 
+  /// 同一 peerId 复用 [ShareP2PHandler]，由 [ShareP2PHandler.handleOffer] 内关旧 PC。
+  /// 勿在每次 offer 时 dispose 再 new：会与 handleOffer 内逻辑重复，且易在传输中途误拆连接。
   Future<void> _onOffer(Map<String, dynamic> offerData, String peerId) async {
-    final previous = _p2pHandlers.remove(peerId);
-    await previous?.dispose();
-
-    late ShareP2PHandler handler;
-    handler = ShareP2PHandler(
-      sendSignaling: (msg) =>
-          _ws?.sink.add(jsonEncode({...msg, 'peerId': peerId})),
-      onSessionEnded: () {
-        unawaited(_removeP2pSession(peerId, handler));
-      },
-    );
-    _p2pHandlers[peerId] = handler;
+    ShareP2PHandler? handler = _p2pHandlers[peerId];
+    if (handler == null) {
+      late ShareP2PHandler h;
+      h = ShareP2PHandler(
+        sendSignaling: (msg) =>
+            _ws?.sink.add(jsonEncode({...msg, 'peerId': peerId})),
+        onSessionEnded: () {
+          unawaited(_removeP2pSession(peerId, h));
+        },
+      );
+      _p2pHandlers[peerId] = h;
+      handler = h;
+    }
     await handler.handleOffer(offerData);
   }
 

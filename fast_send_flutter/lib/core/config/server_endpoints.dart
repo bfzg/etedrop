@@ -48,18 +48,16 @@ class ServerEndpoints {
   }
 
   /// 全球节点（HTTPS）
-  static String get _globalApiBase =>
-      const String.fromEnvironment(
-        'API_BASE_GLOBAL',
-        defaultValue: 'https://api.etedrop.com',
-      );
+  static String get _globalApiBase => const String.fromEnvironment(
+    'API_BASE_GLOBAL',
+    defaultValue: 'https://api.etedrop.com',
+  );
 
   /// 大陆节点（HTTPS）
-  static String get _mainlandApiBase =>
-      const String.fromEnvironment(
-        'API_BASE_MAINLAND',
-        defaultValue: 'https://api-cn.etedrop.com',
-      );
+  static String get _mainlandApiBase => const String.fromEnvironment(
+    'API_BASE_MAINLAND',
+    defaultValue: 'https://api-cn.etedrop.com',
+  );
 
   /// 根据偏好与界面语言解析最终线路
   static ServerEndpoints resolve({

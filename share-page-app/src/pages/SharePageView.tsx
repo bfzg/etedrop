@@ -5,7 +5,7 @@ import { useSharePage } from "../hooks/useSharePage";
 import { formatBytes } from "../utils/format";
 import { FileIconSvg } from "../components/fileIconSvgComponent";
 import { VideoPlayer } from "../components/VideoPlayer";
-import { isIOS, isMobile, isWeChat } from "../utils/env";
+import { isIOS, isMobile, isSafari, isWeChat } from "../utils/env";
 import { hasOpfs } from "../utils/shareDownloadStorage";
 import { SUPPORTED } from "../i18n";
 
@@ -41,7 +41,8 @@ const LANG_LABELS: Record<string, string> = {
   es: "Español",
 };
 
-const ETEDROP_DOWNLOAD_URL = "https://etedrop.com/download/";
+/** 与「使用提示」第 4 条一并恢复 */
+// const ETEDROP_DOWNLOAD_URL = "https://etedrop.com/download/";
 
 export function SharePageView() {
   const { t, i18n } = useTranslation();
@@ -88,6 +89,7 @@ export function SharePageView() {
 
   const videoSrc = mseUrl || playUrl;
   const inWeChat = isWeChat();
+  const safariBrowser = isSafari();
   const isWechatIOS = inWeChat && isIOS();
   const isWechatMobile = inWeChat && isMobile();
   const opfsAvailable = hasOpfs();
@@ -95,8 +97,9 @@ export function SharePageView() {
     typeof window !== "undefined" && "MediaSource" in window;
   const wechatDownloadSoftLimitBytes = 10 * 1024 * 1024;
   const wechatCanPlay = mediaSourceAvailable;
-  /** 微信内置浏览器无法可靠触发系统下载，不展示下载按钮（已有顶部引导用系统浏览器打开） */
-  const showDownloadAction = showDownloadBtn && !inWeChat;
+  /** 微信内：仍展示下载按钮但禁用，并提示用系统浏览器（如 Chrome）打开 */
+  const showDownloadUi = showDownloadBtn;
+  const downloadActionEnabled = showDownloadBtn && !inWeChat;
   const showPlayAction =
     showDownloadBtn &&
     isLikelyVideo(fileInfo?.fileName ?? "") &&
@@ -275,47 +278,87 @@ export function SharePageView() {
             </div>
           )}
 
-          {(showPlayAction || showDownloadAction) && (
-            <div
-              className={`grid gap-2 ${showPlayAction && showDownloadAction ? "grid-cols-2" : "grid-cols-1"}`}
-            >
-              {showPlayAction && (
-                <button
-                  type="button"
-                  disabled={!fileInfo || !isLikelyVideo(fileInfo?.fileName ?? "")}
-                  onClick={() => {
-                    void sendDownloadStart({
-                      intent: "play",
-                      remuxFmp4: true,
-                      stream: !canPlayWithoutMse,
-                    });
-                  }}
-                  className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {t("share.play")}
-                </button>
-              )}
+          {(showPlayAction || showDownloadUi) && (
+            <>
+              <div
+                className={`grid gap-2 ${showPlayAction && showDownloadUi ? "grid-cols-2" : "grid-cols-1"}`}
+              >
+                {showPlayAction && (
+                  <button
+                    type="button"
+                    disabled={
+                      !fileInfo ||
+                      !isLikelyVideo(fileInfo?.fileName ?? "") ||
+                      safariBrowser
+                    }
+                    title={
+                      safariBrowser
+                        ? t("share.safariPlayNotSupported")
+                        : undefined
+                    }
+                    aria-label={
+                      safariBrowser
+                        ? `${t("share.play")} — ${t("share.safariPlayNotSupported")}`
+                        : t("share.play")
+                    }
+                    onClick={() => {
+                      void sendDownloadStart({
+                        intent: "play",
+                        remuxFmp4: true,
+                        stream: !canPlayWithoutMse,
+                      });
+                    }}
+                    className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {t("share.play")}
+                  </button>
+                )}
 
-              {showDownloadAction && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    void sendDownloadStart({
-                      intent: "download",
-                      remuxFmp4: false,
-                      stream: false,
-                    });
-                  }}
-                  className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-slate-900 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {resumeHintBytes > 0
-                    ? t("share.resumeDownload", {
-                        size: formatBytes(resumeHintBytes),
-                      })
-                    : t("share.download")}
-                </button>
+                {showDownloadUi && (
+                  <button
+                    type="button"
+                    disabled={!downloadActionEnabled}
+                    title={
+                      inWeChat ? t("share.wechatDownloadNotSupported") : undefined
+                    }
+                    aria-label={
+                      inWeChat
+                        ? `${t("share.download")} — ${t("share.wechatDownloadNotSupported")}`
+                        : resumeHintBytes > 0
+                          ? t("share.resumeDownload", {
+                              size: formatBytes(resumeHintBytes),
+                            })
+                          : t("share.download")
+                    }
+                    onClick={() => {
+                      if (!downloadActionEnabled) return;
+                      void sendDownloadStart({
+                        intent: "download",
+                        remuxFmp4: false,
+                        stream: false,
+                      });
+                    }}
+                    className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-slate-900 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {resumeHintBytes > 0
+                      ? t("share.resumeDownload", {
+                          size: formatBytes(resumeHintBytes),
+                        })
+                      : t("share.download")}
+                  </button>
+                )}
+              </div>
+              {inWeChat && showDownloadBtn && (
+                <p className="mt-2 text-xs text-slate-500 text-left">
+                  {t("share.wechatDownloadNotSupported")}
+                </p>
               )}
-            </div>
+              {safariBrowser && showPlayAction && (
+                <p className="mt-2 text-xs text-slate-500 text-left">
+                  {t("share.safariPlayNotSupported")}
+                </p>
+              )}
+            </>
           )}
 
           {canPlayWithoutMse && isLikelyVideo(fileInfo?.fileName ?? "") && (
@@ -378,21 +421,34 @@ export function SharePageView() {
             <ol className="list-decimal pl-4 space-y-2 text-base leading-relaxed text-slate-600 marker:text-slate-400">
               <li>{t("share.compatibilityTip1")}</li>
               <li>{t("share.compatibilityTip2")}</li>
-              <li>{t("share.compatibilityTip3")}</li>
-              <li>
-                <span>{t("share.compatibilityTip4a")}</span>
-                <a
-                  href={ETEDROP_DOWNLOAD_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-indigo-600 underline underline-offset-2 break-all"
-                >
-                  {ETEDROP_DOWNLOAD_URL}
-                </a>
-                <span>{t("share.compatibilityTip4b")}</span>
-              </li>
-              <li>{t("share.compatibilityTip5")}</li>
+              {/* 发版暂缓：第 3–5 条（iOS App / 下载页 / 链接在客户端打开） */}
+              {/* <li>{t("share.compatibilityTip3")}</li> */}
+              {/* <li> */}
+              {/*   <span>{t("share.compatibilityTip4a")}</span> */}
+              {/*   <a */}
+              {/*     href={ETEDROP_DOWNLOAD_URL} */}
+              {/*     target="_blank" */}
+              {/*     rel="noopener noreferrer" */}
+              {/*     className="text-indigo-600 underline underline-offset-2 break-all" */}
+              {/*   > */}
+              {/*     {ETEDROP_DOWNLOAD_URL} */}
+              {/*   </a> */}
+              {/*   <span>{t("share.compatibilityTip4b")}</span> */}
+              {/* </li> */}
+              {/* <li>{t("share.compatibilityTip5")}</li> */}
             </ol>
+            <p className="mt-4 text-sm text-slate-600 leading-relaxed">
+              <span className="font-medium text-slate-700">
+                {t("share.feedbackTitle")}
+              </span>
+              <span className="mx-1">{t("share.feedbackEmailLabel")}</span>
+              <a
+                href="mailto:yuanzhou_cn@qq.com"
+                className="text-indigo-600 underline underline-offset-2 break-all"
+              >
+                yuanzhou_cn@qq.com
+              </a>
+            </p>
           </div>
         </div>
       </div>

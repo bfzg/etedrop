@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { DataChannelMessage } from "../types";
 import { ensureMetaMatchesOrClear, getOpfsPartialSize, readSessionMeta } from "../utils/shareDownloadStorage";
@@ -18,6 +18,8 @@ export function useSharePage(deviceId: string, shareCode: string) {
   const [passwordError, setPasswordError] = useState("");
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [showDownloadBtn, setShowDownloadBtn] = useState(false);
+  /** 流式播放中途 DC 断开时仅自动整网重连一次，避免循环 */
+  const streamAutoReconnectPendingRef = useRef(false);
 
   const signaling = useSignaling(deviceId, shareCode);
 
@@ -44,6 +46,21 @@ export function useSharePage(deviceId: string, shareCode: string) {
         if (!download.downloadCompletedRef.current) {
           signaling.setStatusState("error", t("p2p.disconnected"));
           signaling.setShowReconnect(true);
+          const wasStreaming =
+            stream.streamingActiveRef.current ||
+            stream.streamModeRef.current === "mse-fmp4";
+          if (
+            wasStreaming &&
+            !streamAutoReconnectPendingRef.current
+          ) {
+            streamAutoReconnectPendingRef.current = true;
+            window.setTimeout(() => {
+              streamAutoReconnectPendingRef.current = false;
+              if (!download.downloadCompletedRef.current) {
+                signaling.reconnect();
+              }
+            }, 900);
+          }
         }
         return;
       }
@@ -152,6 +169,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
     download.downloadIntentRef.current = opts?.intent ?? "download";
 
     if (opts?.stream) {
+      streamAutoReconnectPendingRef.current = false;
       // Allow playing multiple stream sessions in one page lifecycle.
       // After the first stream ends, MediaSource/SourceBuffer may remain in an ended state.
       // Reset first so a new MediaSource is created.

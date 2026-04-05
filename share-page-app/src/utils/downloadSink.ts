@@ -1,3 +1,4 @@
+import { isMobile, isSafari } from "./env";
 import { hasOpfs } from "./shareDownloadStorage";
 
 /**
@@ -15,11 +16,13 @@ export function isStreamSaverEnvironmentOk(): boolean {
 
 /**
  * 当前环境是否使用 StreamSaver（mitm + SW）作为分片下载落盘。
- * **优先 OPFS**：有 OPFS 时一律不用 StreamSaver；仅在无 OPFS 且安全上下文 + SW 可用时用 StreamSaver，否则再走内存分片。
+ * **Safari** 与 **手机 UA**（`isMobile`）：在安全上下文 + SW 可用时固定走 StreamSaver，减少 OPFS 在移动端的差异与收尾问题。
+ * **桌面非 Safari**：有 OPFS 时优先 OPFS；无 OPFS 且环境可用时用 StreamSaver，否则内存分片。
  * StreamSaver 不做断点续传；每次下载结束或 `resetDownload` 时须 `resetMitmTransporter()`（见 `src/lib/streamSaver`）。
  */
 export function shouldUseStreamSaverSink(): boolean {
   if (!isStreamSaverEnvironmentOk()) return false;
+  if (isSafari() || isMobile()) return true;
   if (hasOpfs()) return false;
   return true;
 }
@@ -45,4 +48,40 @@ export function uniqueStreamSaverFileName(baseName: string): string {
     return `${baseName}_${ts}`;
   }
   return `${baseName.slice(0, i)}_${ts}${baseName.slice(i)}`;
+}
+
+/** 保存对话框建议文件名（去掉路径与非法字符） */
+export function sanitizeDownloadFileName(name: string): string {
+  const s = name.replace(/[/\\?%*:|"<>]/g, "_").trim();
+  return s.length > 0 ? s : "download";
+}
+
+/**
+ * Chrome 等在「P2P/写入完成后的异步时刻」用 blob: + 程序化点击 <a download> 保存时，
+ * 常误报「无法下载 / 请检查互联网链接状态」（无用户手势）。支持时优先用系统「另存为」+ 流式 pipe。
+ *
+ * @returns `saved` 已写入；`aborted` 用户取消；`unavailable` 应回退锚点下载
+ */
+export async function trySaveBlobViaFileSystemPicker(
+  data: Blob,
+  suggestedName: string,
+): Promise<"saved" | "aborted" | "unavailable"> {
+  if (typeof window === "undefined") return "unavailable";
+  const w = window as Window & {
+    showSaveFilePicker?: (options: {
+      suggestedName?: string;
+    }) => Promise<FileSystemFileHandle>;
+  };
+  if (typeof w.showSaveFilePicker !== "function") return "unavailable";
+  const name = sanitizeDownloadFileName(suggestedName);
+  try {
+    const handle = await w.showSaveFilePicker({ suggestedName: name });
+    const writable = await handle.createWritable();
+    await data.stream().pipeTo(writable);
+    return "saved";
+  } catch (e) {
+    if (e instanceof DOMException && e.name === "AbortError") return "aborted";
+    console.warn("[fastsend] showSaveFilePicker failed", e);
+    return "unavailable";
+  }
 }

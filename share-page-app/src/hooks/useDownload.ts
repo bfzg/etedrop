@@ -17,6 +17,7 @@ import { DOWNLOAD_ACK_WINDOW_BYTES } from "../constants/downloadAck";
 import {
   shouldUseOpfsResumeFromPartial,
   shouldUseStreamSaverSink,
+  trySaveBlobViaFileSystemPicker,
   uniqueStreamSaverFileName,
 } from "../utils/downloadSink";
 
@@ -411,8 +412,14 @@ export function useDownload(
     const intent = downloadIntentRef.current;
 
     try {
-      const triggerSave = (blob: Blob) => {
+      /** 先尝试 File System Access「另存为」（Chrome 对纯 blob 锚点常误报网络错误），再回退 <a download> */
+      const saveWithPickerOrAnchor = async (blob: Blob) => {
         if (blob.size === 0) return;
+        const viaPicker = await trySaveBlobViaFileSystemPicker(
+          blob,
+          fi?.fileName ?? "download",
+        );
+        if (viaPicker !== "unavailable") return;
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
@@ -452,20 +459,20 @@ export function useDownload(
         await w.close();
         const blob = await w.getBlob();
         if (intent === "play") triggerPlay(blob);
-        else triggerSave(blob);
+        else await saveWithPickerOrAnchor(blob);
         await clearPartialFile(deviceId, shareCode);
         clearSessionMeta(deviceId, shareCode);
       } else if (mode === "prefixed-opfs" || mode === "prefixed-memory") {
         const blob = new Blob(memoryDataChunksRef.current);
         if (intent === "play") triggerPlay(blob);
-        else triggerSave(blob);
+        else await saveWithPickerOrAnchor(blob);
         memoryDataChunksRef.current = [];
       } else {
         const parts = chunksRef.current;
         if (parts.length === 0) return;
         const blob = new Blob(parts);
         if (intent === "play") triggerPlay(blob);
-        else triggerSave(blob);
+        else await saveWithPickerOrAnchor(blob);
         chunksRef.current = [];
       }
     } finally {

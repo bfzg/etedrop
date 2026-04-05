@@ -19,7 +19,8 @@ import '../../share/services/share_service.dart';
 int get _dataChunkSize => AppConstants.defaultBlockSize;
 
 /// 从头下载且不超过此大小时走「无偏移头」快速路径（一次读入 + 更少帧），避免每包 8 字节头与 RAF 循环开销。
-const int _smallFileFastPathMaxBytes = 30 * 1024 * 1024; // 30mb
+/// 阈值不宜过大：超过后走带 `download-ack` 的分片路径，避免大文件在网页 legacy 模式堆满内存或 SCTP 背压导致 DC 提前关闭。
+const int _smallFileFastPathMaxBytes = 4 * 1024 * 1024; // 4MB
 
 /// 小文件尝试单帧发送的上限（超过则改为无头多分片，避开部分环境 DataChannel 单帧上限）。
 const int _smallFileSingleSendMaxBytes = 128 * 1024;
@@ -91,6 +92,7 @@ class ShareP2PHandler {
     // 同一 Handler 不应收到第二次 offer；若发生则先关旧 PC（勿调 dispose，以免 _disposeRequested 阻断后续逻辑）
     if (_pc != null) {
       _shareDownloadLog('handleOffer: closing existing PC (re-offer on same handler)');
+      _killActiveStream();
       _downloadFlowGate = null;
       _streamFlowGate = null;
       if (_downloadAckCompleter != null && !_downloadAckCompleter!.isCompleted) {
@@ -620,9 +622,13 @@ class ShareP2PHandler {
       print('[ShareP2P] stream gen=$gen cancelled, skipping stream-done');
       return;
     }
-    print('[ShareP2P] sending stream-done (gen=$gen)');
     if (_dc?.state == RTCDataChannelState.RTCDataChannelOpen) {
+      print('[ShareP2P] sending stream-done (gen=$gen)');
       _sendJson({'type': 'stream-done'});
+    } else {
+      print(
+        '[ShareP2P] skip stream-done (gen=$gen): dc state=${_dc?.state} (对端可能已断开)',
+      );
     }
   }
 

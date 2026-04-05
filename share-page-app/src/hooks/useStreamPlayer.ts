@@ -8,6 +8,8 @@ export type StreamBinaryMode = "raw-mp4" | "init-segment-v1";
 const EVICT_KEEP_BEHIND_S = 10;
 const EVICT_ROUTINE_AHEAD_S = 20;
 const MAX_BUFFER_AHEAD_S = 60;
+/** 播放头未越过此秒数时，不按「缓冲超前于 currentTime」做限流，避免 t=0 时把整段已缓冲算成超前而 pause 且永远无法 resume */
+const BUFFER_AHEAD_GATE_PLAYHEAD_S = 0.5;
 const FLOW_PAUSE_QUEUE_BYTES = 8 * 1024 * 1024;
 const FLOW_RESUME_QUEUE_BYTES = 2 * 1024 * 1024;
 const MSE_QUEUE_MAX_BYTES = 64 * 1024 * 1024;
@@ -32,6 +34,7 @@ export interface StreamPlayerApi {
   sendSeek: (targetTime: number) => void;
   resetStream: () => void;
   streamModeRef: React.RefObject<StreamMode>;
+  streamingActiveRef: React.RefObject<boolean>;
   pumpMse: () => void;
   setStreamProgress: (bytes: number) => void;
 }
@@ -69,6 +72,8 @@ export function useStreamPlayer(
   const mseQueueBytesRef = useRef(0);
   const quotaRetryCountRef = useRef(0);
   const streamPausedRef = useRef(false);
+  const streamingActiveRef = useRef(false);
+  streamingActiveRef.current = streaming;
 
   /** Send stream-pause or stream-resume to the Flutter sender based on queue depth
    *  and SourceBuffer ahead distance. */
@@ -80,7 +85,9 @@ export function useStreamPlayer(
     if (sb && Number.isFinite(t) && t >= 0) {
       const b = sb.buffered;
       if (b.length > 0) {
-        bufferAheadFull = b.end(b.length - 1) - t > MAX_BUFFER_AHEAD_S;
+        const ahead = b.end(b.length - 1) - t;
+        bufferAheadFull =
+          t >= BUFFER_AHEAD_GATE_PLAYHEAD_S && ahead > MAX_BUFFER_AHEAD_S;
       }
     }
 
@@ -148,7 +155,11 @@ export function useStreamPlayer(
     const b = sb.buffered;
     if (b.length > 0) {
       const bufferedEnd = b.end(b.length - 1);
-      if (bufferedEnd - t > MAX_BUFFER_AHEAD_S) {
+      const ahead = bufferedEnd - t;
+      if (
+        t >= BUFFER_AHEAD_GATE_PLAYHEAD_S &&
+        ahead > MAX_BUFFER_AHEAD_S
+      ) {
         updateFlowControl();
         return;
       }
@@ -564,6 +575,7 @@ export function useStreamPlayer(
     streaming,
     streamDuration,
     streamModeRef,
+    streamingActiveRef,
     startMse,
     setPlaybackTime,
     handleStreamMeta,
