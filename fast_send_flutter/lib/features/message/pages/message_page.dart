@@ -14,6 +14,7 @@ class MessagePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final messages = ref.watch(messageListProvider);
+
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
 
     return Scaffold(
@@ -31,6 +32,18 @@ class MessagePage extends ConsumerWidget {
                   ),
               ],
             ),
+      // appBar: AppBar(
+      //   title: Text(l10n.messagePageTitle),
+      //   actions: [
+      //     if (messages.isNotEmpty)
+      //       IconButton(
+      //         onPressed: () =>
+      //             ref.read(messageListProvider.notifier).clearAll(),
+      //         icon: const Icon(Icons.delete_sweep_outlined),
+      //         tooltip: l10n.clearMessagesTooltip,
+      //       ),
+      //   ],
+      // ),
       body: messages.isEmpty
           ? const MessageEmptyView()
           : ListView.separated(
