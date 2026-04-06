@@ -11,10 +11,6 @@ import clsx from "clsx";
 type PlatformRow = {
   id: string;
   icon: string;
-  nameId: string;
-  nameDefault: string;
-  hintId: string;
-  hintDefault: string;
   kind: "ready" | "testing";
   fileKey?: "windows" | "macos";
 };
@@ -23,53 +19,32 @@ const platforms: PlatformRow[] = [
   {
     id: "windows",
     icon: "/img/windows.png",
-    nameId: "download.platform.windows.name",
-    nameDefault: "Windows",
-    hintId: "download.platform.windows.hint",
-    hintDefault: "内含精简版、XP特别版", // 根据你的图片稍微改了下文案做示例
     kind: "ready",
     fileKey: "windows",
   },
   {
     id: "macos",
     icon: "/img/macos.png",
-    nameId: "download.platform.macos.name",
-    nameDefault: "macOS",
-    hintId: "download.platform.macos.hint",
-    hintDefault: "适用于 macOS 12 及以上",
     kind: "ready",
     fileKey: "macos",
   },
   {
     id: "linux",
     icon: "/img/linux.png",
-    nameId: "download.platform.linux.name",
-    nameDefault: "Linux",
-    hintId: "download.platform.linux.hint",
-    hintDefault: "常见桌面发行版",
     kind: "testing",
   },
   {
     id: "ios",
     icon: "/img/ios.png",
-    nameId: "download.platform.ios.name",
-    nameDefault: "iOS",
-    hintId: "download.platform.ios.hint",
-    hintDefault: "iPhone 与 iPad",
     kind: "testing",
   },
   {
     id: "android",
     icon: "/img/android.png",
-    nameId: "download.platform.android.name",
-    nameDefault: "Android",
-    hintId: "download.platform.android.hint",
-    hintDefault: "手机与平板客户端",
     kind: "testing",
   },
 ];
 
-// 右上角下载小图标 SVG
 function DownloadIcon() {
   return (
     <svg
@@ -88,7 +63,6 @@ function DownloadIcon() {
   );
 }
 
-// 右上角敬请期待/时钟小图标 SVG
 function WaitIcon() {
   return (
     <svg
@@ -106,6 +80,87 @@ function WaitIcon() {
   );
 }
 
+function PlatformTitleHint({ id }: { id: string }): ReactNode {
+  switch (id) {
+    case "windows":
+      return (
+        <>
+          <Heading
+            as="h3"
+            className="m-0 text-[18px] font-semibold text-slate-800 dark:text-slate-100"
+          >
+            <Translate id="download.platform.windows.name">Windows</Translate>
+          </Heading>
+          <span className="mt-2 text-center text-[11px] leading-relaxed text-slate-400 line-clamp-2 dark:text-slate-500">
+            <Translate id="download.platform.windows.hint">
+              内含精简版、XP特别版
+            </Translate>
+          </span>
+        </>
+      );
+    case "macos":
+      return (
+        <>
+          <Heading
+            as="h3"
+            className="m-0 text-[18px] font-semibold text-slate-800 dark:text-slate-100"
+          >
+            <Translate id="download.platform.macos.name">macOS</Translate>
+          </Heading>
+          <span className="mt-2 text-center text-[11px] leading-relaxed text-slate-400 line-clamp-2 dark:text-slate-500">
+            <Translate id="download.platform.macos.hint">
+              适用于 macOS 12 及以上
+            </Translate>
+          </span>
+        </>
+      );
+    case "linux":
+      return (
+        <>
+          <Heading
+            as="h3"
+            className="m-0 text-[18px] font-semibold text-slate-800 dark:text-slate-100"
+          >
+            <Translate id="download.platform.linux.name">Linux</Translate>
+          </Heading>
+          <span className="mt-2 text-center text-[11px] leading-relaxed text-slate-400 line-clamp-2 dark:text-slate-500">
+            <Translate id="download.platform.linux.hint">常见桌面发行版</Translate>
+          </span>
+        </>
+      );
+    case "ios":
+      return (
+        <>
+          <Heading
+            as="h3"
+            className="m-0 text-[18px] font-semibold text-slate-800 dark:text-slate-100"
+          >
+            <Translate id="download.platform.ios.name">iOS</Translate>
+          </Heading>
+          <span className="mt-2 text-center text-[11px] leading-relaxed text-slate-400 line-clamp-2 dark:text-slate-500">
+            <Translate id="download.platform.ios.hint">iPhone 与 iPad</Translate>
+          </span>
+        </>
+      );
+    case "android":
+      return (
+        <>
+          <Heading
+            as="h3"
+            className="m-0 text-[18px] font-semibold text-slate-800 dark:text-slate-100"
+          >
+            <Translate id="download.platform.android.name">Android</Translate>
+          </Heading>
+          <span className="mt-2 text-center text-[11px] leading-relaxed text-slate-400 line-clamp-2 dark:text-slate-500">
+            <Translate id="download.platform.android.hint">手机与平板客户端</Translate>
+          </span>
+        </>
+      );
+    default:
+      return null;
+  }
+}
+
 function PlatformCard({ row }: { row: PlatformRow }): ReactNode {
   const iconSrc = useBaseUrl(row.icon);
   const urlWindows = useBaseUrl(DOWNLOAD_INSTALLERS.windows);
@@ -118,8 +173,6 @@ function PlatformCard({ row }: { row: PlatformRow }): ReactNode {
         : undefined;
 
   const isReady = row.kind === "ready";
-
-  // 核心：如果是 ready 状态，卡片本身就是个 <a> 链接，否则是 <div>
   const Wrapper = isReady ? "a" : "div";
 
   return (
@@ -134,7 +187,6 @@ function PlatformCard({ row }: { row: PlatformRow }): ReactNode {
             : "cursor-not-allowed border border-slate-100 bg-slate-50/50 opacity-90 dark:border-slate-800 dark:bg-slate-900/50",
         )}
       >
-        {/* 右上角图标：参考图片中的小箭头/二维码位置 */}
         <div
           className={clsx(
             "absolute right-4 top-4 transition-colors duration-300",
@@ -146,39 +198,30 @@ function PlatformCard({ row }: { row: PlatformRow }): ReactNode {
           {isReady ? <DownloadIcon /> : <WaitIcon />}
         </div>
 
-        {/* 左上角状态徽标 (测试中) */}
         {!isReady && (
           <div className="absolute left-0 top-0 rounded-br-2xl rounded-tl-[28px] bg-gradient-to-br from-amber-400 to-amber-500 px-3 py-1 text-[11px] font-bold text-white shadow-sm dark:from-amber-600 dark:to-amber-700">
             <Translate id="download.badge.testing">测试中</Translate>
           </div>
         )}
 
-        {/* 操作系统 Logo */}
         <img
           src={iconSrc}
           alt=""
           className={clsx(
             "mb-5 h-16 w-16 object-contain transition-transform duration-300",
-            isReady && "group-hover:scale-110", // 悬停放大动画
+            isReady && "group-hover:scale-110",
           )}
         />
 
-        {/* 名称与描述 */}
-        <Heading
-          as="h3"
-          className="m-0 text-[18px] font-semibold text-slate-800 dark:text-slate-100"
-        >
-          <Translate id={row.nameId}>{row.nameDefault}</Translate>
-        </Heading>
-
-        <span className="mt-2 text-center text-[11px] leading-relaxed text-slate-400 line-clamp-2 dark:text-slate-500">
-          <Translate id={row.hintId}>{row.hintDefault}</Translate>
-        </span>
+        <PlatformTitleHint id={row.id} />
       </Wrapper>
 
-      {/* 底部版本号占位 (对应图片下方灰色的 V4.8.7.5 等，这里如果没有真实数据可以用统一文案或隐藏) */}
       <div className="mt-4 text-[13px] text-slate-400 dark:text-slate-500">
-        {isReady ? "最新版本" : "敬请期待"}
+        {isReady ? (
+          <Translate id="download.platform.status.ready">最新版本</Translate>
+        ) : (
+          <Translate id="download.platform.status.soon">敬请期待</Translate>
+        )}
       </div>
     </div>
   );
@@ -190,10 +233,9 @@ export default function DownPage(): ReactNode {
       title={translate({ id: "download.meta.title", message: "下载" })}
       description={translate({
         id: "download.meta.description",
-        message: "下载 EteDrop 桌面客户端...",
+        message: "下载 EteDrop 桌面客户端。",
       })}
     >
-      {/* 背景增加了非常微弱的蓝色渐变，呼应原图头部的天蓝色柔和光效 */}
       <main className="h-[calc(100vh-100px)] bg-gray-50 flex items-center justify-center">
         <Container>
           <div className="mx-auto max-w-3xl text-center">
@@ -210,18 +252,11 @@ export default function DownPage(): ReactNode {
             </p>
           </div>
 
-          {/* 使用 flex 弹性布局居中卡片，自动换行，完美还原一排排列的效果 */}
           <div className="mx-auto mt-16 flex max-w-6xl flex-wrap justify-center gap-6 sm:gap-8">
             {platforms.map((row) => (
               <PlatformCard key={row.id} row={row} />
             ))}
           </div>
-
-          {/* <p className="mx-auto mt-16 max-w-2xl text-center text-sm text-slate-400 dark:text-slate-500">
-            <Translate id="download.page.note">
-              若下载后无法打开安装包，请在系统设置中允许来自已识别开发者的应用，或联系支持获取最新构建。
-            </Translate>
-          </p> */}
         </Container>
       </main>
       <Footer />

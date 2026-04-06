@@ -1,0 +1,139 @@
+{
+  "footer.tagline": { "message": "Transferencia y uso compartido de archivos rápido y seguro" },
+  "footer.builtWith": { "message": "Actualización continua" },
+  "download.badge.testing": { "message": "En pruebas" },
+  "download.meta.title": { "message": "Descargar" },
+  "download.meta.description": { "message": "Descarga el cliente de escritorio EteDrop." },
+  "download.page.title": { "message": "Centro de descargas" },
+  "download.page.subtitle": {
+    "message": "Elige tu sistema para el escritorio. Las versiones móvil y Linux están en pruebas activas."
+  },
+  "homepage.meta.description": {
+    "message": "Sitio oficial de EteDrop: capacidades, guías y documentación técnica."
+  },
+  "homepage.publicE2e.diagram.caption": {
+    "message": "Diagrama WebRTC extremo a extremo: la nube señaliza; los datos van directo entre pares."
+  },
+  "homepage.faq.title": { "message": "Preguntas frecuentes" },
+  "homepage.finalCta.title": { "message": "¿Listo para empezar?" },
+  "homepage.finalCta.subtitle": {
+    "message": "Empieza por la guía para completar una transferencia y profundiza luego en protocolos e implementación."
+  },
+  "homepage.finalCta.primary": { "message": "Leer la guía" },
+  "homepage.finalCta.secondary": { "message": "Ver toda la documentación" },
+  "homepage.hero.title": { "message": "EteDrop facilita las transferencias" },
+  "homepage.hero.subtitle": {
+    "message": "Tu herramienta para internet, LAN y archivos grandes. Aumenta tu productividad."
+  },
+  "homepage.hero.primaryCta": { "message": "Descargar ahora" },
+  "homepage.publicE2e.title": { "message": "Ventajas" },
+  "homepage.publicE2e.lead": {
+    "message": "En internet público los datos van directo entre emisor y receptor; el servidor gestiona sesiones y señalización."
+  },
+  "homepage.lanNotify.title": { "message": "Notificaciones" },
+  "homepage.lanNotify.subtitle": {
+    "message": "Alertas a nivel de sistema, vista en la app y aceptación con un toque."
+  },
+  "homepage.lanNotify.p1": {
+    "message": "Avisos del sistema para tareas nuevas, finalización y errores."
+  },
+  "homepage.lanNotify.p2": {
+    "message": "Estado claro: en curso, correcto o fallido."
+  },
+  "homepage.lanTransfer.title": { "message": "Transferencia en LAN" },
+  "homepage.lanTransfer.subtitle": {
+    "message": "Conexión directa en la misma red: ideal para oficinas y varios dispositivos."
+  },
+  "homepage.lanTransfer.p1": {
+    "message": "Mayor velocidad, descubrimiento rápido, avatares y nombres personalizados."
+  },
+  "homepage.lanTransfer.p2": {
+    "message": "Archivos, texto e imágenes del portapapeles; envío y recepción por lotes."
+  },
+  "homepage.lanTransfer.p3": { "message": "Flujo simple con envío por lotes." },
+  "homepage.useCases.title": { "message": "Casos de uso" },
+  "homepage.useCases.subtitle": {
+    "message": "No es “otra nube”: transferencias más rápidas, ligeras y bajo tu control."
+  },
+  "download.platform.windows.name": { "message": "Windows" },
+  "download.platform.windows.hint": { "message": "Incluye versiones lite y para XP" },
+  "download.platform.macos.name": { "message": "macOS" },
+  "download.platform.macos.hint": { "message": "Para macOS 12 o posterior" },
+  "download.platform.linux.name": { "message": "Linux" },
+  "download.platform.linux.hint": { "message": "Distribuciones de escritorio habituales" },
+  "download.platform.ios.name": { "message": "iOS" },
+  "download.platform.ios.hint": { "message": "iPhone e iPad" },
+  "download.platform.android.name": { "message": "Android" },
+  "download.platform.android.hint": { "message": "App para móvil y tableta" },
+  "download.platform.status.ready": { "message": "Última versión" },
+  "download.platform.status.soon": { "message": "Próximamente" },
+  "homepage.publicE2e.diagram.signaling": { "message": "Señalización" },
+  "homepage.publicE2e.diagram.receiver": { "message": "Receptor" },
+  "homepage.publicE2e.diagram.receiverHint": { "message": "(Navegador web)" },
+  "homepage.publicE2e.diagram.sender": { "message": "Emisor" },
+  "homepage.publicE2e.diagram.senderHint": { "message": "(Cliente de escritorio)" },
+  "homepage.faq.1.q": { "message": "¿Depende del almacenamiento centralizado?" },
+  "homepage.faq.1.a": {
+    "message": "La transferencia prioriza el camino P2P; el servidor coordina en línea y reenvía señalización."
+  },
+  "homepage.faq.2.q": { "message": "¿Funciona en internet público?" },
+  "homepage.faq.2.a": {
+    "message": "Sí; alrededor del 80% de redes admiten P2P. Si no, contáctanos con una captura."
+  },
+  "homepage.faq.3.q": { "message": "¿Qué vista previa en navegador hay?" },
+  "homepage.faq.3.a": {
+    "message": "De momento solo MP4. Más formatos están planificados."
+  },
+  "homepage.faq.4.q": { "message": "¿Cómo reporto problemas?" },
+  "homepage.faq.4.a": {
+    "message": "Envía captura y descripción a yuanzhou_cn@qq.com"
+  },
+  "homepage.publicE2e.feature.play.title": { "message": "Reproducción MP4" },
+  "homepage.publicE2e.feature.play.text": {
+    "message": "Reproduce MP4 y más en el navegador, incluso archivos grandes mientras descargan."
+  },
+  "homepage.publicE2e.feature.download.title": { "message": "Descarga rápida" },
+  "homepage.publicE2e.feature.download.text": {
+    "message": "Descargas P2P de alta velocidad aprovechando tu ancho de banda."
+  },
+  "homepage.publicE2e.feature.privacy.title": { "message": "Privacidad primero" },
+  "homepage.publicE2e.feature.privacy.text": {
+    "message": "Los datos no pasan por nuestros servidores: verdadero P2P."
+  },
+  "homepage.publicE2e.feature.efficiency.title": { "message": "Más eficiencia" },
+  "homepage.publicE2e.feature.efficiency.text": {
+    "message": "Sin subir todo a la nube: el P2P puede reducir el tiempo a la mitad."
+  },
+  "homepage.publicE2e.feature.easy.title": { "message": "Fácil de usar" },
+  "homepage.publicE2e.feature.easy.text": {
+    "message": "Descarga desde el navegador sin cliente para quien recibe."
+  },
+  "homepage.publicE2e.feature.lan.title": { "message": "LAN" },
+  "homepage.publicE2e.feature.lan.text": {
+    "message": "Dispositivos en la misma red, latencia mínima."
+  },
+  "homepage.useCases.1.title": { "message": "Enviarte a ti mismo" },
+  "homepage.useCases.1.desc": {
+    "message": "PC y móvil: archivos temporales al instante."
+  },
+  "homepage.useCases.2.title": { "message": "A amigos" },
+  "homepage.useCases.2.desc": {
+    "message": "Enlaces y códigos para menos zip y reenvíos."
+  },
+  "homepage.useCases.3.title": { "message": "Uso puntual" },
+  "homepage.useCases.3.desc": {
+    "message": "Envía lo necesario sin subirlo todo a la nube."
+  },
+  "homepage.useCases.4.title": { "message": "Oficina" },
+  "homepage.useCases.4.desc": {
+    "message": "Varias personas a la vez; agiliza el trabajo."
+  },
+  "homepage.useCases.5.title": { "message": "Vista remota" },
+  "homepage.useCases.5.desc": {
+    "message": "Vista previa MP4 sin descarga completa; empieza al instante."
+  },
+  "homepage.useCases.6.title": { "message": "Multi-dispositivo" },
+  "homepage.useCases.6.desc": {
+    "message": "Envío directo entre equipos; sincronización llegará después."
+  }
+}

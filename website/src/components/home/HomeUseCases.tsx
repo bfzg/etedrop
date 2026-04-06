@@ -3,39 +3,6 @@ import Heading from "@theme/Heading";
 import Translate from "@docusaurus/Translate";
 import Container from "../Container";
 
-const items = [
-  {
-    id: "homepage.useCases.1",
-    title: "发给自己",
-    desc: "电脑与手机互传，临时文件快速到位。",
-  },
-  {
-    id: "homepage.useCases.2",
-    title: "发给朋友",
-    desc: "分享链接/取件码更顺手，减少打包与中转。",
-  },
-  {
-    id: "homepage.useCases.3",
-    title: "临时分享",
-    desc: "无需把所有内容都上传到云端，按需传输。",
-  },
-  {
-    id: "homepage.useCases.4",
-    title: "办公室互传",
-    desc: "可以将文件同时发送给多个人。极大提升办公效率。",
-  },
-  {
-    id: "homepage.useCases.5",
-    title: "异地预览",
-    desc: "支持mp4文件预览，无需下载。秒播机制，无需等待。",
-  },
-  {
-    id: "homepage.useCases.6",
-    title: "多设备同步",
-    desc: "多台设备直接互相发送（后续支持多设备文件同步）",
-  },
-] as const;
-
 export default function HomeUseCases(): ReactNode {
   return (
     <section className="py-12">
@@ -52,22 +19,66 @@ export default function HomeUseCases(): ReactNode {
         </div>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map((it) => (
-            <div
-              key={it.id}
-              className="rounded-2xl border-2 border-dashed border-slate-200 px-5 pt-3"
-            >
-              <Heading
-                as="h3"
-                className="m-0 text-[1.05rem] tracking-[-0.01em]"
-              >
-                <Translate id={`${it.id}.title`}>{it.title}</Translate>
-              </Heading>
-              <p className="mt-2 text-slate-600 dark:text-slate-300/90">
-                <Translate id={`${it.id}.desc`}>{it.desc}</Translate>
-              </p>
-            </div>
-          ))}
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 px-5 pt-3">
+            <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
+              <Translate id="homepage.useCases.1.title">发给自己</Translate>
+            </Heading>
+            <p className="mt-2 text-slate-600 dark:text-slate-300/90">
+              <Translate id="homepage.useCases.1.desc">
+                电脑与手机互传，临时文件快速到位。
+              </Translate>
+            </p>
+          </div>
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 px-5 pt-3">
+            <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
+              <Translate id="homepage.useCases.2.title">发给朋友</Translate>
+            </Heading>
+            <p className="mt-2 text-slate-600 dark:text-slate-300/90">
+              <Translate id="homepage.useCases.2.desc">
+                分享链接/取件码更顺手，减少打包与中转。
+              </Translate>
+            </p>
+          </div>
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 px-5 pt-3">
+            <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
+              <Translate id="homepage.useCases.3.title">临时分享</Translate>
+            </Heading>
+            <p className="mt-2 text-slate-600 dark:text-slate-300/90">
+              <Translate id="homepage.useCases.3.desc">
+                无需把所有内容都上传到云端，按需传输。
+              </Translate>
+            </p>
+          </div>
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 px-5 pt-3">
+            <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
+              <Translate id="homepage.useCases.4.title">办公室互传</Translate>
+            </Heading>
+            <p className="mt-2 text-slate-600 dark:text-slate-300/90">
+              <Translate id="homepage.useCases.4.desc">
+                可以将文件同时发送给多个人。极大提升办公效率。
+              </Translate>
+            </p>
+          </div>
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 px-5 pt-3">
+            <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
+              <Translate id="homepage.useCases.5.title">异地预览</Translate>
+            </Heading>
+            <p className="mt-2 text-slate-600 dark:text-slate-300/90">
+              <Translate id="homepage.useCases.5.desc">
+                支持mp4文件预览，无需下载。秒播机制，无需等待。
+              </Translate>
+            </p>
+          </div>
+          <div className="rounded-2xl border-2 border-dashed border-slate-200 px-5 pt-3">
+            <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
+              <Translate id="homepage.useCases.6.title">多设备同步</Translate>
+            </Heading>
+            <p className="mt-2 text-slate-600 dark:text-slate-300/90">
+              <Translate id="homepage.useCases.6.desc">
+                多台设备直接互相发送（后续支持多设备文件同步）
+              </Translate>
+            </p>
+          </div>
         </div>
       </Container>
     </section>

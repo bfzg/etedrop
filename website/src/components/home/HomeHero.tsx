@@ -1,10 +1,13 @@
 import type { ReactNode } from "react";
+import useBaseUrl from "@docusaurus/useBaseUrl";
 import Heading from "@theme/Heading";
 import Translate from "@docusaurus/Translate";
-import { Button, ButtonLink } from "@site/src/components/ui/Button";
+import { Button } from "@site/src/components/ui/Button";
 import Container from "../Container";
 
 export default function HomeHero(): ReactNode {
+  const shareVideoSrc = useBaseUrl("/video/share_video.mp4");
+
   return (
     <header className="relative overflow-hidden pb-14 pt-48">
       <div
@@ -38,7 +41,7 @@ export default function HomeHero(): ReactNode {
         <div className="h-1 lg:h-4"></div>
         <div className="aspect-video rounded-xl lg:rounded-[32px] overflow-hidden">
           <video
-            src="/video/share_video.mp4"
+            src={shareVideoSrc}
             autoPlay
             loop
             muted

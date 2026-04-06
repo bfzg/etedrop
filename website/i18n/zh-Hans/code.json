@@ -1,0 +1,239 @@
+{
+  "footer.tagline": {
+    "message": "快速、安全的文件传输与分享"
+  },
+  "footer.builtWith": {
+    "message": "Continuously updating"
+  },
+  "download.badge.testing": {
+    "message": "测试中"
+  },
+  "download.meta.title": {
+    "message": "下载"
+  },
+  "download.meta.description": {
+    "message": "下载 EteDrop 桌面客户端。"
+  },
+  "download.page.title": {
+    "message": "下载中心"
+  },
+  "download.page.subtitle": {
+    "message": "选择您的系统获取桌面客户端。移动端与 Linux 版本正在加紧测试中。"
+  },
+  "homepage.meta.description": {
+    "message": "Fast Send 官网：产品能力、使用指南与技术文档。"
+  },
+  "homepage.publicE2e.diagram.caption": {
+    "message": "WebRTC 端到端传输示意图：云端负责信令，两端直接进行数据传输"
+  },
+  "homepage.faq.title": {
+    "message": "常见问题"
+  },
+  "homepage.finalCta.title": {
+    "message": "准备开始了吗？"
+  },
+  "homepage.finalCta.subtitle": {
+    "message": "从使用指南开始，把一次传输流程跑通，再按需深入协议与实现细节。"
+  },
+  "homepage.finalCta.primary": {
+    "message": "阅读使用指南"
+  },
+  "homepage.finalCta.secondary": {
+    "message": "浏览全部文档"
+  },
+  "homepage.hero.title": {
+    "message": "EteDrop 让传输更便利"
+  },
+  "homepage.hero.subtitle": {
+    "message": "您的公网，内网，大文件传输工具。助您提升工作效率。"
+  },
+  "homepage.hero.primaryCta": {
+    "message": "立即下载"
+  },
+  "homepage.publicE2e.title": {
+    "message": "我的优势"
+  },
+  "homepage.publicE2e.lead": {
+    "message": "支持公网环境，数据在发送端与接收端之间直连传输，服务端主要负责会话与信令。"
+  },
+  "homepage.lanNotify.title": {
+    "message": "消息提示"
+  },
+  "homepage.lanNotify.subtitle": {
+    "message": "系统级消息提示，应用内查看，一键接收消息。"
+  },
+  "homepage.lanNotify.p1": {
+    "message": "系统级消息提示：新任务、完成与异常状态更易感知。"
+  },
+  "homepage.lanNotify.p2": {
+    "message": "接收状态一目了然：进行中、已成功或失败均有反馈。"
+  },
+  "homepage.lanTransfer.title": {
+    "message": "局域网传输"
+  },
+  "homepage.lanTransfer.subtitle": {
+    "message": "同一局域网内设备直连，适合办公室、多设备互联。"
+  },
+  "homepage.lanTransfer.p1": {
+    "message": "传输速度更快，设备快速上线，自定义头像、名称。"
+  },
+  "homepage.lanTransfer.p2": {
+    "message": "支持文件，文字，剪切板图片等。批量发送文件，批量接收文件。"
+  },
+  "homepage.lanTransfer.p3": {
+    "message": "操作简单、支持批量发送。"
+  },
+  "homepage.useCases.title": {
+    "message": "适用场景"
+  },
+  "homepage.useCases.subtitle": {
+    "message": "目标不是“又一个网盘”，而是让传输更快、更轻、更可控。"
+  },
+  "download.platform.windows.name": {
+    "message": "Windows"
+  },
+  "download.platform.windows.hint": {
+    "message": "内含精简版、XP特别版"
+  },
+  "download.platform.macos.name": {
+    "message": "macOS"
+  },
+  "download.platform.macos.hint": {
+    "message": "适用于 macOS 12 及以上"
+  },
+  "download.platform.linux.name": {
+    "message": "Linux"
+  },
+  "download.platform.linux.hint": {
+    "message": "常见桌面发行版"
+  },
+  "download.platform.ios.name": {
+    "message": "iOS"
+  },
+  "download.platform.ios.hint": {
+    "message": "iPhone 与 iPad"
+  },
+  "download.platform.android.name": {
+    "message": "Android"
+  },
+  "download.platform.android.hint": {
+    "message": "手机与平板客户端"
+  },
+  "download.platform.status.ready": {
+    "message": "最新版本"
+  },
+  "download.platform.status.soon": {
+    "message": "敬请期待"
+  },
+  "homepage.publicE2e.diagram.signaling": {
+    "message": "信令服务"
+  },
+  "homepage.publicE2e.diagram.receiver": {
+    "message": "接收端"
+  },
+  "homepage.publicE2e.diagram.receiverHint": {
+    "message": "(Web 浏览器)"
+  },
+  "homepage.publicE2e.diagram.sender": {
+    "message": "发送端"
+  },
+  "homepage.publicE2e.diagram.senderHint": {
+    "message": "(桌面客户端)"
+  },
+  "homepage.faq.1.q": {
+    "message": "是否依赖中心化存储？"
+  },
+  "homepage.faq.1.a": {
+    "message": "核心传输尽量走端到端直连；服务端主要负责在线管理与信令转发。"
+  },
+  "homepage.faq.2.q": {
+    "message": "公网环境能用吗？"
+  },
+  "homepage.faq.2.a": {
+    "message": "支持的，80% 的用户网络环境支持 p2p 传输。如不支持请截图联系我们。"
+  },
+  "homepage.faq.3.q": {
+    "message": "支持哪些文件类型在线预览？"
+  },
+  "homepage.faq.3.a": {
+    "message": "目前仅支持 Mp4 视频在线预览。其他格式如图片、文档、音频等，后续会支持。"
+  },
+  "homepage.faq.4.q": {
+    "message": "如何反馈问题？"
+  },
+  "homepage.faq.4.a": {
+    "message": "请截图，并描述问题，发送邮件至 yuanzhou_cn@qq.com"
+  },
+  "homepage.publicE2e.feature.play.title": {
+    "message": "Mp4 播放"
+  },
+  "homepage.publicE2e.feature.play.text": {
+    "message": "支持 MP4 等视频在线播放，大文件也能边收边看。"
+  },
+  "homepage.publicE2e.feature.download.title": {
+    "message": "高速下载"
+  },
+  "homepage.publicE2e.feature.download.text": {
+    "message": "p2p 高速下载，直连链路充分利用带宽。"
+  },
+  "homepage.publicE2e.feature.privacy.title": {
+    "message": "隐私优先"
+  },
+  "homepage.publicE2e.feature.privacy.text": {
+    "message": "数据不会经过服务器，真正的P2P传输。"
+  },
+  "homepage.publicE2e.feature.efficiency.title": {
+    "message": "效率提升"
+  },
+  "homepage.publicE2e.feature.efficiency.text": {
+    "message": "无需上传到云端，P2P传输，节省50%的传输时间。"
+  },
+  "homepage.publicE2e.feature.easy.title": {
+    "message": "操作简单"
+  },
+  "homepage.publicE2e.feature.easy.text": {
+    "message": "浏览器点击直接下载，无需安装客户端。"
+  },
+  "homepage.publicE2e.feature.lan.title": {
+    "message": "局域网传输"
+  },
+  "homepage.publicE2e.feature.lan.text": {
+    "message": "同网络下设备互传，超快速度无延迟。"
+  },
+  "homepage.useCases.1.title": {
+    "message": "发给自己"
+  },
+  "homepage.useCases.1.desc": {
+    "message": "电脑与手机互传，临时文件快速到位。"
+  },
+  "homepage.useCases.2.title": {
+    "message": "发给朋友"
+  },
+  "homepage.useCases.2.desc": {
+    "message": "分享链接/取件码更顺手，减少打包与中转。"
+  },
+  "homepage.useCases.3.title": {
+    "message": "临时分享"
+  },
+  "homepage.useCases.3.desc": {
+    "message": "无需把所有内容都上传到云端，按需传输。"
+  },
+  "homepage.useCases.4.title": {
+    "message": "办公室互传"
+  },
+  "homepage.useCases.4.desc": {
+    "message": "可以将文件同时发送给多个人。极大提升办公效率。"
+  },
+  "homepage.useCases.5.title": {
+    "message": "异地预览"
+  },
+  "homepage.useCases.5.desc": {
+    "message": "支持mp4文件预览，无需下载。秒播机制，无需等待。"
+  },
+  "homepage.useCases.6.title": {
+    "message": "多设备同步"
+  },
+  "homepage.useCases.6.desc": {
+    "message": "多台设备直接互相发送（后续支持多设备文件同步）"
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "footer.tagline": { "message": "빠르고 안전한 파일 전송·공유" },
+  "footer.builtWith": { "message": "계속 업데이트 중" },
+  "download.badge.testing": { "message": "테스트 중" },
+  "download.meta.title": { "message": "다운로드" },
+  "download.meta.description": { "message": "EteDrop 데스크톱 클라이언트를 받으세요." },
+  "download.page.title": { "message": "다운로드 센터" },
+  "download.page.subtitle": {
+    "message": "OS에 맞는 데스크톱 버전을 선택하세요. 모바일·Linux는 준비 중입니다."
+  },
+  "homepage.meta.description": {
+    "message": "EteDrop 공식 사이트: 기능, 사용 가이드, 기술 문서."
+  },
+  "homepage.publicE2e.diagram.caption": {
+    "message": "WebRTC 엔드투엔드: 클라우드는 시그널링, 데이터는 단말 간 직접 전송."
+  },
+  "homepage.faq.title": { "message": "자주 묻는 질문" },
+  "homepage.finalCta.title": { "message": "시작할 준비가 되셨나요?" },
+  "homepage.finalCta.subtitle": {
+    "message": "사용 가이드로 한 번 전송 흐름을 익힌 뒤, 프로토콜·구현 세부로 넘어가세요."
+  },
+  "homepage.finalCta.primary": { "message": "사용 가이드 읽기" },
+  "homepage.finalCta.secondary": { "message": "문서 모두 보기" },
+  "homepage.hero.title": { "message": "EteDrop으로 전송을 더 쉽게" },
+  "homepage.hero.subtitle": {
+    "message": "인터넷·LAN·대용량까지. 업무 효율을 높이세요."
+  },
+  "homepage.hero.primaryCta": { "message": "지금 다운로드" },
+  "homepage.publicE2e.title": { "message": "장점" },
+  "homepage.publicE2e.lead": {
+    "message": "공용 인터넷에서도 동작합니다. 데이터는 송·수신 단말 사이 직접 전송되고 서버는 세션·시그널링을 담당합니다."
+  },
+  "homepage.lanNotify.title": { "message": "알림" },
+  "homepage.lanNotify.subtitle": {
+    "message": "시스템 수준 알림, 앱에서 확인, 한 번에 수락."
+  },
+  "homepage.lanNotify.p1": {
+    "message": "새 작업·완료·오류를 놓치지 않는 시스템 알림."
+  },
+  "homepage.lanNotify.p2": {
+    "message": "진행·성공·실패 상태를 한눈에."
+  },
+  "homepage.lanTransfer.title": { "message": "LAN 전송" },
+  "homepage.lanTransfer.subtitle": {
+    "message": "같은 네트워크에서 단말이 직접 연결—사무실·다중 기기에 적합."
+  },
+  "homepage.lanTransfer.p1": {
+    "message": "더 빠른 속도, 빠른 발견, 아바타·이름 설정."
+  },
+  "homepage.lanTransfer.p2": {
+    "message": "파일·텍스트·클립보드 이미지 등. 대량 송·수신."
+  },
+  "homepage.lanTransfer.p3": { "message": "간단한 조작과 대량 전송 지원." },
+  "homepage.useCases.title": { "message": "활용 사례" },
+  "homepage.useCases.subtitle": {
+    "message": "‘또 다른 클라우드’가 아니라 더 빠르고 가볍고 제어 가능한 전송."
+  },
+  "download.platform.windows.name": { "message": "Windows" },
+  "download.platform.windows.hint": { "message": "라이트·XP용 빌드 포함" },
+  "download.platform.macos.name": { "message": "macOS" },
+  "download.platform.macos.hint": { "message": "macOS 12 이상" },
+  "download.platform.linux.name": { "message": "Linux" },
+  "download.platform.linux.hint": { "message": "주요 데스크톱 배포판" },
+  "download.platform.ios.name": { "message": "iOS" },
+  "download.platform.ios.hint": { "message": "iPhone·iPad" },
+  "download.platform.android.name": { "message": "Android" },
+  "download.platform.android.hint": { "message": "스마트폰·태블릿 앱" },
+  "download.platform.status.ready": { "message": "최신" },
+  "download.platform.status.soon": { "message": "곧 제공" },
+  "homepage.publicE2e.diagram.signaling": { "message": "시그널링" },
+  "homepage.publicE2e.diagram.receiver": { "message": "수신" },
+  "homepage.publicE2e.diagram.receiverHint": { "message": "(웹 브라우저)" },
+  "homepage.publicE2e.diagram.sender": { "message": "송신" },
+  "homepage.publicE2e.diagram.senderHint": { "message": "(데스크톱 앱)" },
+  "homepage.faq.1.q": { "message": "중앙 저장소에 의존하나요?" },
+  "homepage.faq.1.a": {
+    "message": "가능한 한 엔드투엔드 직접 경로를 쓰고, 서버는 온라인 관리·시그널링이 중심입니다."
+  },
+  "homepage.faq.2.q": { "message": "공용 인터넷에서 되나요?" },
+  "homepage.faq.2.a": {
+    "message": "네, 약 80% 환경에서 P2P가 동작합니다. 안 되면 스크린샷과 함께 문의하세요."
+  },
+  "homepage.faq.3.q": { "message": "브라우저 미리보기 형식은?" },
+  "homepage.faq.3.a": {
+    "message": "현재 MP4만 지원. 이미지·문서·오디오 등은 예정입니다."
+  },
+  "homepage.faq.4.q": { "message": "문제는 어떻게 제보하나요?" },
+  "homepage.faq.4.a": {
+    "message": "스크린샷과 설명을 yuanzhou_cn@qq.com 으로 보내 주세요."
+  },
+  "homepage.publicE2e.feature.play.title": { "message": "MP4 재생" },
+  "homepage.publicE2e.feature.play.text": {
+    "message": "MP4 등 브라우저에서 재생. 큰 파일도 받으며 시청."
+  },
+  "homepage.publicE2e.feature.download.title": { "message": "고속 다운로드" },
+  "homepage.publicE2e.feature.download.text": {
+    "message": "P2P로 직접 링크 대역을 활용한 고속 다운로드."
+  },
+  "homepage.publicE2e.feature.privacy.title": { "message": "프라이버시 우선" },
+  "homepage.publicE2e.feature.privacy.text": {
+    "message": "데이터가 서버를 거치지 않는 진짜 P2P."
+  },
+  "homepage.publicE2e.feature.efficiency.title": { "message": "효율 향상" },
+  "homepage.publicE2e.feature.efficiency.text": {
+    "message": "클라우드 전체 업로드 없이 P2P로 시간을 약 절반으로."
+  },
+  "homepage.publicE2e.feature.easy.title": { "message": "쉬운 사용" },
+  "homepage.publicE2e.feature.easy.text": {
+    "message": "브라우저 클릭으로 다운로드. 수신자 클라이언트 불필요."
+  },
+  "homepage.publicE2e.feature.lan.title": { "message": "LAN 전송" },
+  "homepage.publicE2e.feature.lan.text": {
+    "message": "같은 네트워크 기기 간 초저지연."
+  },
+  "homepage.useCases.1.title": { "message": "나에게 보내기" },
+  "homepage.useCases.1.desc": {
+    "message": "PC와 휴대폰 간 임시 파일을 빠르게."
+  },
+  "homepage.useCases.2.title": { "message": "친구에게" },
+  "homepage.useCases.2.desc": {
+    "message": "공유 링크·픽업 코드로 압축·중계 줄이기."
+  },
+  "homepage.useCases.3.title": { "message": "임시 공유" },
+  "homepage.useCases.3.desc": {
+    "message": "모든 걸 클라우드에 올리지 않고 필요한 만큼만."
+  },
+  "homepage.useCases.4.title": { "message": "사무실 공유" },
+  "homepage.useCases.4.desc": {
+    "message": "여러 사람에게 동시 전송으로 업무 가속."
+  },
+  "homepage.useCases.5.title": { "message": "원격 미리보기" },
+  "homepage.useCases.5.desc": {
+    "message": "MP4 미리보기, 전체 다운로드 없이 빠른 시작."
+  },
+  "homepage.useCases.6.title": { "message": "다중 기기" },
+  "homepage.useCases.6.desc": {
+    "message": "기기 간 직접 전송(동기화는 추후)."
+  }
+}

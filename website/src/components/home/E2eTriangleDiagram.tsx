@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import useBaseUrl from "@docusaurus/useBaseUrl";
-import Translate from "@docusaurus/Translate";
+import Translate, { translate } from "@docusaurus/Translate";
 
 export default function E2eTriangleDiagram(): ReactNode {
   // 图片资源
@@ -165,7 +165,10 @@ export default function E2eTriangleDiagram(): ReactNode {
             textAnchor="middle"
             className="font-bold fill-slate-700 dark:fill-slate-200"
           >
-            信令服务
+            {translate({
+              id: "homepage.publicE2e.diagram.signaling",
+              message: "信令服务",
+            })}
           </text>
         </g>
 
@@ -197,7 +200,10 @@ export default function E2eTriangleDiagram(): ReactNode {
             textAnchor="middle"
             className="font-bold fill-slate-700 dark:fill-slate-200"
           >
-            接收端
+            {translate({
+              id: "homepage.publicE2e.diagram.receiver",
+              message: "接收端",
+            })}
           </text>
           <text
             x="0"
@@ -206,7 +212,10 @@ export default function E2eTriangleDiagram(): ReactNode {
             textAnchor="middle"
             className="fill-slate-500 dark:fill-slate-400"
           >
-            (Web 浏览器)
+            {translate({
+              id: "homepage.publicE2e.diagram.receiverHint",
+              message: "(Web 浏览器)",
+            })}
           </text>
         </g>
 
@@ -255,7 +264,10 @@ export default function E2eTriangleDiagram(): ReactNode {
             textAnchor="middle"
             className="font-bold fill-slate-700 dark:fill-slate-200"
           >
-            发送端
+            {translate({
+              id: "homepage.publicE2e.diagram.sender",
+              message: "发送端",
+            })}
           </text>
           <text
             x="0"
@@ -264,7 +276,10 @@ export default function E2eTriangleDiagram(): ReactNode {
             textAnchor="middle"
             className="fill-slate-500 dark:fill-slate-400"
           >
-            (桌面客户端)
+            {translate({
+              id: "homepage.publicE2e.diagram.senderHint",
+              message: "(桌面客户端)",
+            })}
           </text>
         </g>
       </svg>

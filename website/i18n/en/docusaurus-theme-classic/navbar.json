@@ -1,0 +1,16 @@
+{
+  "title": { "message": "EteDrop", "description": "The title in the navbar" },
+  "logo.alt": { "message": "EteDrop", "description": "The alt text of navbar logo" },
+  "item.label.首页": {
+    "message": "Home",
+    "description": "Navbar item with label 首页"
+  },
+  "item.label.文档": {
+    "message": "Docs",
+    "description": "Navbar item with label 文档"
+  },
+  "item.label.下载": {
+    "message": "Download",
+    "description": "Navbar item with label 下载"
+  }
+}

@@ -113,7 +113,8 @@
   position: sticky;
   top: 0;
   z-index: 1000;
-  overflow: hidden;
+  /* must be visible so locale/docs dropdowns are not clipped */
+  overflow: visible;
   transition: all 0.3s ease;
   padding: 20px 0;
   font-size: 19px;

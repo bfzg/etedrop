@@ -1,0 +1,139 @@
+{
+  "footer.tagline": { "message": "高速で安全なファイル転送と共有" },
+  "footer.builtWith": { "message": "継続的にアップデート中" },
+  "download.badge.testing": { "message": "テスト中" },
+  "download.meta.title": { "message": "ダウンロード" },
+  "download.meta.description": { "message": "EteDrop デスクトップ版をダウンロード。" },
+  "download.page.title": { "message": "ダウンロードセンター" },
+  "download.page.subtitle": {
+    "message": "お使いのOS向けデスクトップ版を入手。モバイル・Linux版は準備中です。"
+  },
+  "homepage.meta.description": {
+    "message": "EteDrop 公式サイト：機能、ガイド、技術ドキュメント。"
+  },
+  "homepage.publicE2e.diagram.caption": {
+    "message": "WebRTC エンドツーエンド図：クラウドはシグナリング、データは端末間で直接やり取り。"
+  },
+  "homepage.faq.title": { "message": "よくある質問" },
+  "homepage.finalCta.title": { "message": "始めてみますか？" },
+  "homepage.finalCta.subtitle": {
+    "message": "利用ガイドで一度転送フローを体験し、必要に応じてプロトコルや実装へ進んでください。"
+  },
+  "homepage.finalCta.primary": { "message": "利用ガイドを読む" },
+  "homepage.finalCta.secondary": { "message": "すべてのドキュメント" },
+  "homepage.hero.title": { "message": "EteDrop で転送をもっと簡単に" },
+  "homepage.hero.subtitle": {
+    "message": "インターネット・LAN・大容量に。業務効率をサポート。"
+  },
+  "homepage.hero.primaryCta": { "message": "今すぐダウンロード" },
+  "homepage.publicE2e.title": { "message": "特長" },
+  "homepage.publicE2e.lead": {
+    "message": "公網でも利用可能。データは送受信端末間で直接転送し、サーバーはセッションとシグナリングを担当します。"
+  },
+  "homepage.lanNotify.title": { "message": "通知" },
+  "homepage.lanNotify.subtitle": {
+    "message": "システムレベルの通知、アプリ内で確認、ワンタップ受信。"
+  },
+  "homepage.lanNotify.p1": {
+    "message": "新規タスク、完了、エラーが把握しやすいシステム通知。"
+  },
+  "homepage.lanNotify.p2": {
+    "message": "進行中・成功・失敗など状態がひと目で分かります。"
+  },
+  "homepage.lanTransfer.title": { "message": "LAN 転送" },
+  "homepage.lanTransfer.subtitle": {
+    "message": "同一LAN内で端末が直接接続。オフィスや複数端末に最適。"
+  },
+  "homepage.lanTransfer.p1": {
+    "message": "高速転送、すぐ見つかる端末、アバター・名前のカスタム。"
+  },
+  "homepage.lanTransfer.p2": {
+    "message": "ファイル・テキスト・クリップボード画像など。一括送受信。"
+  },
+  "homepage.lanTransfer.p3": { "message": "シンプル操作で一括送信に対応。" },
+  "homepage.useCases.title": { "message": "活用シーン" },
+  "homepage.useCases.subtitle": {
+    "message": "「また.cloud」ではなく、より速く・軽く・コントロールしやすい転送を。"
+  },
+  "download.platform.windows.name": { "message": "Windows" },
+  "download.platform.windows.hint": { "message": "ライト版・XP向けビルド同梱" },
+  "download.platform.macos.name": { "message": "macOS" },
+  "download.platform.macos.hint": { "message": "macOS 12 以降" },
+  "download.platform.linux.name": { "message": "Linux" },
+  "download.platform.linux.hint": { "message": "主要デスクトップディストリビューション" },
+  "download.platform.ios.name": { "message": "iOS" },
+  "download.platform.ios.hint": { "message": "iPhone / iPad" },
+  "download.platform.android.name": { "message": "Android" },
+  "download.platform.android.hint": { "message": "スマホ・タブレットアプリ" },
+  "download.platform.status.ready": { "message": "最新版" },
+  "download.platform.status.soon": { "message": "近日公開" },
+  "homepage.publicE2e.diagram.signaling": { "message": "シグナリング" },
+  "homepage.publicE2e.diagram.receiver": { "message": "受信側" },
+  "homepage.publicE2e.diagram.receiverHint": { "message": "（Web ブラウザ）" },
+  "homepage.publicE2e.diagram.sender": { "message": "送信側" },
+  "homepage.publicE2e.diagram.senderHint": { "message": "（デスクトップアプリ）" },
+  "homepage.faq.1.q": { "message": "中央ストレージに依存しますか？" },
+  "homepage.faq.1.a": {
+    "message": "転送はエンドツーエンド直結を優先し、サーバーはオンライン管理とシグナリング中継が中心です。"
+  },
+  "homepage.faq.2.q": { "message": "公網で使えますか？" },
+  "homepage.faq.2.a": {
+    "message": "はい。おおよそ80%の環境でP2Pが使えます。不可の場合はスクリーンショットとともにお問い合わせください。"
+  },
+  "homepage.faq.3.q": { "message": "ブラウザプレビューはどの形式？" },
+  "homepage.faq.3.a": {
+    "message": "現状は MP4 のみ。画像・文書・音声などは順次対応予定です。"
+  },
+  "homepage.faq.4.q": { "message": "問題の報告方法は？" },
+  "homepage.faq.4.a": {
+    "message": "スクリーンショットと内容を yuanzhou_cn@qq.com までメールでお送りください。"
+  },
+  "homepage.publicE2e.feature.play.title": { "message": "MP4 再生" },
+  "homepage.publicE2e.feature.play.text": {
+    "message": "MP4 などをブラウザで再生。大容量も受信しながら視聴。"
+  },
+  "homepage.publicE2e.feature.download.title": { "message": "高速ダウンロード" },
+  "homepage.publicE2e.feature.download.text": {
+    "message": "P2Pで直リンク帯域を活かした高速ダウンロード。"
+  },
+  "homepage.publicE2e.feature.privacy.title": { "message": "プライバシー優先" },
+  "homepage.publicE2e.feature.privacy.text": {
+    "message": "データはサーバーを経由せず、真のP2P転送。"
+  },
+  "homepage.publicE2e.feature.efficiency.title": { "message": "効率アップ" },
+  "homepage.publicE2e.feature.efficiency.text": {
+    "message": "クラウドに全部上げなくてもP2Pで、転送時間を約半分に。"
+  },
+  "homepage.publicE2e.feature.easy.title": { "message": "かんたん操作" },
+  "homepage.publicE2e.feature.easy.text": {
+    "message": "ブラウザでクリックしてDL。受信側にクライアント不要。"
+  },
+  "homepage.publicE2e.feature.lan.title": { "message": "LAN 転送" },
+  "homepage.publicE2e.feature.lan.text": {
+    "message": "同一ネットワークで端末同士、超低遅延。"
+  },
+  "homepage.useCases.1.title": { "message": "自分へ送る" },
+  "homepage.useCases.1.desc": {
+    "message": "PCとスマホ間で一時ファイルをすばやく。"
+  },
+  "homepage.useCases.2.title": { "message": "友人へ送る" },
+  "homepage.useCases.2.desc": {
+    "message": "共有リンク・受取コードで手間を削減。"
+  },
+  "homepage.useCases.3.title": { "message": "一時共有" },
+  "homepage.useCases.3.desc": {
+    "message": "すべてをクラウドに上げず、必要な分だけ。"
+  },
+  "homepage.useCases.4.title": { "message": "オフィス共有" },
+  "homepage.useCases.4.desc": {
+    "message": "複数人へ同時送信で業務を加速。"
+  },
+  "homepage.useCases.5.title": { "message": "リモートプレビュー" },
+  "homepage.useCases.5.desc": {
+    "message": "MP4をダウンロード前にプレビュー。すぐ再生。"
+  },
+  "homepage.useCases.6.title": { "message": "マルチデバイス" },
+  "homepage.useCases.6.desc": {
+    "message": "端末同士で直接送信（同期機能は順次）。"
+  }
+}

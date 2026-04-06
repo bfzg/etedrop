@@ -1,0 +1,139 @@
+{
+  "footer.tagline": { "message": "Fast, secure file transfer and sharing" },
+  "footer.builtWith": { "message": "Continuously updating" },
+  "download.badge.testing": { "message": "In testing" },
+  "download.meta.title": { "message": "Download" },
+  "download.meta.description": { "message": "Download the EteDrop desktop client." },
+  "download.page.title": { "message": "Download center" },
+  "download.page.subtitle": {
+    "message": "Choose your system for the desktop app. Mobile and Linux versions are in active testing."
+  },
+  "homepage.meta.description": {
+    "message": "EteDrop official site: product capabilities, guides, and technical docs."
+  },
+  "homepage.publicE2e.diagram.caption": {
+    "message": "WebRTC end-to-end diagram: the cloud handles signaling; peers exchange data directly."
+  },
+  "homepage.faq.title": { "message": "FAQ" },
+  "homepage.finalCta.title": { "message": "Ready to get started?" },
+  "homepage.finalCta.subtitle": {
+    "message": "Start with the user guide to complete one transfer, then explore protocols and implementation details as needed."
+  },
+  "homepage.finalCta.primary": { "message": "Read the user guide" },
+  "homepage.finalCta.secondary": { "message": "Browse all docs" },
+  "homepage.hero.title": { "message": "EteDrop makes transfers easier" },
+  "homepage.hero.subtitle": {
+    "message": "Your tool for internet, LAN, and large files—boost your productivity."
+  },
+  "homepage.hero.primaryCta": { "message": "Download now" },
+  "homepage.publicE2e.title": { "message": "Why choose us" },
+  "homepage.publicE2e.lead": {
+    "message": "Works on the public internet: data goes directly between sender and receiver; the server handles sessions and signaling."
+  },
+  "homepage.lanNotify.title": { "message": "Notifications" },
+  "homepage.lanNotify.subtitle": {
+    "message": "System-level alerts—view in the app and accept with one tap."
+  },
+  "homepage.lanNotify.p1": {
+    "message": "System notifications make new tasks, completion, and errors easier to notice."
+  },
+  "homepage.lanNotify.p2": {
+    "message": "Transfer status at a glance: in progress, success, or failure."
+  },
+  "homepage.lanTransfer.title": { "message": "LAN transfer" },
+  "homepage.lanTransfer.subtitle": {
+    "message": "Direct device-to-device on the same network—great for offices and multi-device setups."
+  },
+  "homepage.lanTransfer.p1": {
+    "message": "Faster speeds, quick device discovery, custom avatars and names."
+  },
+  "homepage.lanTransfer.p2": {
+    "message": "Files, text, clipboard images, and more—batch send and receive."
+  },
+  "homepage.lanTransfer.p3": { "message": "Simple workflow with batch sending." },
+  "homepage.useCases.title": { "message": "Use cases" },
+  "homepage.useCases.subtitle": {
+    "message": "Not “another cloud drive”—faster, lighter, and more control over your transfers."
+  },
+  "download.platform.windows.name": { "message": "Windows" },
+  "download.platform.windows.hint": { "message": "Includes lite and XP-focused builds" },
+  "download.platform.macos.name": { "message": "macOS" },
+  "download.platform.macos.hint": { "message": "For macOS 12 and later" },
+  "download.platform.linux.name": { "message": "Linux" },
+  "download.platform.linux.hint": { "message": "Common desktop distributions" },
+  "download.platform.ios.name": { "message": "iOS" },
+  "download.platform.ios.hint": { "message": "iPhone and iPad" },
+  "download.platform.android.name": { "message": "Android" },
+  "download.platform.android.hint": { "message": "Phone and tablet app" },
+  "download.platform.status.ready": { "message": "Latest" },
+  "download.platform.status.soon": { "message": "Coming soon" },
+  "homepage.publicE2e.diagram.signaling": { "message": "Signaling" },
+  "homepage.publicE2e.diagram.receiver": { "message": "Receiver" },
+  "homepage.publicE2e.diagram.receiverHint": { "message": "(Web browser)" },
+  "homepage.publicE2e.diagram.sender": { "message": "Sender" },
+  "homepage.publicE2e.diagram.senderHint": { "message": "(Desktop app)" },
+  "homepage.faq.1.q": { "message": "Does it rely on centralized storage?" },
+  "homepage.faq.1.a": {
+    "message": "Transfers prefer a direct peer-to-peer path; the server handles online coordination and signaling."
+  },
+  "homepage.faq.2.q": { "message": "Does it work on the public internet?" },
+  "homepage.faq.2.a": {
+    "message": "Yes—about 80% of networks support P2P. If not, contact us with a screenshot."
+  },
+  "homepage.faq.3.q": { "message": "Which preview formats are supported?" },
+  "homepage.faq.3.a": {
+    "message": "In-browser preview is MP4-only for now. More formats are planned."
+  },
+  "homepage.faq.4.q": { "message": "How do I report issues?" },
+  "homepage.faq.4.a": {
+    "message": "Send a screenshot and a short description to yuanzhou_cn@qq.com"
+  },
+  "homepage.publicE2e.feature.play.title": { "message": "MP4 playback" },
+  "homepage.publicE2e.feature.play.text": {
+    "message": "Stream MP4 and more in the browser—large files while downloading."
+  },
+  "homepage.publicE2e.feature.download.title": { "message": "Fast downloads" },
+  "homepage.publicE2e.feature.download.text": {
+    "message": "High-speed P2P downloads that use your bandwidth efficiently."
+  },
+  "homepage.publicE2e.feature.privacy.title": { "message": "Privacy first" },
+  "homepage.publicE2e.feature.privacy.text": {
+    "message": "Data stays off our servers—true peer-to-peer transfer."
+  },
+  "homepage.publicE2e.feature.efficiency.title": { "message": "Save time" },
+  "homepage.publicE2e.feature.efficiency.text": {
+    "message": "No full cloud upload—P2P can cut transfer time by about half."
+  },
+  "homepage.publicE2e.feature.easy.title": { "message": "Easy to use" },
+  "homepage.publicE2e.feature.easy.text": {
+    "message": "Click in the browser to download—no client required for recipients."
+  },
+  "homepage.publicE2e.feature.lan.title": { "message": "LAN transfer" },
+  "homepage.publicE2e.feature.lan.text": {
+    "message": "Same-network devices with ultra-low latency."
+  },
+  "homepage.useCases.1.title": { "message": "Send to yourself" },
+  "homepage.useCases.1.desc": {
+    "message": "PC and phone—get temporary files where you need them, fast."
+  },
+  "homepage.useCases.2.title": { "message": "Share with friends" },
+  "homepage.useCases.2.desc": {
+    "message": "Links and pickup codes—less zipping and relaying."
+  },
+  "homepage.useCases.3.title": { "message": "Ad-hoc sharing" },
+  "homepage.useCases.3.desc": {
+    "message": "Send what you need without uploading everything to the cloud."
+  },
+  "homepage.useCases.4.title": { "message": "Office sharing" },
+  "homepage.useCases.4.desc": {
+    "message": "Send to multiple people at once and speed up daily work."
+  },
+  "homepage.useCases.5.title": { "message": "Remote preview" },
+  "homepage.useCases.5.desc": {
+    "message": "MP4 preview in the browser—quick start, minimal waiting."
+  },
+  "homepage.useCases.6.title": { "message": "Multi-device" },
+  "homepage.useCases.6.desc": {
+    "message": "Send directly between devices—multi-device sync coming later."
+  }
+}

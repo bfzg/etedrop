@@ -18,7 +18,29 @@ const config: Config = {
 
   i18n: {
     defaultLocale: "zh-Hans",
-    locales: ["zh-Hans"],
+    locales: ["zh-Hans", "en", "ja", "es", "ko"],
+    localeConfigs: {
+      "zh-Hans": {
+        label: "简体中文",
+        htmlLang: "zh-Hans",
+      },
+      en: {
+        label: "English",
+        htmlLang: "en",
+      },
+      ja: {
+        label: "日本語",
+        htmlLang: "ja",
+      },
+      es: {
+        label: "Español",
+        htmlLang: "es",
+      },
+      ko: {
+        label: "한국어",
+        htmlLang: "ko",
+      },
+    },
   },
 
   scripts: [
@@ -28,7 +50,11 @@ const config: Config = {
     },
   ],
 
-  clientModules: [require.resolve("./src/scripts/navbar-scroll.js")],
+  clientModules: [
+    require.resolve("./src/scripts/dev-i18n-hint.js"),
+    require.resolve("./src/scripts/fix-double-locale.js"),
+    require.resolve("./src/scripts/navbar-scroll.js"),
+  ],
 
   presets: [
     [
@@ -65,6 +91,10 @@ const config: Config = {
           position: "left",
           label: "下载",
           exact: true,
+        },
+        {
+          type: "localeDropdown",
+          position: "right",
         },
       ],
     },

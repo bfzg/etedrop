@@ -12,7 +12,12 @@ function updateNavbar() {
   // Check if it's homepage
   // Matches "/" or "/index.html" or localized versions if needed.
   // For now, simple check.
-  const isHomePage = window.location.pathname === '/' || window.location.pathname === '/index.html' || window.location.pathname === '/zh-Hans/';
+  const path = window.location.pathname.replace(/\/$/, '') || '/';
+  const isHomePage =
+    path === '/' ||
+    path === '/index.html' ||
+    /^\/(zh-Hans|en|ja|es|ko)$/.test(path) ||
+    /^\/(zh-Hans|en|ja|es|ko)\/index\.html$/.test(path);
 
   if (isHomePage) {
     navbar.classList.add('navbar-home');
