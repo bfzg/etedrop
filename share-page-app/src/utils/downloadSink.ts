@@ -22,8 +22,8 @@ export function isStreamSaverEnvironmentOk(): boolean {
  */
 export function shouldUseStreamSaverSink(): boolean {
   if (!isStreamSaverEnvironmentOk()) return false;
-  if (isSafari() || isMobile()) return true;
-  if (hasOpfs()) return false;
+  // if (isSafari() || isMobile()) return true;
+  // if (hasOpfs()) return false;
   return true;
 }
 

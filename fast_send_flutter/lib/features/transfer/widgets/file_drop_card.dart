@@ -302,10 +302,7 @@ class _FileDropCardState extends State<FileDropCard> {
                     loading: _sending,
                     onPressed: _send,
                     radius: 99,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 22,
-                      vertical: _isDesktop ? 14 : 12,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
                 ],
               ),
