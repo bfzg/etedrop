@@ -5,7 +5,10 @@ import Heading from "@theme/Heading";
 import Translate, { translate } from "@docusaurus/Translate";
 import Container from "@site/src/components/Container";
 import Footer from "@site/src/components/Footer";
-import { DOWNLOAD_INSTALLERS } from "@site/src/constant/downloads";
+import {
+  useReleaseManifest,
+  useResolvedDownloadHref,
+} from "@site/src/hooks/useReleaseManifest";
 import clsx from "clsx";
 
 type PlatformRow = {
@@ -161,15 +164,23 @@ function PlatformTitleHint({ id }: { id: string }): ReactNode {
   }
 }
 
-function PlatformCard({ row }: { row: PlatformRow }): ReactNode {
+function PlatformCard({
+  row,
+  windowsHref,
+  macosHref,
+  version,
+}: {
+  row: PlatformRow;
+  windowsHref: string;
+  macosHref: string;
+  version: string;
+}): ReactNode {
   const iconSrc = useBaseUrl(row.icon);
-  const urlWindows = useBaseUrl(DOWNLOAD_INSTALLERS.windows);
-  const urlMacos = useBaseUrl(DOWNLOAD_INSTALLERS.macos);
   const href =
     row.fileKey === "windows"
-      ? urlWindows
+      ? windowsHref
       : row.fileKey === "macos"
-        ? urlMacos
+        ? macosHref
         : undefined;
 
   const isReady = row.kind === "ready";
@@ -218,7 +229,10 @@ function PlatformCard({ row }: { row: PlatformRow }): ReactNode {
 
       <div className="mt-4 text-[13px] text-slate-400 dark:text-slate-500">
         {isReady ? (
-          <Translate id="download.platform.status.ready">最新版本</Translate>
+          <>
+            <Translate id="download.platform.status.ready">最新版本</Translate>
+            {version ? ` · v${version}` : null}
+          </>
         ) : (
           <Translate id="download.platform.status.soon">敬请期待</Translate>
         )}
@@ -228,6 +242,10 @@ function PlatformCard({ row }: { row: PlatformRow }): ReactNode {
 }
 
 export default function DownPage(): ReactNode {
+  const manifest = useReleaseManifest();
+  const windowsHref = useResolvedDownloadHref(manifest.downloads.windows);
+  const macosHref = useResolvedDownloadHref(manifest.downloads.macos);
+
   return (
     <Layout
       title={translate({ id: "download.meta.title", message: "下载" })}
@@ -254,7 +272,13 @@ export default function DownPage(): ReactNode {
 
           <div className="mx-auto mt-16 flex max-w-6xl flex-wrap justify-center gap-6 sm:gap-8">
             {platforms.map((row) => (
-              <PlatformCard key={row.id} row={row} />
+              <PlatformCard
+                key={row.id}
+                row={row}
+                windowsHref={windowsHref}
+                macosHref={macosHref}
+                version={manifest.version}
+              />
             ))}
           </div>
         </Container>

@@ -21,7 +21,7 @@
   },
   "homepage.finalCta.primary": { "message": "사용 가이드 읽기" },
   "homepage.finalCta.secondary": { "message": "문서 모두 보기" },
-  "homepage.hero.title": { "message": "EteDrop으로 전송을 더 쉽게" },
+  "homepage.hero.title": { "message": "EteDrop 으로 전송을 더 쉽게" },
   "homepage.hero.subtitle": {
     "message": "인터넷·LAN·대용량까지. 업무 효율을 높이세요."
   },

@@ -1,12 +1,45 @@
 import type { ReactNode } from "react";
+import { useMemo } from "react";
 import useBaseUrl from "@docusaurus/useBaseUrl";
-import Heading from "@theme/Heading";
 import Translate from "@docusaurus/Translate";
-import { Button } from "@site/src/components/ui/Button";
+import { ButtonLink } from "@site/src/components/ui/Button";
+import {
+  useClientDownloadPlatform,
+  useReleaseManifest,
+  useResolvedDownloadHref,
+} from "@site/src/hooks/useReleaseManifest";
 import Container from "../Container";
 
 export default function HomeHero(): ReactNode {
   const shareVideoSrc = useBaseUrl("/video/share_video.mp4");
+  const platform = useClientDownloadPlatform();
+  const manifest = useReleaseManifest();
+  const macIcon = useBaseUrl("/svg/mac-icon.svg");
+  const winIcon = useBaseUrl("/svg/windows-icon.svg");
+  const winHref = useResolvedDownloadHref(manifest.downloads.windows);
+  const macHref = useResolvedDownloadHref(manifest.downloads.macos);
+
+  const primaryCta = useMemo(() => {
+    if (platform === "macos") {
+      return {
+        to: macHref,
+        icon: macIcon,
+        download: true,
+      } as const;
+    }
+    if (platform === "windows") {
+      return {
+        to: winHref,
+        icon: winIcon,
+        download: true,
+      } as const;
+    }
+    return {
+      to: "/down",
+      icon: null as string | null,
+      download: undefined,
+    } as const;
+  }, [platform, macHref, winHref, macIcon, winIcon]);
 
   return (
     <header className="relative overflow-hidden pb-14 pt-48">
@@ -34,9 +67,26 @@ export default function HomeHero(): ReactNode {
         </p>
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
-          <Button className="w-56 h-14 text-xl" variant="primary">
+          <ButtonLink
+            to={primaryCta.to}
+            variant="primary"
+            size="lg"
+            className="w-auto min-w-56 h-14 text-xl"
+            download={primaryCta.download}
+            iconPosition="left"
+            icon={
+              primaryCta.icon ? (
+                <img
+                  src={primaryCta.icon}
+                  alt=""
+                  className="h-7 w-7 pb-0.5 shrink-0 object-contain"
+                  decoding="async"
+                />
+              ) : undefined
+            }
+          >
             <Translate id="homepage.hero.primaryCta">立即下载</Translate>
-          </Button>
+          </ButtonLink>
         </div>
         <div className="h-1 lg:h-4"></div>
         <div className="aspect-video rounded-xl lg:rounded-[32px] overflow-hidden">
