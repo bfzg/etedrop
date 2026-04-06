@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { pubIceServers } from "../constants/constants";
 
 export type StatusKind = "pending" | "online" | "error";
 
@@ -127,7 +128,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
       closePcDcOnly();
 
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+        iceServers: pubIceServers,
       });
       pcRef.current = pc;
 

@@ -37,8 +37,25 @@ class AppConstants {
   static const String iosStoreUrl = '';
   static const String androidStoreUrl = '';
 
-  /// WebRTC DataChannel 默认分块大小
-  static const int defaultBlockSize = 32768;
+  /// WebRTC DataChannel 默认分块大小（分享下载分片负载，不含 8 字节偏移头）。
+  /// 32KB→64KB 可减少帧数与 SCTP 开销，利于跨网吞吐；若个别环境单帧异常可再回调。
+  static const int defaultBlockSize = 65536;
+
+  /// WebRTC ICE（默认公共 STUN；跨网稳定性最终取决于 TURN）
+  static const List<Map<String, dynamic>> pubIceServers = [
+    {
+      'urls': [
+        'stun:stun.cloudflare.com:3478',
+        'stun:stun.qq.com:3478',
+        'stun:stun.miwifi.com:3478',
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302',
+      ],
+    },
+  ];
 
   /// 设备配置文件名
   static const String deviceConfigFileName = 'device-config.json';
