@@ -23,7 +23,7 @@ const faqs = [
 
 export default function HomeFaq(): ReactNode {
   return (
-    <section className="bg-linear-to-b from-white to-slate-50 py-14 dark:from-slate-950/85 dark:to-slate-900/60">
+    <section className="py-12">
       <Container>
         <div className="mb-4 grid gap-1">
           <Heading as="h2" className="m-0 text-[1.75rem] tracking-[-0.01em]">
@@ -33,7 +33,7 @@ export default function HomeFaq(): ReactNode {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {faqs.map((f) => (
-            <div key={f.id} className="rounded-2xl border border-slate-200 bg-white/70 p-5 dark:border-slate-700/40 dark:bg-slate-950/25">
+            <div key={f.id} className="rounded-2xl border border-slate-200 bg-white/80 p-5 dark:border-slate-700/40 dark:bg-slate-950/30">
               <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
                 <Translate id={`${f.id}.q`}>{f.q}</Translate>
               </Heading>

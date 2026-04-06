@@ -40,7 +40,7 @@ export default function HomeUseCases(): ReactNode {
           {items.map((it) => (
             <div
               key={it.id}
-              className="rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-[0_10px_20px_rgba(2,6,23,0.05)] dark:border-slate-700/40 dark:bg-slate-950/25 dark:shadow-[0_18px_40px_rgba(0,0,0,0.26)]">
+              className="rounded-2xl border border-slate-200 bg-white/80 p-5 dark:border-slate-700/40 dark:bg-slate-950/30">
               <Heading as="h3" className="m-0 text-[1.05rem] tracking-[-0.01em]">
                 <Translate id={`${it.id}.title`}>{it.title}</Translate>
               </Heading>

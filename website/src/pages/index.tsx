@@ -5,7 +5,8 @@ import { translate } from "@docusaurus/Translate";
 import {
   HomeHero,
   HomeCapabilityGrid,
-  HomeHowItWorks,
+  HomeLanTransfer,
+  HomeLanNotify,
   HomeUseCases,
   HomeFaq,
   HomeFinalCta,
@@ -24,7 +25,8 @@ export default function Home(): ReactNode {
       <main className="home text-slate-900">
         <HomeHero />
         <HomeCapabilityGrid />
-        <HomeHowItWorks />
+        <HomeLanTransfer />
+        <HomeLanNotify />
         <HomeUseCases />
         <HomeFaq />
         <HomeFinalCta />

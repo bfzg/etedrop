@@ -4,7 +4,7 @@ import type * as Preset from "@docusaurus/preset-classic";
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: "Eddy",
+  title: "EteDrop",
   tagline: "快速、安全的文件传输与分享",
   favicon: "/favicon.ico",
   future: {
@@ -12,7 +12,7 @@ const config: Config = {
   },
   url: "https://fasteddy.com",
   baseUrl: "/",
-  projectName: "Eddy",
+  projectName: "EteDrop",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
 

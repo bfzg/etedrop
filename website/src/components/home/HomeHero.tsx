@@ -6,9 +6,7 @@ import Container from "../Container";
 
 export default function HomeHero(): ReactNode {
   return (
-    <header
-      className="relative overflow-hidden pb-14 pt-48"
-    >
+    <header className="relative overflow-hidden pb-14 pt-48">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"
@@ -40,6 +38,18 @@ export default function HomeHero(): ReactNode {
             <Translate id="homepage.hero.primaryCta">立即下载</Translate>
           </Button>
         </div>
+        <div className="h-1 lg:h-4"></div>
+        <div className="aspect-video rounded-xl lg:rounded-[32px] overflow-hidden">
+          <video
+            src="/video/share_video.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover"
+          />
+        </div>
+        <div className="h-8 lg:h-24"></div>
       </Container>
     </header>
   );
