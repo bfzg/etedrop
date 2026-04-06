@@ -47,9 +47,9 @@ const config: Config = {
   themeConfig: {
     navbar: {
       hideOnScroll: false,
-      title: "Eddy",
+      title: "EteDrop",
       logo: {
-        alt: "Eddy",
+        alt: "EteDrop",
         src: "img/app_icon.png",
       },
       items: [
@@ -59,12 +59,6 @@ const config: Config = {
           to: "/docs",
           label: "文档",
           sidebarId: "docSidebar",
-        },
-        {
-          label: "定价",
-          href: "/#price",
-          target: "_self",
-          exact: true,
         },
         {
           to: "/down/index",

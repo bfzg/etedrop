@@ -11,16 +11,16 @@ export default function HomeLanNotify(): ReactNode {
     <section className="w-full py-12">
       <Container>
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-center">
-          <div className="grid gap-3 lg:order-2">
-            <Heading as="h2" className="m-0 text-[1.75rem] tracking-[-0.01em]">
-              <Translate id="homepage.lanNotify.title">局域网消息提示</Translate>
-            </Heading>
-            <p className="m-0 max-w-[68ch] text-slate-600 dark:text-slate-300/90">
+          <div className="lg:order-2">
+            <div className="text-3xl font-medium">
+              <Translate id="homepage.lanNotify.title">消息提示</Translate>
+            </div>
+            <p className="pt-1 max-w-[68ch] text-slate-600">
               <Translate id="homepage.lanNotify.subtitle">
-                接收端可收到系统级通知，无需一直停留在页面也能掌握传输进度与结果。
+                系统级消息提示，应用内查看，一键接收消息。
               </Translate>
             </p>
-            <ul className="m-0 grid list-disc gap-2 pl-5 text-slate-600 dark:text-slate-300/90">
+            <ul className="pt-5 grid list-disc gap-2 pl-5 text-lg text-slate-600">
               <li>
                 <Translate id="homepage.lanNotify.p1">
                   系统级消息提示：新任务、完成与异常状态更易感知。
@@ -33,9 +33,9 @@ export default function HomeLanNotify(): ReactNode {
               </li>
             </ul>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white/80 p-3 lg:order-1 dark:border-slate-700/40 dark:bg-slate-950/30">
+          <div className="rounded-2xl border border-slate-200 bg-white/80 p-3 lg:order-1">
             <video
-              className="block w-full rounded-xl border border-slate-200/80 dark:border-slate-700/50"
+              className="block w-full rounded-xl border border-slate-200/80"
               src={videoSrc}
               autoPlay
               muted

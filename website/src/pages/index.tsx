@@ -9,8 +9,8 @@ import {
   HomeLanNotify,
   HomeUseCases,
   HomeFaq,
-  HomeFinalCta,
 } from "@site/src/components/home";
+import Footer from "../components/Footer";
 
 export default function Home(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
@@ -29,8 +29,9 @@ export default function Home(): ReactNode {
         <HomeLanNotify />
         <HomeUseCases />
         <HomeFaq />
-        <HomeFinalCta />
+        {/* <HomeFinalCta /> */}
       </main>
+      <Footer />
     </Layout>
   );
 }
