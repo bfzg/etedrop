@@ -61,7 +61,7 @@ const config: Config = {
           sidebarId: "docSidebar",
         },
         {
-          to: "/down/index",
+          to: "/down",
           position: "left",
           label: "下载",
           exact: true,
