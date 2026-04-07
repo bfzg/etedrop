@@ -12,6 +12,7 @@
     "start:ko": "docusaurus start --host 0.0.0.0 --locale ko",
     "preview": "docusaurus build && docusaurus serve --host 0.0.0.0",
     "build": "docusaurus build",
+    "build:dedupe": "docusaurus build && node ./scripts/dedupe-build-assets.mjs",
     "swizzle": "docusaurus swizzle",
     "deploy": "docusaurus deploy",
     "clear": "docusaurus clear",
