@@ -104,12 +104,16 @@ export function useReleaseManifest(): ReleaseManifest {
 
 /** 相对站点路径交给 `useBaseUrl`；http(s) 外链由 `useBaseUrl` 原样放行 */
 export function useResolvedDownloadHref(pathOrUrl: string): string {
-  const normalized = /^https?:\/\//i.test(pathOrUrl)
-    ? pathOrUrl
-    : pathOrUrl.startsWith("/")
-      ? pathOrUrl
-      : `/${pathOrUrl}`;
-  return useBaseUrl(normalized);
+  const input = pathOrUrl.trim();
+  const normalized = !input
+    ? "/"
+    : /^https?:\/\//i.test(input)
+      ? input
+      : input.startsWith("/")
+        ? input
+        : `/${input}`;
+  const resolved = useBaseUrl(normalized);
+  return input ? resolved : "";
 }
 
 export function useClientDownloadPlatform(): ClientDesktopPlatform {

@@ -58,6 +58,16 @@ if [[ -n "$BUILD_NUMBER" ]]; then
   EXTRA_ARGS+=("--build-number=$BUILD_NUMBER")
 fi
 
+run_flutter_build() {
+  local platform="$1"
+  shift
+  if [[ ${#EXTRA_ARGS[@]} -gt 0 ]]; then
+    flutter build "$platform" "$@" "${EXTRA_ARGS[@]}"
+  else
+    flutter build "$platform" "$@"
+  fi
+}
+
 ensure_macos() {
   if [[ "$(uname -s)" != "Darwin" ]]; then
     echo "错误: 该目标仅支持在 macOS 执行。"
@@ -84,13 +94,13 @@ run_flutter_prepare() {
 
 build_android_apk() {
   run_flutter_prepare
-  flutter build apk --release "${EXTRA_ARGS[@]}"
+  run_flutter_build apk --release
   echo "产物: build/app/outputs/flutter-apk/app-release.apk"
 }
 
 build_android_aab() {
   run_flutter_prepare
-  flutter build appbundle --release "${EXTRA_ARGS[@]}"
+  run_flutter_build appbundle --release
   echo "产物: build/app/outputs/bundle/release/app-release.aab"
 }
 
@@ -98,21 +108,21 @@ build_ios_ipa() {
   ensure_macos
   run_flutter_prepare
   (cd ios && pod install)
-  flutter build ipa --release "${EXTRA_ARGS[@]}"
+  run_flutter_build ipa --release
   echo "产物目录: build/ios/ipa/"
 }
 
 build_macos_app() {
   ensure_macos
   run_flutter_prepare
-  flutter build macos --release --tree-shake-icons "${EXTRA_ARGS[@]}"
+  run_flutter_build macos --release --tree-shake-icons
   echo "产物: build/macos/Build/Products/Release/EteDrop.app"
 }
 
 build_macos_dmg() {
   ensure_macos
   run_flutter_prepare
-  flutter build macos --release --tree-shake-icons "${EXTRA_ARGS[@]}"
+  run_flutter_build macos --release --tree-shake-icons
 
   if ! command -v create-dmg >/dev/null 2>&1; then
     echo "错误: 未安装 create-dmg，请先执行: brew install create-dmg"
@@ -145,7 +155,7 @@ build_macos_dmg() {
 build_windows_exe() {
   ensure_windows
   run_flutter_prepare
-  flutter build windows --release "${EXTRA_ARGS[@]}"
+  run_flutter_build windows --release
   echo "产物目录: build/windows/x64/runner/Release/"
 }
 
