@@ -46,7 +46,11 @@ class UpdateService {
   String? _downloadUrlForPlatform(UpdateManifest m) {
     if (Platform.isWindows) return m.windowsDownloadUrl ?? m.releasePageUrl;
     if (Platform.isMacOS) return m.macDownloadUrl ?? m.releasePageUrl;
-    if (Platform.isAndroid) return AppConstants.androidStoreUrl;
+    if (Platform.isAndroid) {
+      final store = AppConstants.androidStoreUrl.trim();
+      if (store.isNotEmpty) return store;
+      return AppConstants.androidUpdateDownloadPageUrl;
+    }
     if (Platform.isIOS) return AppConstants.iosStoreUrl;
     return m.releasePageUrl;
   }

@@ -24,8 +24,9 @@ class AppConstants {
   /// 应用名称
   static const String appName = 'EteDrop';
 
-  /// 应用版本
-  static const String version = '1.0.0';
+  /// 应用版本号与构建：**只改 [pubspec.yaml] 顶部的 `version: x.y.z+build`** 即可；
+  /// iOS / Android / macOS / Windows 构建与 [package_info_plus] 均从此读取。
+  /// 不要在常量里再写一份版本，避免不一致。
 
   /// 更新清单（自建 HTTP）：返回 JSON
   static const String updateManifestUrl =
@@ -33,9 +34,16 @@ class AppConstants {
   // static const String updateManifestUrl =
   //     'http://192.168.1.9:3000/version.json';
 
-  /// iOS/Android 未来上架后可配置商店链接（用于“去商店更新”跳转）
+  /// iOS 上架后配置（用于「去商店更新」跳转）
   static const String iosStoreUrl = '';
+
+  /// Android 上架后配置应用商店地址；非空时 [UpdateService] 优先跳转此处。
+  /// 留空则跳转 [androidUpdateDownloadPageUrl]（未上架前官网验证用）。
   static const String androidStoreUrl = '';
+
+  /// 未上架前：安卓检查更新弹窗「更新」打开的官网下载页。
+  static const String androidUpdateDownloadPageUrl =
+      'https://etedrop.com/ja/down';
 
   /// WebRTC DataChannel 默认分块大小（分享下载分片负载，不含 8 字节偏移头）。
   /// 32KB→64KB 可减少帧数与 SCTP 开销，利于跨网吞吐；若个别环境单帧异常可再回调。

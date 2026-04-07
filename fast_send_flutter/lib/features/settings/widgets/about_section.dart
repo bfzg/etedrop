@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../core/config/constants.dart';
+import '../../../core/providers/app_package_info_provider.dart';
 import '../../../core/update/update_service.dart';
 import '../../../core/update/update_state.dart';
 import '../../../l10n/app_localizations.dart';
@@ -15,6 +16,17 @@ class AboutSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final hasUpdate = ref.watch(updateStateProvider).hasUpdate;
+    final pkgAsync = ref.watch(appPackageInfoProvider);
+
+    final versionSubtitle = pkgAsync.when(
+      data: (p) => Text(
+        p.buildNumber.isEmpty
+            ? 'v${p.version}'
+            : 'v${p.version}+${p.buildNumber}',
+      ),
+      loading: () => const Text('…'),
+      error: (_, _) => const Text('v?'),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -24,7 +36,7 @@ class AboutSection extends ConsumerWidget {
           child: ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text(AppConstants.appName),
-            subtitle: Text('v${AppConstants.version}'),
+            subtitle: versionSubtitle,
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
