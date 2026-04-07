@@ -44,7 +44,8 @@ if [[ -z "$TARGET" ]]; then
   ios-ipa         构建 iOS IPA (仅 macOS)
   macos-app       构建 macOS .app (仅 macOS)
   macos-dmg       构建 macOS .dmg (仅 macOS, 需 create-dmg)
-  windows-exe     构建 Windows Release 目录 (仅 Windows)
+  windows-exe     构建 Windows Release 目录 + 安装器（Inno Setup, 仅 Windows）
+  windows-installer  同 windows-exe（兼容别名）
 EOF
   exit 1
 fi
@@ -148,13 +149,97 @@ build_windows_exe() {
   echo "产物目录: build/windows/x64/runner/Release/"
 }
 
+find_iscc_windows() {
+  # 优先用 PowerShell 定位 ISCC.exe（用户级/系统级安装都覆盖）
+  local ps_cmd
+  ps_cmd=$(
+    cat <<'EOF'
+$p = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+if (-not $p) {
+  $candidates = @(
+    "C:\Program Files*",
+    (Join-Path $env:LOCALAPPDATA "Programs")
+  )
+  $p = $candidates |
+    Where-Object { Test-Path $_ } |
+    ForEach-Object {
+      Get-ChildItem $_ -Recurse -Filter ISCC.exe -ErrorAction SilentlyContinue |
+        Select-Object -First 1 -ExpandProperty FullName
+    } |
+    Where-Object { $_ } |
+    Select-Object -First 1
+}
+if ($p) { Write-Output $p }
+EOF
+  )
+
+  local win_path=""
+  win_path="$(powershell.exe -NoProfile -Command "$ps_cmd" 2>/dev/null | tr -d '\r' | head -n 1)"
+  if [[ -z "$win_path" ]]; then
+    return 1
+  fi
+
+  # 直接返回 Windows 路径。后续通过 cmd.exe 调用，避免 MSYS 路径/引号问题。
+  echo "$win_path"
+}
+
+build_windows_installer() {
+  ensure_windows
+
+  # 先构建 Release 目录
+  build_windows_exe
+
+  # 再用 Inno Setup 生成安装器
+  local iscc
+  if ! iscc="$(find_iscc_windows)"; then
+    echo "错误: 未找到 ISCC.exe（Inno Setup 命令行编译器）。"
+    echo "请先安装 Inno Setup: https://jrsoftware.org/isinfo.php"
+    exit 1
+  fi
+
+  local version
+  version="$(sed -n 's/^version:[[:space:]]*\([^+[:space:]]*\).*/\1/p' pubspec.yaml | head -n 1)"
+  version="${version:-dev}"
+
+  echo "使用 ISCC: $iscc"
+
+  # 通过 PowerShell 调用 ISCC，并显式指定工作目录，避免 Git Bash/MSYS 的 cmd 引号/路径解析问题。
+  local win_root
+  if command -v cygpath >/dev/null 2>&1; then
+    win_root="$(cygpath -w "$ROOT_DIR")"
+  else
+    win_root="$(cd "$ROOT_DIR" && pwd -W 2>/dev/null)" || win_root="$ROOT_DIR"
+  fi
+
+  local ps_run
+  ps_run=$(
+    cat <<EOF
+\$ErrorActionPreference = "Stop"
+\$iscc = "${iscc//\\/\\\\}"
+\$ver = "$version"
+Set-Location -LiteralPath "${win_root//\\/\\\\}"
+& \$iscc "/DMyAppVersion=\$ver" "installer\\windows\\EteDrop.iss"
+if (\$LASTEXITCODE -ne 0) { exit \$LASTEXITCODE }
+EOF
+  )
+
+  powershell.exe -NoProfile -Command "$ps_run" \
+    || {
+      echo "错误: Inno Setup 编译失败（见上方 ISCC 输出）。"
+      exit 1
+    }
+
+  echo "安装器输出目录: installer/windows/dist/"
+}
+
 case "$TARGET" in
   android-apk) build_android_apk ;;
   android-aab) build_android_aab ;;
   ios-ipa) build_ios_ipa ;;
   macos-app) build_macos_app ;;
   macos-dmg) build_macos_dmg ;;
-  windows-exe) build_windows_exe ;;
+  windows-exe) build_windows_installer ;;
+  windows-installer) build_windows_installer ;;
   *)
     echo "错误: 不支持的 target: $TARGET"
     exit 1
