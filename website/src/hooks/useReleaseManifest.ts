@@ -36,6 +36,18 @@ function mergeManifest(raw: unknown): ReleaseManifest {
     typeof o.macDownloadUrl === "string"
       ? o.macDownloadUrl
       : FALLBACK_RELEASE.macDownloadUrl;
+  const linuxDownloadUrl =
+    typeof o.linuxDownloadUrl === "string"
+      ? o.linuxDownloadUrl
+      : FALLBACK_RELEASE.linuxDownloadUrl;
+  const iosDownloadUrl =
+    typeof o.iosDownloadUrl === "string"
+      ? o.iosDownloadUrl
+      : FALLBACK_RELEASE.iosDownloadUrl;
+  const androidDownloadUrl =
+    typeof o.androidDownloadUrl === "string"
+      ? o.androidDownloadUrl
+      : FALLBACK_RELEASE.androidDownloadUrl;
   const forceUpdate =
     typeof o.forceUpdate === "boolean" ? o.forceUpdate : FALLBACK_RELEASE.forceUpdate;
   const releasePageUrl =
@@ -59,6 +71,9 @@ function mergeManifest(raw: unknown): ReleaseManifest {
     latestVersion,
     windowsDownloadUrl,
     macDownloadUrl,
+    linuxDownloadUrl,
+    iosDownloadUrl,
+    androidDownloadUrl,
     forceUpdate,
     releasePageUrl,
     releaseNotes,

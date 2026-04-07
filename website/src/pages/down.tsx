@@ -14,37 +14,34 @@ import clsx from "clsx";
 type PlatformRow = {
   id: string;
   icon: string;
-  kind: "ready" | "testing";
-  fileKey?: "windows" | "macos";
+  fileKey?: "windows" | "macos" | "linux" | "ios" | "android";
 };
 
 const platforms: PlatformRow[] = [
   {
     id: "windows",
     icon: "/img/windows.png",
-    kind: "ready",
     fileKey: "windows",
   },
   {
     id: "macos",
     icon: "/img/macos.png",
-    kind: "ready",
     fileKey: "macos",
   },
   {
     id: "linux",
     icon: "/img/linux.png",
-    kind: "testing",
+    fileKey: "linux",
   },
   {
     id: "ios",
     icon: "/img/ios.png",
-    kind: "testing",
+    fileKey: "ios",
   },
   {
     id: "android",
     icon: "/img/android.png",
-    kind: "testing",
+    fileKey: "android",
   },
 ];
 
@@ -168,22 +165,30 @@ function PlatformCard({
   row,
   windowsHref,
   macosHref,
+  linuxHref,
+  iosHref,
+  androidHref,
   version,
 }: {
   row: PlatformRow;
   windowsHref: string;
   macosHref: string;
+  linuxHref: string;
+  iosHref: string;
+  androidHref: string;
   version: string;
 }): ReactNode {
   const iconSrc = useBaseUrl(row.icon);
-  const href =
-    row.fileKey === "windows"
-      ? windowsHref
-      : row.fileKey === "macos"
-        ? macosHref
-        : undefined;
+  const hrefByKey: Record<string, string> = {
+    windows: windowsHref,
+    macos: macosHref,
+    linux: linuxHref,
+    ios: iosHref,
+    android: androidHref,
+  };
+  const href = row.fileKey ? hrefByKey[row.fileKey] : "";
 
-  const isReady = row.kind === "ready";
+  const isReady = href.trim().length > 0;
   const Wrapper = isReady ? "a" : "div";
 
   return (
@@ -245,6 +250,9 @@ export default function DownPage(): ReactNode {
   const manifest = useReleaseManifest();
   const windowsHref = useResolvedDownloadHref(manifest.windowsDownloadUrl);
   const macosHref = useResolvedDownloadHref(manifest.macDownloadUrl);
+  const linuxHref = useResolvedDownloadHref(manifest.linuxDownloadUrl);
+  const iosHref = useResolvedDownloadHref(manifest.iosDownloadUrl);
+  const androidHref = useResolvedDownloadHref(manifest.androidDownloadUrl);
 
   return (
     <Layout
@@ -254,7 +262,7 @@ export default function DownPage(): ReactNode {
         message: "下载 EteDrop 桌面客户端。",
       })}
     >
-      <main className="h-[calc(100vh-100px)] bg-gray-50 flex items-center justify-center">
+      <main className="min-h-[calc(100vh-100px)] py-16 bg-gray-50 flex items-center justify-center">
         <Container>
           <div className="mx-auto max-w-3xl text-center">
             <Heading
@@ -277,6 +285,9 @@ export default function DownPage(): ReactNode {
                 row={row}
                 windowsHref={windowsHref}
                 macosHref={macosHref}
+                linuxHref={linuxHref}
+                iosHref={iosHref}
+                androidHref={androidHref}
                 version={manifest.latestVersion}
               />
             ))}

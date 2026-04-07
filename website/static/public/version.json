@@ -2,6 +2,9 @@
   "latestVersion": "1.0.1",
   "windowsDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-Setup-1.0.1-win-x64.exe",
   "macDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-macos.dmg",
+  "linuxDownloadUrl": "",
+  "iosDownloadUrl": "",
+  "androidDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-android.apk",
   "forceUpdate": false,
   "releaseNotes": {
     "zh": [],

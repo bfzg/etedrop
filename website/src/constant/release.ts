@@ -6,6 +6,9 @@ export type ReleaseManifest = {
   latestVersion: string;
   windowsDownloadUrl: string;
   macDownloadUrl: string;
+  linuxDownloadUrl: string;
+  iosDownloadUrl: string;
+  androidDownloadUrl: string;
   forceUpdate: boolean;
   releasePageUrl: string;
   releaseNotes: Record<string, string[]>;
@@ -16,6 +19,9 @@ export const FALLBACK_RELEASE: ReleaseManifest = {
   latestVersion: "0.0.0",
   windowsDownloadUrl: "/downloads/EteDrop-Windows-x64.exe",
   macDownloadUrl: "/downloads/EteDrop-macOS.dmg",
+  linuxDownloadUrl: "",
+  iosDownloadUrl: "",
+  androidDownloadUrl: "",
   forceUpdate: false,
   releasePageUrl: "",
   releaseNotes: {

@@ -16,8 +16,10 @@ export default function HomeHero(): ReactNode {
   const manifest = useReleaseManifest();
   const macIcon = useBaseUrl("/svg/mac-icon.svg");
   const winIcon = useBaseUrl("/svg/windows-icon.svg");
+  const linuxIcon = useBaseUrl("/img/linux.png");
   const winHref = useResolvedDownloadHref(manifest.windowsDownloadUrl);
   const macHref = useResolvedDownloadHref(manifest.macDownloadUrl);
+  const linuxHref = useResolvedDownloadHref(manifest.linuxDownloadUrl);
 
   const primaryCta = useMemo(() => {
     if (platform === "macos") {
@@ -34,12 +36,19 @@ export default function HomeHero(): ReactNode {
         download: true,
       } as const;
     }
+    if (platform === "linux" && manifest.linuxDownloadUrl.trim().isNotEmpty) {
+      return {
+        to: linuxHref,
+        icon: linuxIcon,
+        download: true,
+      } as const;
+    }
     return {
       to: "/down",
       icon: null as string | null,
       download: undefined,
     } as const;
-  }, [platform, macHref, winHref, macIcon, winIcon]);
+  }, [platform, macHref, winHref, linuxHref, macIcon, winIcon, linuxIcon, manifest.linuxDownloadUrl]);
 
   return (
     <header className="relative overflow-hidden pb-14 pt-48">
