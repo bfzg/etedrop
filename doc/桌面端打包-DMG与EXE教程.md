@@ -25,6 +25,13 @@
 
 4. 本仓库 macOS 应用名为 **EteDrop**，产物为 `EteDrop.app`；Windows 可执行文件名为 **EteDrop.exe**（见 `windows/CMakeLists.txt` 中 `BINARY_NAME`）。
 
+5. 已提供统一打包脚本（推荐）：
+
+   ```bash
+   cd fast_send_flutter
+   chmod +x scripts/package.sh
+   ```
+
 ---
 
 ## 2. macOS：Release 构建 + 制作 DMG
@@ -35,7 +42,7 @@
 
 ```bash
 cd fast_send_flutter
-flutter build macos --release --tree-shake-icons
+./scripts/package.sh macos-app
 ```
 
 产物路径：
@@ -289,7 +296,7 @@ build\windows\x64\runner\Release\
 
 ```bash
 cd fast_send_flutter
-flutter build windows --release
+./scripts/package.sh windows-exe
 ```
 
 再用 Inno Setup 的 `ISCC.exe` 编译（示例 PowerShell）：

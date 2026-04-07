@@ -5,7 +5,7 @@ import path from "node:path";
 const root = process.cwd();
 const buildDir = path.join(root, "build");
 const localeDirs = ["en", "ja", "es", "ko"];
-const assetDirs = ["downloads", "video"];
+const assetDirs = ["downloads", "video", "public"];
 
 function removeIfExists(targetPath) {
   if (!fs.existsSync(targetPath)) return;
