@@ -243,8 +243,8 @@ function PlatformCard({
 
 export default function DownPage(): ReactNode {
   const manifest = useReleaseManifest();
-  const windowsHref = useResolvedDownloadHref(manifest.downloads.windows);
-  const macosHref = useResolvedDownloadHref(manifest.downloads.macos);
+  const windowsHref = useResolvedDownloadHref(manifest.windowsDownloadUrl);
+  const macosHref = useResolvedDownloadHref(manifest.macDownloadUrl);
 
   return (
     <Layout
@@ -277,7 +277,7 @@ export default function DownPage(): ReactNode {
                 row={row}
                 windowsHref={windowsHref}
                 macosHref={macosHref}
-                version={manifest.version}
+                version={manifest.latestVersion}
               />
             ))}
           </div>

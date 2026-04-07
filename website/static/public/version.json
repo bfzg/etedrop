@@ -1,7 +1,14 @@
 {
-  "version": "0.0.0",
-  "downloads": {
-    "windows": "/downloads/EteDrop-Windows-x64.exe",
-    "macos": "/downloads/EteDrop-macOS.dmg"
-  }
+  "latestVersion": "1.0.1",
+  "windowsDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-windows.exe",
+  "macDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-macos.dmg",
+  "forceUpdate": false,
+  "releaseNotes": {
+    "zh": [],
+    "en": [],
+    "ja": [],
+    "ko": [],
+    "es": []
+  },
+  "releasePageUrl": ""
 }

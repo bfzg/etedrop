@@ -7,7 +7,7 @@ import {
   useClientDownloadPlatform,
   useReleaseManifest,
   useResolvedDownloadHref,
-} from "@site/src/hooks/useReleaseManifest";
+} from "../../hooks/useReleaseManifest";
 import Container from "../Container";
 
 export default function HomeHero(): ReactNode {
@@ -16,8 +16,8 @@ export default function HomeHero(): ReactNode {
   const manifest = useReleaseManifest();
   const macIcon = useBaseUrl("/svg/mac-icon.svg");
   const winIcon = useBaseUrl("/svg/windows-icon.svg");
-  const winHref = useResolvedDownloadHref(manifest.downloads.windows);
-  const macHref = useResolvedDownloadHref(manifest.downloads.macos);
+  const winHref = useResolvedDownloadHref(manifest.windowsDownloadUrl);
+  const macHref = useResolvedDownloadHref(manifest.macDownloadUrl);
 
   const primaryCta = useMemo(() => {
     if (platform === "macos") {

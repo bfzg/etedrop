@@ -30,7 +30,7 @@ class AppConstants {
 
   /// 更新清单（自建 HTTP）：返回 JSON
   static const String updateManifestUrl =
-      'https://api.etedrop.com/version.json';
+      'https://www.etedrop.com/public/version.json';
   // static const String updateManifestUrl =
   //     'http://192.168.1.9:3000/version.json';
 
@@ -42,8 +42,7 @@ class AppConstants {
   static const String androidStoreUrl = '';
 
   /// 未上架前：安卓检查更新弹窗「更新」打开的官网下载页。
-  static const String androidUpdateDownloadPageUrl =
-      'https://etedrop.com/ja/down';
+  static const String androidUpdateDownloadPageUrl = 'https://etedrop.com/down';
 
   /// WebRTC DataChannel 默认分块大小（分享下载分片负载，不含 8 字节偏移头）。
   /// 32KB→64KB 可减少帧数与 SCTP 开销，利于跨网吞吐；若个别环境单帧异常可再回调。

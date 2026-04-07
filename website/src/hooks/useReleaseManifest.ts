@@ -1,33 +1,68 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import useBaseUrl from "@docusaurus/useBaseUrl";
-import { getClientDownloadPlatform, type ClientDesktopPlatform } from "@site/src/constant/release";
+import {
+  getClientDownloadPlatform,
+  type ClientDesktopPlatform,
+} from "@site/src/constant/release";
 import {
   FALLBACK_RELEASE,
   type ReleaseManifest,
   VERSION_JSON_PUBLIC_PATH,
 } from "@site/src/constant/release";
 
+function toStringArray(raw: unknown): string[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+}
+
 function mergeManifest(raw: unknown): ReleaseManifest {
   if (!raw || typeof raw !== "object") {
     return FALLBACK_RELEASE;
   }
   const o = raw as Record<string, unknown>;
-  const version = typeof o.version === "string" ? o.version : FALLBACK_RELEASE.version;
-  const d = o.downloads;
-  const downloads =
-    d && typeof d === "object"
+  const latestVersion =
+    typeof o.latestVersion === "string"
+      ? o.latestVersion
+      : FALLBACK_RELEASE.latestVersion;
+  const windowsDownloadUrl =
+    typeof o.windowsDownloadUrl === "string"
+      ? o.windowsDownloadUrl
+      : FALLBACK_RELEASE.windowsDownloadUrl;
+  const macDownloadUrl =
+    typeof o.macDownloadUrl === "string"
+      ? o.macDownloadUrl
+      : FALLBACK_RELEASE.macDownloadUrl;
+  const forceUpdate =
+    typeof o.forceUpdate === "boolean" ? o.forceUpdate : FALLBACK_RELEASE.forceUpdate;
+  const releasePageUrl =
+    typeof o.releasePageUrl === "string"
+      ? o.releasePageUrl
+      : FALLBACK_RELEASE.releasePageUrl;
+
+  const notesRaw = o.releaseNotes;
+  const releaseNotes: Record<string, string[]> =
+    notesRaw && typeof notesRaw === "object"
       ? {
-          windows:
-            typeof (d as Record<string, unknown>).windows === "string"
-              ? ((d as Record<string, unknown>).windows as string)
-              : FALLBACK_RELEASE.downloads.windows,
-          macos:
-            typeof (d as Record<string, unknown>).macos === "string"
-              ? ((d as Record<string, unknown>).macos as string)
-              : FALLBACK_RELEASE.downloads.macos,
+          zh: toStringArray((notesRaw as Record<string, unknown>).zh),
+          en: toStringArray((notesRaw as Record<string, unknown>).en),
+          ja: toStringArray((notesRaw as Record<string, unknown>).ja),
+          ko: toStringArray((notesRaw as Record<string, unknown>).ko),
+          es: toStringArray((notesRaw as Record<string, unknown>).es),
         }
-      : FALLBACK_RELEASE.downloads;
-  return { version, downloads };
+      : FALLBACK_RELEASE.releaseNotes;
+
+  return {
+    latestVersion,
+    windowsDownloadUrl,
+    macDownloadUrl,
+    forceUpdate,
+    releasePageUrl,
+    releaseNotes,
+  };
 }
 
 export function useReleaseManifest(): ReleaseManifest {

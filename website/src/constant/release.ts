@@ -3,19 +3,27 @@
  * 缺省或 fetch 失败时使用 FALLBACK_RELEASE。
  */
 export type ReleaseManifest = {
-  version: string;
-  downloads: {
-    windows: string;
-    macos: string;
-  };
+  latestVersion: string;
+  windowsDownloadUrl: string;
+  macDownloadUrl: string;
+  forceUpdate: boolean;
+  releasePageUrl: string;
+  releaseNotes: Record<string, string[]>;
 };
 
 /** 与 `static/public/version.json` 结构一致，便于一处对照填写 */
 export const FALLBACK_RELEASE: ReleaseManifest = {
-  version: "0.0.0",
-  downloads: {
-    windows: "/downloads/EteDrop-Windows-x64.exe",
-    macos: "/downloads/EteDrop-macOS.dmg",
+  latestVersion: "0.0.0",
+  windowsDownloadUrl: "/downloads/EteDrop-Windows-x64.exe",
+  macDownloadUrl: "/downloads/EteDrop-macOS.dmg",
+  forceUpdate: false,
+  releasePageUrl: "",
+  releaseNotes: {
+    zh: [],
+    en: [],
+    ja: [],
+    ko: [],
+    es: [],
   },
 };
 
@@ -77,4 +85,3 @@ export function getClientDownloadPlatform(): ClientDesktopPlatform {
   }
   return "unknown";
 }
-
