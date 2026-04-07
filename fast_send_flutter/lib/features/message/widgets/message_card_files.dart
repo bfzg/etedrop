@@ -131,7 +131,6 @@ Widget revealableFileChip(
       border: Border.all(color: theme.colorScheme.outlineVariant),
     ),
     child: Row(
-      mainAxisSize: MainAxisSize.min,
       children: [
         if (thumbOk)
           ClipRRect(
@@ -153,13 +152,20 @@ Widget revealableFileChip(
         else
           messageFileTypeAssetIcon(context, fileName, boxSide: 40),
         const SizedBox(width: 4),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 160),
-          child: Text(fileName, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Expanded(
+          child: Text(
+            fileName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.fileName(context),
+          ),
         ),
         const SizedBox(width: 6),
         Text(
           FormatUtils.fileSize(fileSize),
+          maxLines: 1,
+          overflow: TextOverflow.fade,
+          softWrap: false,
           style: AppTextStyles.secondary(context),
         ),
       ],

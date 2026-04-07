@@ -25,12 +25,11 @@ class NearbyDeviceGrid extends ConsumerWidget {
     final raw = ref.watch(lanManagerProvider);
     final myDeviceId = ref.watch(deviceIdProvider);
     final theme = Theme.of(context);
+    final safeH = MediaQuery.paddingOf(context);
     final devices = [...raw]
       ..sort((a, b) {
         if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
-        if (a.isOnline &&
-            b.isOnline &&
-            a.isPresenceWeak != b.isPresenceWeak) {
+        if (a.isOnline && b.isOnline && a.isPresenceWeak != b.isPresenceWeak) {
           return a.isPresenceWeak ? 1 : -1;
         }
         final aSelf = a.deviceId == myDeviceId;
@@ -42,82 +41,100 @@ class NearbyDeviceGrid extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              l10n.nearbyDevices,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (selectedIds.isNotEmpty) ...[
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppStyles.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
+          child: Row(
+            children: [
+              Text(
+                l10n.nearbyDevices,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
-                child: Text(
-                  l10n.selectedCount(selectedIds.length),
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: AppStyles.primary,
-                    fontWeight: FontWeight.w500,
+              ),
+              if (selectedIds.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
                   ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: 16),
-        if (devices.isEmpty)
-          SizedBox(
-            height: 100,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.4,
+                  decoration: BoxDecoration(
+                    color: AppStyles.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Text(
+                    l10n.selectedCount(selectedIds.length),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      color: AppStyles.primary,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  l10n.findingNearbyUsers,
-                  style: AppTextStyles.secondary(context),
-                ),
               ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (devices.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
+            child: SizedBox(
+              height: 100,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    l10n.findingNearbyUsers,
+                    style: AppTextStyles.secondary(context),
+                  ),
+                ],
+              ),
             ),
           )
         else
-          Wrap(
-            spacing: 32,
-            runSpacing: 16,
-            children: devices.map((device) {
-              final isSelf = device.deviceId == myDeviceId;
-              final selected = selectedIds.contains(device.deviceId);
-              return _DeviceAvatar(
-                device: device,
-                selected: selected,
-                isSelf: isSelf,
-                offlineLabel: l10n.offline,
-                weakSignalLabel: l10n.weakSignal,
-                youLabel: l10n.youLabel,
-                onTap: isSelf
-                    ? null
-                    : (!device.isOnline &&
-                          !selectedIds.contains(device.deviceId))
-                    ? null
-                    : () => onToggle(device.deviceId),
-              );
-            }).toList(),
+          SizedBox(
+            height: 130,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: EdgeInsets.only(
+                left: safeH.left + Spacing.xl,
+                right: safeH.right + Spacing.xl,
+              ),
+              itemCount: devices.length,
+              separatorBuilder: (_, _) => const SizedBox(width: 28),
+              itemBuilder: (context, index) {
+                final device = devices[index];
+                final isSelf = device.deviceId == myDeviceId;
+                final selected = selectedIds.contains(device.deviceId);
+                return _DeviceAvatar(
+                  device: device,
+                  selected: selected,
+                  isSelf: isSelf,
+                  offlineLabel: l10n.offline,
+                  weakSignalLabel: l10n.weakSignal,
+                  youLabel: l10n.youLabel,
+                  onTap: isSelf
+                      ? null
+                      : (!device.isOnline &&
+                            !selectedIds.contains(device.deviceId))
+                      ? null
+                      : () => onToggle(device.deviceId),
+                );
+              },
+            ),
           ),
       ],
     );

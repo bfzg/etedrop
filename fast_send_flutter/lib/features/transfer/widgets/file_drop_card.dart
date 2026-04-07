@@ -209,6 +209,7 @@ class _FileDropCardState extends State<FileDropCard> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final narrowPhone = MediaQuery.sizeOf(context).width < 640;
     final borderColor = _dragging
         ? theme.colorScheme.primary
         : theme.colorScheme.outlineVariant;
@@ -297,12 +298,12 @@ class _FileDropCardState extends State<FileDropCard> {
                   const Spacer(),
                   EButton(
                     variant: EButtonVariant.primary,
+                    size: narrowPhone ? EButtonSize.sm : EButtonSize.md,
                     icon: Icons.send_rounded,
                     text: _sending ? l10n.sendingButton : l10n.sendButtonLabel,
                     loading: _sending,
                     onPressed: _send,
                     radius: 99,
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   ),
                 ],
               ),

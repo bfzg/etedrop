@@ -125,8 +125,6 @@ class _SendPageState extends ConsumerState<SendPage> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
     final devices = ref.watch(lanManagerProvider);
 
     _selectedDeviceIds.removeWhere(
@@ -134,8 +132,12 @@ class _SendPageState extends ConsumerState<SendPage> {
     );
 
     return Scaffold(
-      appBar: isDesktopLayout ? null : AppBar(title: Text(l10n.shareScreenTitle)),
-      body: _buildBody(context),
+      // 窄屏不展示 AppBar 大标题，由 SafeArea 顶开状态栏
+      appBar: null,
+      body: SafeArea(
+        bottom: false,
+        child: _buildBody(context),
+      ),
     );
   }
 
@@ -148,7 +150,7 @@ class _SendPageState extends ConsumerState<SendPage> {
     );
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(Spacing.xl),
+      padding: const EdgeInsets.only(top: Spacing.xl, bottom: Spacing.xl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -160,26 +162,32 @@ class _SendPageState extends ConsumerState<SendPage> {
             ),
           ),
           const SizedBox(height: Spacing.xl),
-          FileDropCard(
-            hasSelectedDevices: hasOnlineTarget,
-            selectionOfflineOnly: hasSelection && !hasOnlineTarget,
-            onSend: ({required absoluteFilePaths, caption}) async {
-              final cleaned = absoluteFilePaths.map(_cleanPath).toList();
-              await _startShare(paths: cleaned, caption: caption);
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
+            child: FileDropCard(
+              hasSelectedDevices: hasOnlineTarget,
+              selectionOfflineOnly: hasSelection && !hasOnlineTarget,
+              onSend: ({required absoluteFilePaths, caption}) async {
+                final cleaned = absoluteFilePaths.map(_cleanPath).toList();
+                await _startShare(paths: cleaned, caption: caption);
+              },
+            ),
           ),
           if (hasActive) ...[
             const SizedBox(height: Spacing.xl),
-            LanSharePanel(
-              shareId: _activeShareId!,
-              expiresAt: _activeExpiresAt!,
-              recipients: _activeRecipients,
-              onCancelSharing: _cancelShare,
-              onDismissRecord: _clearActiveShareState,
-              onExpired: () {
-                if (!mounted) return;
-                _clearActiveShareState();
-              },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
+              child: LanSharePanel(
+                shareId: _activeShareId!,
+                expiresAt: _activeExpiresAt!,
+                recipients: _activeRecipients,
+                onCancelSharing: _cancelShare,
+                onDismissRecord: _clearActiveShareState,
+                onExpired: () {
+                  if (!mounted) return;
+                  _clearActiveShareState();
+                },
+              ),
             ),
           ],
         ],

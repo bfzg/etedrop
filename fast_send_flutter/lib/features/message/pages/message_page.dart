@@ -21,7 +21,8 @@ class MessagePage extends ConsumerWidget {
       appBar: isDesktopLayout
           ? null
           : AppBar(
-              title: Text(l10n.messagePageTitle),
+              automaticallyImplyLeading: false,
+              title: null,
               actions: [
                 if (messages.isNotEmpty)
                   IconButton(

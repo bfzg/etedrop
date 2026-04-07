@@ -53,96 +53,94 @@ class _AppLayoutState extends State<AppLayout> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (isDesktopPlatform() || constraints.maxWidth >= 640) {
-          return Scaffold(
-            backgroundColor: Colors.transparent,
-            body: Padding(
-              padding: isWindowsPlatform()
-                  ? const EdgeInsets.all(4)
-                  : EdgeInsets.zero,
-              child: ClipRRect(
-                borderRadius: BorderRadius.vertical(
-                  top: isWindowsPlatform()
-                      ? Radius.circular(14)
-                      : Radius.circular(0),
-                  bottom: isWindowsPlatform()
-                      ? Radius.circular(10)
-                      : Radius.circular(0),
-                ),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: isWindowsPlatform()
-                        ? Theme.of(context).scaffoldBackgroundColor
-                        : Colors.transparent,
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
+    // 用 MediaQuery 宽度代替 LayoutBuilder，避免热重载（reassemble）时
+    // _LayoutBuilderElement.markNeedsBuild 与布局断言冲突（Flutter 已知类问题）。
+    final useDesktopChrome =
+        isDesktopPlatform() || MediaQuery.sizeOf(context).width >= 640;
+
+    if (useDesktopChrome) {
+      return Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Padding(
+          padding:
+              isWindowsPlatform() ? const EdgeInsets.all(4) : EdgeInsets.zero,
+          child: ClipRRect(
+            borderRadius: BorderRadius.vertical(
+              top: isWindowsPlatform()
+                  ? Radius.circular(14)
+                  : Radius.circular(0),
+              bottom: isWindowsPlatform()
+                  ? Radius.circular(10)
+                  : Radius.circular(0),
+            ),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: isWindowsPlatform()
+                    ? Theme.of(context).scaffoldBackgroundColor
+                    : Colors.transparent,
+              ),
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          AppSidebarNavBar(
-                            items: widget.items,
-                            currentIndex: widget.navigationShell.currentIndex,
-                            onSelect: (index) => _onTap(context, index),
-                          ),
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.horizontal(
-                                left: isWindowsPlatform()
-                                    ? Radius.circular(0)
-                                    : Radius.circular(14),
-                              ),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(
-                                    context,
-                                  ).scaffoldBackgroundColor,
-                                ),
-                                child: widget.navigationShell,
-                              ),
-                            ),
-                          ),
-                        ],
+                      AppSidebarNavBar(
+                        items: widget.items,
+                        currentIndex: widget.navigationShell.currentIndex,
+                        onSelect: (index) => _onTap(context, index),
                       ),
-                      const Positioned(
-                        right: 16,
-                        bottom: 16,
-                        child: SafeArea(
-                          child: IncomingTransferToast(),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.horizontal(
+                            left: isWindowsPlatform()
+                                ? Radius.circular(0)
+                                : Radius.circular(14),
+                          ),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                            ),
+                            child: widget.navigationShell,
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const Positioned(
+                    right: 16,
+                    bottom: 16,
+                    child: SafeArea(
+                      child: IncomingTransferToast(),
+                    ),
+                  ),
+                ],
               ),
             ),
-          );
-        }
+          ),
+        ),
+      );
+    }
 
-        // 窄屏模式（手机）使用底部导航栏
-        return Scaffold(
-          body: Stack(
-            children: [
-              widget.navigationShell,
-              const Positioned(
-                right: 12,
-                bottom: 12,
-                child: SafeArea(
-                  child: IncomingTransferToast(),
-                ),
-              ),
-            ],
+    // 窄屏模式（手机）使用底部导航栏
+    return Scaffold(
+      body: Stack(
+        children: [
+          widget.navigationShell,
+          const Positioned(
+            right: 12,
+            bottom: 12,
+            child: SafeArea(
+              child: IncomingTransferToast(),
+            ),
           ),
-          bottomNavigationBar: AppBottomNavBar(
-            currentIndex: widget.navigationShell.currentIndex,
-            items: widget.items,
-            onTap: (index) => _onTap(context, index),
-          ),
-        );
-      },
+        ],
+      ),
+      bottomNavigationBar: AppBottomNavBar(
+        currentIndex: widget.navigationShell.currentIndex,
+        items: widget.items,
+        onTap: (index) => _onTap(context, index),
+      ),
     );
   }
 

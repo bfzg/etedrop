@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../../l10n/app_localizations.dart';
 import '../../cloud/providers/cloud_provider.dart';
 import '../../device/providers/device_provider.dart';
 import '../providers/settings_provider.dart';
@@ -21,8 +20,6 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
-
     // 进入设置页即加载设备配置，保证名称/头像显示和修改立即生效
     ref.watch(deviceConfigReadyProvider);
 
@@ -46,10 +43,13 @@ class SettingsPage extends ConsumerWidget {
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
 
     return Scaffold(
-      appBar: isDesktopLayout ? null : AppBar(title: Text(l10n.settings)),
-      body: Center(
-        child: ListView(
-          children: [
+      appBar: null,
+      body: SafeArea(
+        top: !isDesktopLayout,
+        bottom: false,
+        child: Center(
+          child: ListView(
+            children: [
             DeviceInfoSection(
               connected: connected,
               connecting: connecting,
@@ -84,6 +84,7 @@ class SettingsPage extends ConsumerWidget {
             const SizedBox(height: 32),
           ],
         ),
+      ),
       ),
     );
   }

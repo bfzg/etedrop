@@ -386,11 +386,14 @@ export function useSignaling(deviceId: string, shareCode: string) {
 
   /** connect/cleanup 随 i18n、回调引用变化而变体；挂载 effect 只应随 deviceId/shareCode 重连，否则会误拆 P2P */
   const connectRef = useRef(connect);
-  connectRef.current = connect;
   const cleanupRef = useRef(cleanup);
-  cleanupRef.current = cleanup;
   const rejectUnmountRef = useRef(rejectPendingDcOpen);
-  rejectUnmountRef.current = rejectPendingDcOpen;
+
+  useEffect(() => {
+    connectRef.current = connect;
+    cleanupRef.current = cleanup;
+    rejectUnmountRef.current = rejectPendingDcOpen;
+  });
 
   useEffect(() => {
     let cancelled = false;

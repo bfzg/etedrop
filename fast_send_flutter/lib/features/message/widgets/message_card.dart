@@ -57,11 +57,11 @@ class MessageCard extends ConsumerWidget {
               const SizedBox(height: 10),
             ],
             if (batch != null && batch.isNotEmpty) ...[
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (var i = 0; i < batch.length; i++)
+                  for (var i = 0; i < batch.length; i++) ...[
+                    if (i > 0) const SizedBox(height: 6),
                     revealableFileChip(
                       context,
                       ref,
@@ -77,6 +77,7 @@ class MessageCard extends ConsumerWidget {
                         batch[i]['name'] as String? ?? '',
                       ),
                     ),
+                  ],
                 ],
               ),
               if (batch.length == 1 &&
