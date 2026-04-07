@@ -713,4 +713,36 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get invalidPickupCode => '取件码无效';
+
+  @override
+  String get transferReceiveSection => '附近传输';
+
+  @override
+  String get transferAutoReceiveTitle => '自动接收分享';
+
+  @override
+  String get transferAutoReceiveSubtitle => '开启后，局域网分享无需在消息里手动点「接收」。默认关闭。';
+
+  @override
+  String get transferAutoReceivingHint => '已开启自动接收，正在连接并后台接收。';
+
+  @override
+  String get webrtcBackgroundKeepaliveSection => '后台';
+
+  @override
+  String get webrtcBackgroundKeepaliveTitle => '后台保持传输';
+
+  @override
+  String get webrtcBackgroundKeepaliveSubtitle =>
+      '开启后尽量在应用进入后台时维持局域网 WebRTC 连接：使用语音通话类音频会话；Android 会显示低优先级常驻通知并请求麦克风，以满足前台服务的 mediaPlayback/microphone 类型；iOS 启用 audio/voip 相关后台能力。仍受系统省电与内存策略影响。';
+
+  @override
+  String get webrtcBackgroundFgNotificationTitle => '传输保活';
+
+  @override
+  String get webrtcBackgroundFgNotificationBody => '点击返回应用';
+
+  @override
+  String get webrtcBackgroundKeepaliveEnableFailed =>
+      '无法开启后台保活，请允许通知与麦克风权限后重试。';
 }

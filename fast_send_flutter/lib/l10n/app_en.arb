@@ -436,6 +436,16 @@
   "signalingConnectFailed": "Could not connect to signaling server",
   "signalingWaitTimeout": "Timed out",
   "webSocketError": "WebSocket connection error",
-  "invalidPickupCode": "Invalid pickup code"
+  "invalidPickupCode": "Invalid pickup code",
+  "transferReceiveSection": "Nearby transfer",
+  "transferAutoReceiveTitle": "Auto-accept incoming shares",
+  "transferAutoReceiveSubtitle": "When on, LAN share offers begin without tapping Receive in Messages. Default is off.",
+  "transferAutoReceivingHint": "Auto-accept is on — connecting and receiving in the background.",
+  "webrtcBackgroundKeepaliveSection": "Background",
+  "webrtcBackgroundKeepaliveTitle": "Keep transfer alive in background",
+  "webrtcBackgroundKeepaliveSubtitle": "When on, the app tries to keep the LAN WebRTC session while in background using a voice-style audio session. Android shows a low-priority notification and requests the microphone so mediaPlayback/microphone foreground service types meet system rules; iOS allows audio/voIP-style background. Does not replace system battery limits.",
+  "webrtcBackgroundFgNotificationTitle": "Keeping transfer active",
+  "webrtcBackgroundFgNotificationBody": "Tap to return to the app",
+  "webrtcBackgroundKeepaliveEnableFailed": "Could not enable background keep-alive. Allow notification and microphone access, then try again."
 }
 

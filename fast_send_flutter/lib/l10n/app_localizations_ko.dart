@@ -714,4 +714,39 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get invalidPickupCode => '픽업 코드가 올바르지 않습니다';
+
+  @override
+  String get transferReceiveSection => '전송';
+
+  @override
+  String get transferAutoReceiveTitle => '공유 자동 수락';
+
+  @override
+  String get transferAutoReceiveSubtitle =>
+      '켜면 LAN 공유가 메시지에서 수신을 누르지 않고 시작합니다. 기본값은 꺼짐.';
+
+  @override
+  String get transferAutoReceivingHint =>
+      '자동 수락이 켜져 있습니다. 연결 후 백그라운드에서 수신 중입니다.';
+
+  @override
+  String get webrtcBackgroundKeepaliveSection => 'Background';
+
+  @override
+  String get webrtcBackgroundKeepaliveTitle =>
+      'Keep transfer alive in background';
+
+  @override
+  String get webrtcBackgroundKeepaliveSubtitle =>
+      'When on, the app tries to keep the LAN WebRTC session while in background. Android shows a notification and may request the microphone for foreground service types. iOS uses audio/voIP-related background modes. System limits still apply.';
+
+  @override
+  String get webrtcBackgroundFgNotificationTitle => 'Keeping transfer active';
+
+  @override
+  String get webrtcBackgroundFgNotificationBody => 'Tap to return to the app';
+
+  @override
+  String get webrtcBackgroundKeepaliveEnableFailed =>
+      'Could not enable background keep-alive. Allow notification and microphone access, then try again.';
 }

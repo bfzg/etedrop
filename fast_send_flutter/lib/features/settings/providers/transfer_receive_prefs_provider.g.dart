@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'lan_provider.dart';
+part of 'transfer_receive_prefs_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,51 +9,52 @@ part of 'lan_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(LanManager)
-final lanManagerProvider = LanManagerProvider._();
+@ProviderFor(AutoReceiveLanTransfer)
+final autoReceiveLanTransferProvider = AutoReceiveLanTransferProvider._();
 
-final class LanManagerProvider
-    extends $NotifierProvider<LanManager, List<LanDevice>> {
-  LanManagerProvider._()
+final class AutoReceiveLanTransferProvider
+    extends $NotifierProvider<AutoReceiveLanTransfer, bool> {
+  AutoReceiveLanTransferProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'lanManagerProvider',
+        name: r'autoReceiveLanTransferProvider',
         isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$lanManagerHash();
+  String debugGetCreateSourceHash() => _$autoReceiveLanTransferHash();
 
   @$internal
   @override
-  LanManager create() => LanManager();
+  AutoReceiveLanTransfer create() => AutoReceiveLanTransfer();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(List<LanDevice> value) {
+  Override overrideWithValue(bool value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<List<LanDevice>>(value),
+      providerOverride: $SyncValueProvider<bool>(value),
     );
   }
 }
 
-String _$lanManagerHash() => r'dc54054fd7251df585badbb442abf4c22967d310';
+String _$autoReceiveLanTransferHash() =>
+    r'd11e878c43d496f82ab540bc6a1a118cfe0e78b6';
 
-abstract class _$LanManager extends $Notifier<List<LanDevice>> {
-  List<LanDevice> build();
+abstract class _$AutoReceiveLanTransfer extends $Notifier<bool> {
+  bool build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<List<LanDevice>, List<LanDevice>>;
+    final ref = this.ref as $Ref<bool, bool>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<List<LanDevice>, List<LanDevice>>,
-              List<LanDevice>,
+              AnyNotifier<bool, bool>,
+              bool,
               Object?,
               Object?
             >;

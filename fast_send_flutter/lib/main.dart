@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_acrylic/flutter_acrylic.dart';
+import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import 'app.dart';
@@ -10,9 +11,14 @@ import 'features/cloud/services/macos_cloud_storage_access.dart';
 import 'services/desktop_service.dart';
 import 'services/local_storage_service.dart';
 import 'services/notification_service.dart';
+import 'services/webrtc_background_keepalive.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (WebRtcBackgroundKeepalive.isSupportedMobile) {
+    FlutterForegroundTask.initCommunicationPort();
+  }
 
   // 窗口毛玻璃效果
   if (!kIsWeb && (Platform.isMacOS || Platform.isWindows || Platform.isLinux)) {
@@ -20,6 +26,9 @@ void main() async {
   }
   // 初始化本地存储
   await LocalStorageService.instance.init();
+  if (WebRtcBackgroundKeepalive.isSupportedMobile) {
+    WebRtcBackgroundKeepalive.initForegroundTaskPlugin();
+  }
   // macOS 沙盒：恢复网盘目录安全作用域书签（须在访问用户所选路径前执行）
   await MacosCloudStorageAccess.restoreIfNeeded();
   // 初始化本地通知服务

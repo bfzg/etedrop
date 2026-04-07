@@ -715,4 +715,38 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get invalidPickupCode => '受け取りコードが無効です';
+
+  @override
+  String get transferReceiveSection => '転送';
+
+  @override
+  String get transferAutoReceiveTitle => '共有を自動受信';
+
+  @override
+  String get transferAutoReceiveSubtitle =>
+      'オンの場合、LAN共有はメッセージで「受信」を押さずに開始します。既定はオフ。';
+
+  @override
+  String get transferAutoReceivingHint => '自動受信がオンです。接続してバックグラウンドで受信中です。';
+
+  @override
+  String get webrtcBackgroundKeepaliveSection => 'Background';
+
+  @override
+  String get webrtcBackgroundKeepaliveTitle =>
+      'Keep transfer alive in background';
+
+  @override
+  String get webrtcBackgroundKeepaliveSubtitle =>
+      'When on, the app tries to keep the LAN WebRTC session while in background. Android shows a notification and may request the microphone for foreground service types. iOS uses audio/voIP-related background modes. System limits still apply.';
+
+  @override
+  String get webrtcBackgroundFgNotificationTitle => 'Keeping transfer active';
+
+  @override
+  String get webrtcBackgroundFgNotificationBody => 'Tap to return to the app';
+
+  @override
+  String get webrtcBackgroundKeepaliveEnableFailed =>
+      'Could not enable background keep-alive. Allow notification and microphone access, then try again.';
 }

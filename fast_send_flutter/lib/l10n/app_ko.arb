@@ -436,5 +436,15 @@
   "signalingConnectFailed": "시그널링 서버에 연결할 수 없습니다",
   "signalingWaitTimeout": "시간 초과",
   "webSocketError": "WebSocket 오류",
-  "invalidPickupCode": "픽업 코드가 올바르지 않습니다"
+  "invalidPickupCode": "픽업 코드가 올바르지 않습니다",
+  "transferReceiveSection": "전송",
+  "transferAutoReceiveTitle": "공유 자동 수락",
+  "transferAutoReceiveSubtitle": "켜면 LAN 공유가 메시지에서 수신을 누르지 않고 시작합니다. 기본값은 꺼짐.",
+  "transferAutoReceivingHint": "자동 수락이 켜져 있습니다. 연결 후 백그라운드에서 수신 중입니다.",
+  "webrtcBackgroundKeepaliveSection": "Background",
+  "webrtcBackgroundKeepaliveTitle": "Keep transfer alive in background",
+  "webrtcBackgroundKeepaliveSubtitle": "When on, the app tries to keep the LAN WebRTC session while in background. Android shows a notification and may request the microphone for foreground service types. iOS uses audio/voIP-related background modes. System limits still apply.",
+  "webrtcBackgroundFgNotificationTitle": "Keeping transfer active",
+  "webrtcBackgroundFgNotificationBody": "Tap to return to the app",
+  "webrtcBackgroundKeepaliveEnableFailed": "Could not enable background keep-alive. Allow notification and microphone access, then try again."
 }

@@ -1399,6 +1399,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invalid pickup code'**
   String get invalidPickupCode;
+
+  /// No description provided for @transferReceiveSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Nearby transfer'**
+  String get transferReceiveSection;
+
+  /// No description provided for @transferAutoReceiveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-accept incoming shares'**
+  String get transferAutoReceiveTitle;
+
+  /// No description provided for @transferAutoReceiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When on, LAN share offers begin without tapping Receive in Messages. Default is off.'**
+  String get transferAutoReceiveSubtitle;
+
+  /// No description provided for @transferAutoReceivingHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Auto-accept is on — connecting and receiving in the background.'**
+  String get transferAutoReceivingHint;
+
+  /// No description provided for @webrtcBackgroundKeepaliveSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Background'**
+  String get webrtcBackgroundKeepaliveSection;
+
+  /// No description provided for @webrtcBackgroundKeepaliveTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep transfer alive in background'**
+  String get webrtcBackgroundKeepaliveTitle;
+
+  /// No description provided for @webrtcBackgroundKeepaliveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When on, the app tries to keep the LAN WebRTC session while in background using a voice-style audio session. Android shows a low-priority notification and requests the microphone so mediaPlayback/microphone foreground service types meet system rules; iOS allows audio/voIP-style background. Does not replace system battery limits.'**
+  String get webrtcBackgroundKeepaliveSubtitle;
+
+  /// No description provided for @webrtcBackgroundFgNotificationTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keeping transfer active'**
+  String get webrtcBackgroundFgNotificationTitle;
+
+  /// No description provided for @webrtcBackgroundFgNotificationBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to return to the app'**
+  String get webrtcBackgroundFgNotificationBody;
+
+  /// No description provided for @webrtcBackgroundKeepaliveEnableFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not enable background keep-alive. Allow notification and microphone access, then try again.'**
+  String get webrtcBackgroundKeepaliveEnableFailed;
 }
 
 class _AppLocalizationsDelegate

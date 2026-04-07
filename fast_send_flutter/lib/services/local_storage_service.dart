@@ -10,6 +10,12 @@ class StorageKeys {
   static const String systemConfig = 'system_config';
   /// 局域网曾出现过的设备（用于离线仍展示头像）
   static const String lanRememberedDevices = 'lan_remembered_devices_v1';
+
+  /// 局域网分享是否自动接收（默认关闭，需在设置中开启）
+  static const String transferAutoReceiveLan = 'transfer_auto_receive_lan_v1';
+
+  /// 是否开启 WebRTC/传输后台保活（Audio Session + Android 前台服务）
+  static const String webrtcBackgroundKeepalive = 'webrtc_background_keepalive_v1';
 }
 
 /// 通用本地存储服务

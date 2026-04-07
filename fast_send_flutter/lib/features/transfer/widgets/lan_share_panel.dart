@@ -200,65 +200,30 @@ class _RecipientAvatarStack extends StatelessWidget {
   const _RecipientAvatarStack({required this.devices});
 
   static const double _size = 28;
-  static const double _overlap = 14;
+  static const double _gap = 8;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final n = devices.length > 8 ? 8 : devices.length;
-    final extra = devices.length - n;
-    final width = n <= 1
-        ? _size
-        : _size + (n - 1) * _overlap + (extra > 0 ? 12 : 0);
-
-    return SizedBox(
-      height: _size + 4,
-      width: width,
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          for (var i = 0; i < n; i++)
-            Positioned(
-              left: i * _overlap,
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: theme.colorScheme.surface,
-                    width: 2,
-                  ),
-                ),
-                child: ClipOval(
-                  child: Image.asset(
-                    memojiAssetPath(devices[i].avatar),
-                    width: _size,
-                    height: _size,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => Icon(
-                      Icons.person,
-                      size: _size * 0.55,
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
+    return Wrap(
+      spacing: _gap,
+      runSpacing: _gap,
+      children: [
+        for (final d in devices)
+          ClipOval(
+            child: Image.asset(
+              memojiAssetPath(d.avatar),
+              width: _size,
+              height: _size,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Icon(
+                Icons.person,
+                size: _size * 0.55,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
-          if (extra > 0)
-            Positioned(
-              left: (n - 1) * _overlap + 6,
-              child: CircleAvatar(
-                radius: _size / 2,
-                backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                child: Text(
-                  '+$extra',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }

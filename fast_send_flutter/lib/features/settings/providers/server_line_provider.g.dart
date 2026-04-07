@@ -104,4 +104,4 @@ final class ServerEndpointsProvider
   }
 }
 
-String _$serverEndpointsHash() => r'31c4f2974127e5390f956531c02d71308df6df02';
+String _$serverEndpointsHash() => r'26f7b870c04737c658ce30e5e28ddf995e1fc970';

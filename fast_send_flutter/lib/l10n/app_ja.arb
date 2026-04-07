@@ -436,5 +436,15 @@
   "signalingConnectFailed": "シグナリングサーバーに接続できませんでした",
   "signalingWaitTimeout": "タイムアウトしました",
   "webSocketError": "WebSocket エラー",
-  "invalidPickupCode": "受け取りコードが無効です"
+  "invalidPickupCode": "受け取りコードが無効です",
+  "transferReceiveSection": "転送",
+  "transferAutoReceiveTitle": "共有を自動受信",
+  "transferAutoReceiveSubtitle": "オンの場合、LAN共有はメッセージで「受信」を押さずに開始します。既定はオフ。",
+  "transferAutoReceivingHint": "自動受信がオンです。接続してバックグラウンドで受信中です。",
+  "webrtcBackgroundKeepaliveSection": "Background",
+  "webrtcBackgroundKeepaliveTitle": "Keep transfer alive in background",
+  "webrtcBackgroundKeepaliveSubtitle": "When on, the app tries to keep the LAN WebRTC session while in background. Android shows a notification and may request the microphone for foreground service types. iOS uses audio/voIP-related background modes. System limits still apply.",
+  "webrtcBackgroundFgNotificationTitle": "Keeping transfer active",
+  "webrtcBackgroundFgNotificationBody": "Tap to return to the app",
+  "webrtcBackgroundKeepaliveEnableFailed": "Could not enable background keep-alive. Allow notification and microphone access, then try again."
 }

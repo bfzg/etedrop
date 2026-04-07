@@ -12,6 +12,8 @@ import '../widgets/desktop_integration_section.dart';
 import '../widgets/device_info_section.dart';
 import '../widgets/network_line_section.dart';
 import '../widgets/storage_section.dart';
+import '../widgets/transfer_receive_section.dart';
+import '../widgets/webrtc_background_section.dart';
 
 /// 设置页面
 /// 对应 Electron: src/routes/settings.tsx → SettingsPage
@@ -64,6 +66,14 @@ class SettingsPage extends ConsumerWidget {
               storagePath: storagePath,
               downloadPath: downloadPath,
             ),
+
+            const SizedBox(height: 16),
+
+            const TransferReceiveSection(),
+
+            const SizedBox(height: 16),
+
+            const WebrtcBackgroundSection(),
 
             const SizedBox(height: 16),
 

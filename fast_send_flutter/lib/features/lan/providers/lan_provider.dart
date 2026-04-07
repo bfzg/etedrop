@@ -13,6 +13,7 @@ import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/incoming_transfer_toast_provider.dart';
 import '../../message/providers/message_provider.dart';
+import '../../settings/providers/transfer_receive_prefs_provider.dart';
 import '../../../core/http/cancel_token.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
 import '../../../services/local_storage_service.dart';
@@ -355,6 +356,40 @@ class LanManager extends _$LanManager {
       senderName: offer.senderName,
       fileName: summary,
     );
+
+    if (ref.read(autoReceiveLanTransferProvider)) {
+      unawaited(_autoAcceptIncomingBatchShare(added));
+    }
+  }
+
+  /// 设置项「自动接收」：与消息卡片中手动点「接收」等价的批量分享接受流程。
+  Future<void> _autoAcceptIncomingBatchShare(TransferMessage msg) async {
+    if (!msg.isBatch || msg.shareId == null || msg.isOutgoing) return;
+    final msgNotifier = ref.read(messageListProvider.notifier);
+    final cur = msgNotifier.findIncomingByShareId(msg.shareId!);
+    if (cur == null ||
+        cur.id != msg.id ||
+        cur.status != TransferMessageStatus.pending) {
+      return;
+    }
+    msgNotifier.updateStatus(msg.id, TransferMessageStatus.accepted);
+    try {
+      await receiverRespondToShare(msg, true);
+      var textOnlyOffer = false;
+      final raw = msg.batchFilesJson;
+      if (raw != null && raw.isNotEmpty) {
+        try {
+          final list = jsonDecode(raw) as List<dynamic>;
+          textOnlyOffer = list.isEmpty;
+        } catch (_) {}
+      }
+      if (textOnlyOffer) {
+        msgNotifier.markCompleted(msg.id);
+      }
+    } catch (e) {
+      debugPrint('[LAN] auto-accept batch share failed: $e');
+      msgNotifier.updateStatus(msg.id, TransferMessageStatus.pending);
+    }
   }
 
   Future<void> _onIncomingShareCancel(LanShareCancelPayload cancel) async {
@@ -736,6 +771,15 @@ class LanManager extends _$LanManager {
 
     final completer = Completer<bool>();
     _pendingDecisions[msg.id] = completer;
+
+    if (ref.read(autoReceiveLanTransferProvider)) {
+      scheduleMicrotask(() {
+        final c = _pendingDecisions[msg.id];
+        if (c != null && !c.isCompleted) {
+          c.complete(true);
+        }
+      });
+    }
 
     final accepted = await completer.future;
     _pendingDecisions.remove(msg.id);

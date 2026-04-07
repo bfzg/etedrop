@@ -6,6 +6,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../styles/styles.dart';
 import '../../../widgets/ui/e_button.dart';
 import '../../lan/providers/transfer_receive_speed_provider.dart';
+import '../../settings/providers/transfer_receive_prefs_provider.dart';
 import '../models/transfer_message.dart';
 import 'message_card_actions.dart';
 import 'message_card_files.dart';
@@ -27,7 +28,9 @@ class MessageCard extends ConsumerWidget {
         ? receiveSpeeds[receiveSpeedKey]
         : null;
     final isPending = message.status == TransferMessageStatus.pending;
-    final showIncomingActions = isPending && !message.isOutgoing;
+    final autoReceiveLan = ref.watch(autoReceiveLanTransferProvider);
+    final showIncomingActions =
+        isPending && !message.isOutgoing && !autoReceiveLan;
     final batch = decodeBatchFiles(message);
     final canRevealInFolder = message.status == TransferMessageStatus.completed;
 
@@ -171,6 +174,13 @@ class MessageCard extends ConsumerWidget {
                   text: l10n.retrySend,
                   onPressed: () => retryOutgoingShare(context, ref, message),
                 ),
+              ),
+            ],
+            if (isPending && !message.isOutgoing && autoReceiveLan) ...[
+              const SizedBox(height: 8),
+              Text(
+                l10n.transferAutoReceivingHint,
+                style: AppTextStyles.hint(context),
               ),
             ],
             if (showIncomingActions) ...[
