@@ -51,7 +51,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverLineAuto => '自动';
 
   @override
-  String get serverLineAutoDesc => '简体中文（不含港澳台）走大陆优化节点，其余走全球节点。';
+  String get serverLineAutoDesc => '自动选取最近节点。';
 
   @override
   String get serverLineGlobal => '全球';
@@ -718,7 +718,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get transferReceiveSection => '附近传输';
 
   @override
-  String get transferAutoReceiveTitle => '自动接收分享';
+  String get transferAutoReceiveTitle => '自动接收';
 
   @override
   String get transferAutoReceiveSubtitle => '开启后，局域网分享无需在消息里手动点「接收」。默认关闭。';

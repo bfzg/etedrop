@@ -14,7 +14,6 @@ import 'features/device/providers/device_auto_connect.dart';
 import 'features/device/providers/device_provider.dart';
 import 'features/settings/providers/locale_provider.dart';
 import 'features/settings/providers/server_line_provider.dart';
-import 'features/settings/providers/webrtc_keepalive_prefs_provider.dart';
 import 'features/lan/providers/lan_provider.dart';
 import 'services/desktop_service.dart';
 import 'services/webrtc_background_keepalive.dart';
@@ -56,7 +55,6 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
     if (state != AppLifecycleState.resumed) return;
     if (!WebRtcBackgroundKeepalive.isSupportedMobile) return;
-    if (!ref.read(webrtcKeepalivePreferenceProvider)) return;
     unawaited(WebRtcBackgroundKeepalive.refreshAudioSessionIfActive());
   }
 
@@ -64,7 +62,6 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
     if (!WebRtcBackgroundKeepalive.isSupportedMobile) return;
     if (_didRestoreWebrtcKeepalive) return;
     _didRestoreWebrtcKeepalive = true;
-    if (!ref.read(webrtcKeepalivePreferenceProvider)) return;
     final l10n = loadAppLocalizationsSync();
     await WebRtcBackgroundKeepalive.activate(
       notificationTitle: l10n.webrtcBackgroundFgNotificationTitle,

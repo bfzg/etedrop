@@ -51,7 +51,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get serverLineAuto => '자동';
 
   @override
-  String get serverLineAutoDesc => '중국어(홍콩·대만·마카오 제외)는 대륙 노드, 그 외는 글로벌.';
+  String get serverLineAutoDesc => '가장 가까운 노드를 자동 선택합니다.';
 
   @override
   String get serverLineGlobal => '글로벌';

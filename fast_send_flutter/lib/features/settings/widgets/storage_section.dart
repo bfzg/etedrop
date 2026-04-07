@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'dart:io';
-
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../cloud/providers/cloud_provider.dart';
 import 'settings_card.dart';
@@ -20,7 +19,7 @@ class StorageSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final isDesktop = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+    final isMobile = Platform.isAndroid || Platform.isIOS;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -29,23 +28,32 @@ class StorageSection extends ConsumerWidget {
         SettingsCard(
           child: Column(
             children: [
-              ListTile(
-                leading: const Icon(Icons.cloud_outlined),
-                title: Text(l10n.cloudDirectoryLabel),
-                subtitle: Text(storagePath.isEmpty ? l10n.notSet : storagePath),
-                trailing: isDesktop ? const Icon(Icons.chevron_right) : null,
-                onTap: isDesktop
-                    ? () => ref.read(fileServiceProvider.notifier).selectStorageDir(
-                          dialogTitle: l10n.pickCloudStorageTitle,
-                        )
-                    : null,
-              ),
-              const Divider(height: 1, indent: 16, endIndent: 16),
+              if (!isMobile) ...[
+                ListTile(
+                  leading: const Icon(Icons.cloud_outlined),
+                  title: Text(l10n.cloudDirectoryLabel),
+                  subtitle: Text(
+                    storagePath.isEmpty ? l10n.notSet : storagePath,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => ref
+                      .read(fileServiceProvider.notifier)
+                      .selectStorageDir(
+                        dialogTitle: l10n.pickCloudStorageTitle,
+                      ),
+                ),
+                const Divider(height: 1, indent: 16, endIndent: 16),
+              ],
               ListTile(
                 leading: const Icon(Icons.download_outlined),
                 title: Text(l10n.downloadDirectoryLabel),
-                subtitle:
-                    Text(downloadPath.isEmpty ? l10n.notSet : downloadPath),
+                subtitle: Text(
+                  downloadPath.isEmpty ? l10n.notSet : downloadPath,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => ref.read(downloadDirProvider.notifier).selectDownloadDir(
                       dialogTitle: l10n.pickDownloadDirTitle,

@@ -51,8 +51,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get serverLineAuto => 'Auto';
 
   @override
-  String get serverLineAutoDesc =>
-      'Mainland-optimized when using Chinese (except HK/MO/TW); otherwise global.';
+  String get serverLineAutoDesc => 'Automatically select the nearest node.';
 
   @override
   String get serverLineGlobal => 'Global';
@@ -739,7 +738,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get transferReceiveSection => 'Nearby transfer';
 
   @override
-  String get transferAutoReceiveTitle => 'Auto-accept incoming shares';
+  String get transferAutoReceiveTitle => 'Auto receive';
 
   @override
   String get transferAutoReceiveSubtitle =>

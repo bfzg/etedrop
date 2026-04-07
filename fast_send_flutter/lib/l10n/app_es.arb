@@ -14,7 +14,7 @@
   "appearance": "Apariencia",
   "networkLine": "Ruta del servidor",
   "serverLineAuto": "Automático",
-  "serverLineAutoDesc": "Chino (excepto HK/MO/TW) usa nodo China continental; resto global.",
+  "serverLineAutoDesc": "Selecciona automáticamente el nodo más cercano.",
   "serverLineGlobal": "Global",
   "serverLineGlobalDesc": "api.etedrop.com",
   "serverLineMainland": "China continental",

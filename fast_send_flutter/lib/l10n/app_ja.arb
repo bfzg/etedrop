@@ -14,7 +14,7 @@
   "appearance": "外観",
   "networkLine": "サーバー経路",
   "serverLineAuto": "自動",
-  "serverLineAutoDesc": "中国語（香港・台湾・マカオ除く）は大陸向け、その他はグローバル。",
+  "serverLineAutoDesc": "最も近いノードを自動選択。",
   "serverLineGlobal": "グローバル",
   "serverLineGlobalDesc": "api.etedrop.com",
   "serverLineMainland": "中国大陸",

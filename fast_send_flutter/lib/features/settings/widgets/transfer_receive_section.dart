@@ -23,7 +23,6 @@ class TransferReceiveSection extends ConsumerWidget {
           child: SwitchListTile.adaptive(
             secondary: const Icon(Icons.download_done_outlined),
             title: Text(l10n.transferAutoReceiveTitle),
-            subtitle: Text(l10n.transferAutoReceiveSubtitle),
             value: enabled,
             onChanged: (v) {
               ref.read(autoReceiveLanTransferProvider.notifier).setEnabled(v);

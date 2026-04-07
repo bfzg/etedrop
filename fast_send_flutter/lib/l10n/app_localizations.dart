@@ -191,7 +191,7 @@ abstract class AppLocalizations {
   /// No description provided for @serverLineAutoDesc.
   ///
   /// In en, this message translates to:
-  /// **'Mainland-optimized when using Chinese (except HK/MO/TW); otherwise global.'**
+  /// **'Automatically select the nearest node.'**
   String get serverLineAutoDesc;
 
   /// No description provided for @serverLineGlobal.
@@ -1409,7 +1409,7 @@ abstract class AppLocalizations {
   /// No description provided for @transferAutoReceiveTitle.
   ///
   /// In en, this message translates to:
-  /// **'Auto-accept incoming shares'**
+  /// **'Auto receive'**
   String get transferAutoReceiveTitle;
 
   /// No description provided for @transferAutoReceiveSubtitle.

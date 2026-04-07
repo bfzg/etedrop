@@ -201,11 +201,12 @@ class DeviceInfoSection extends ConsumerWidget {
                   child: ListTile(
                     title: Text(l10n.deviceId),
                     subtitle: Text(
-                      devId!,
+                      _breakLongToken(devId!),
                       style: const TextStyle(
                         fontSize: 12,
                         fontFamily: 'monospace',
                       ),
+                      softWrap: true,
                     ),
                   ),
                 ),
@@ -225,5 +226,18 @@ class DeviceInfoSection extends ConsumerWidget {
     if (result != null && result != currentAvatar) {
       await ref.read(deviceManagerProvider).setAvatar(result);
     }
+  }
+
+  /// 为无分隔符长串（设备ID）注入零宽断行点，避免小屏溢出。
+  String _breakLongToken(String input, {int chunk = 4}) {
+    if (input.length <= chunk) return input;
+    final sb = StringBuffer();
+    for (var i = 0; i < input.length; i++) {
+      sb.write(input[i]);
+      if ((i + 1) % chunk == 0 && i != input.length - 1) {
+        sb.write('\u200B');
+      }
+    }
+    return sb.toString();
   }
 }

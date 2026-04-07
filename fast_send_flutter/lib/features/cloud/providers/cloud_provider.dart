@@ -18,10 +18,6 @@ part 'cloud_provider.g.dart';
 const _downloadDirKey = 'download_dir';
 const _mobileDefaultCloudSubdir = 'etedrop';
 
-bool _isDesktopPlatform() {
-  return Platform.isMacOS || Platform.isWindows || Platform.isLinux;
-}
-
 Future<String> _defaultDownloadDir() async {
   if (Platform.isAndroid) {
     final dir = await getExternalStorageDirectory();
@@ -94,12 +90,11 @@ class FileServiceNotifier extends _$FileServiceNotifier {
 
   Future<String?> selectStorageDir({String? dialogTitle}) async {
     // Mobile: don't prompt for directory selection; keep storage in app-owned dir.
-    if (!_isDesktopPlatform()) {
+    if (Platform.isAndroid || Platform.isIOS) {
       _mobileInitFuture ??= _initMobileDefaultStorageDir();
       await _mobileInitFuture;
       return state.storageDir;
     }
-
     final result = await FilePicker.platform.getDirectoryPath(
       dialogTitle: dialogTitle,
     );

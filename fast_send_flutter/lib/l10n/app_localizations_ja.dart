@@ -51,7 +51,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get serverLineAuto => '自動';
 
   @override
-  String get serverLineAutoDesc => '中国語（香港・台湾・マカオ除く）は大陸向け、その他はグローバル。';
+  String get serverLineAutoDesc => '最も近いノードを自動選択。';
 
   @override
   String get serverLineGlobal => 'グローバル';

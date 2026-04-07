@@ -24,10 +24,6 @@ class NetworkLineSection extends ConsumerWidget {
             children: [
               RadioListTile<ServerLinePreference>(
                 title: Text(l10n.serverLineAuto),
-                subtitle: Text(
-                  l10n.serverLineAutoDesc,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
                 value: ServerLinePreference.auto,
                 groupValue: pref,
                 onChanged: (v) {
@@ -40,10 +36,6 @@ class NetworkLineSection extends ConsumerWidget {
               ),
               RadioListTile<ServerLinePreference>(
                 title: Text(l10n.serverLineGlobal),
-                subtitle: Text(
-                  l10n.serverLineGlobalDesc,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
                 value: ServerLinePreference.global,
                 groupValue: pref,
                 onChanged: (v) {
@@ -56,10 +48,6 @@ class NetworkLineSection extends ConsumerWidget {
               ),
               RadioListTile<ServerLinePreference>(
                 title: Text(l10n.serverLineMainland),
-                subtitle: Text(
-                  l10n.serverLineMainlandDesc,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
                 value: ServerLinePreference.mainland,
                 groupValue: pref,
                 onChanged: (v) {

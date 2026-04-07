@@ -52,7 +52,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get serverLineAutoDesc =>
-      'Chino (excepto HK/MO/TW) usa nodo China continental; resto global.';
+      'Selecciona automáticamente el nodo más cercano.';
 
   @override
   String get serverLineGlobal => 'Global';
