@@ -29,14 +29,17 @@ const int _smallFileSingleSendMaxBytes = 128 * 1024;
 const int _smallFileLegacyChunkBytes = 64 * 1024;
 
 /// 分片下载时发送侧 `bufferedAmount` 超过此值则等待再发下一包。
-/// 约 2MB 与 4MB ACK 窗口配合，减少高 RTT 下的发送端「等缓冲」时间。
-const int _downloadMaxBufferedBytes = 2 * 1024 * 1024;
+/// 默认 4MB；过大可能增加 SCTP 端内存/SW 路径压力，断连时可 `--dart-define=SHARE_DOWNLOAD_MAX_BUFFERED_BYTES=2097152` 回调。
+const int _downloadMaxBufferedBytes = int.fromEnvironment(
+  'SHARE_DOWNLOAD_MAX_BUFFERED_BYTES',
+  defaultValue: 4 * 1024 * 1024,
+);
 
 /// 与 share-page-app `DOWNLOAD_ACK_WINDOW_BYTES` 一致：网页每落盘此量 payload 后回传 `download-ack`，发送端再发下一窗口。
-/// 默认 4MB；可用 `--dart-define=SHARE_DOWNLOAD_ACK_WINDOW_BYTES=2097152` 对比 2MB。
+/// 默认 8MB；可用 `SHARE_DOWNLOAD_ACK_WINDOW_BYTES` 改为 4194304（4MB）/ 2097152（2MB）做 AB。
 const int _downloadAckWindowBytes = int.fromEnvironment(
   'SHARE_DOWNLOAD_ACK_WINDOW_BYTES',
-  defaultValue: 4 * 1024 * 1024,
+  defaultValue: 8 * 1024 * 1024,
 );
 
 /// 分享下载诊断日志：debug 默认开；release 排查时加 `--dart-define=SHARE_P2P_DL_LOG=true`
