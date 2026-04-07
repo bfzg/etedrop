@@ -27,7 +27,7 @@ class DesktopIntegrationSection extends ConsumerWidget {
         SettingsCard(
           child: Column(
             children: [
-              SwitchListTile(
+              SwitchListTile.adaptive(
                 secondary: const Icon(Icons.power_settings_new),
                 title: Text(l10n.launchAtStartup),
                 value: autoStart,
@@ -35,7 +35,7 @@ class DesktopIntegrationSection extends ConsumerWidget {
                     ref.read(settingsProvider.notifier).toggleAutoStart(value),
               ),
               const Divider(height: 1, indent: 56),
-              SwitchListTile(
+              SwitchListTile.adaptive(
                 secondary: const Icon(Icons.close),
                 title: Text(l10n.minimizeToTray),
                 subtitle: Text(l10n.minimizeToTrayDesc),

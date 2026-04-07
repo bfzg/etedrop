@@ -8,19 +8,22 @@ part of 'settings_provider.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// 执行桌面端异步设置；勿用 autoDispose，否则 await 间隙 Ref 会被回收，invalidate 抛错且开关不刷新。
 
 @ProviderFor(SettingsNotifier)
 final settingsProvider = SettingsNotifierProvider._();
 
+/// 执行桌面端异步设置；勿用 autoDispose，否则 await 间隙 Ref 会被回收，invalidate 抛错且开关不刷新。
 final class SettingsNotifierProvider
     extends $AsyncNotifierProvider<SettingsNotifier, void> {
+  /// 执行桌面端异步设置；勿用 autoDispose，否则 await 间隙 Ref 会被回收，invalidate 抛错且开关不刷新。
   SettingsNotifierProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
         name: r'settingsProvider',
-        isAutoDispose: true,
+        isAutoDispose: false,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
@@ -33,7 +36,9 @@ final class SettingsNotifierProvider
   SettingsNotifier create() => SettingsNotifier();
 }
 
-String _$settingsNotifierHash() => r'ba8d0fe2cf412686b6f2543e748cbccc19bd0ae1';
+String _$settingsNotifierHash() => r'8fa2dce59de26511d055f9c8a791ff549a8cc843';
+
+/// 执行桌面端异步设置；勿用 autoDispose，否则 await 间隙 Ref 会被回收，invalidate 抛错且开关不刷新。
 
 abstract class _$SettingsNotifier extends $AsyncNotifier<void> {
   FutureOr<void> build();

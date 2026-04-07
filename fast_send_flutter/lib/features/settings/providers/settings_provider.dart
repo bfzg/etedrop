@@ -3,7 +3,8 @@ import '../../../services/desktop_service.dart';
 
 part 'settings_provider.g.dart';
 
-@riverpod
+/// 执行桌面端异步设置；勿用 autoDispose，否则 await 间隙 Ref 会被回收，invalidate 抛错且开关不刷新。
+@Riverpod(keepAlive: true)
 class SettingsNotifier extends _$SettingsNotifier {
   @override
   FutureOr<void> build() {}
@@ -11,7 +12,9 @@ class SettingsNotifier extends _$SettingsNotifier {
   // 切换开机自启
   Future<void> toggleAutoStart(bool enable) async {
     await DesktopService.instance.toggleAutoStart(enable);
-    ref.invalidate(autoStartEnabledProvider);
+    if (ref.mounted) {
+      ref.invalidate(autoStartEnabledProvider);
+    }
   }
 
   // 切换最小化到托盘
@@ -24,7 +27,9 @@ class SettingsNotifier extends _$SettingsNotifier {
     } else {
       await DesktopService.instance.setPreventClose(false);
     }
-    ref.invalidate(minimizeToTrayEnabledProvider);
+    if (ref.mounted) {
+      ref.invalidate(minimizeToTrayEnabledProvider);
+    }
   }
 }
 
