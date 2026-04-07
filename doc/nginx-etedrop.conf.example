@@ -1,0 +1,205 @@
+# =============================================================================
+# EteDrop — 统一 Nginx 配置（官网静态站 + fast_send_server 反代）
+#
+# 用途：整份复制到服务器后按需改证书路径与网站根目录，替换 sites-enabled 里零散配置。
+#
+# 官网根目录（Docusaurus build 产物）：
+#   /home/app/www.etedrop.com/
+#   rsync -av --delete ./website/build/ user@server:/home/app/www.etedrop.com/
+#   确保 www-data 能遍历 /home、/home/app（如 chmod o+x /home /home/app）并能读站点文件。
+#
+# API：本机 Node fast_send_server 监听 127.0.0.1:40321（与仓库默认一致）。
+#
+# 证书（Let's Encrypt 一次申请多域名示例）：
+#   sudo certbot --nginx -d etedrop.com -d www.etedrop.com -d api.etedrop.com -d api-cn.etedrop.com
+#   若证书路径与下文不一致，请统一改成 certbot certificates 中的实际路径。
+#
+# 启用：
+#   sudo cp nginx-etedrop.conf.example /etc/nginx/sites-available/etedrop
+#   sudo ln -sf /etc/nginx/sites-available/etedrop /etc/nginx/sites-enabled/etedrop
+#   # 删掉与上述 server_name 冲突的旧 conf 后：
+#   sudo nginx -t && sudo systemctl reload nginx
+#
+# 注意：若 /etc/nginx/nginx.conf 的 http{} 里已有同名 map，请删除本文件中的 map 段，避免重复。
+#
+# WebSocket：wss://.../api/share、/api/connect 依赖 Upgrade 头，已写在 API 的 location / 中。
+# =============================================================================
+
+# ---------- WebSocket 升级（HTTP/1.1）----------
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+# ---------- 后端上游：本机 fast_send_server ----------
+upstream fast_send_backend {
+    server 127.0.0.1:40321;
+    keepalive 32;
+}
+
+# =============================================================================
+# HTTP：证书续期 + 跳转 HTTPS
+# =============================================================================
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.etedrop.com api-cn.etedrop.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name etedrop.com www.etedrop.com;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/html;
+    }
+
+    location / {
+        return 301 https://etedrop.com$request_uri;
+    }
+}
+
+# =============================================================================
+# HTTPS：API — 全球线 api.etedrop.com
+# =============================================================================
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name api.etedrop.com;
+
+    ssl_certificate     /etc/letsencrypt/live/api.etedrop.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.etedrop.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 500m;
+
+    location / {
+        proxy_pass http://fast_send_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+        proxy_buffering off;
+    }
+}
+
+# =============================================================================
+# HTTPS：API — 大陆线 api-cn.etedrop.com（同一 upstream；大陆 DNS 可指向更近的 VPS）
+# =============================================================================
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name api-cn.etedrop.com;
+
+    ssl_certificate     /etc/letsencrypt/live/api-cn.etedrop.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api-cn.etedrop.com/privkey.pem;
+    # 若使用一张 SAN 证书同时包含 api + api-cn，改为与 api 相同的 fullchain.pem / privkey.pem，
+    # 或合并为单个 server_name api.etedrop.com api-cn.etedrop.com 的 server{}（见文件末尾注释）。
+
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    client_max_body_size 500m;
+
+    location / {
+        proxy_pass http://fast_send_backend;
+        proxy_http_version 1.1;
+
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection $connection_upgrade;
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        proxy_read_timeout 86400s;
+        proxy_send_timeout 86400s;
+        proxy_buffering off;
+    }
+}
+
+# =============================================================================
+# HTTPS：官网 — www 重定向到 apex
+# =============================================================================
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name www.etedrop.com;
+
+    ssl_certificate     /etc/letsencrypt/live/etedrop.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/etedrop.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://etedrop.com$request_uri;
+}
+
+# =============================================================================
+# HTTPS：官网 — etedrop.com 静态站
+# =============================================================================
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name etedrop.com;
+
+    ssl_certificate     /etc/letsencrypt/live/etedrop.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/etedrop.com/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root /home/app/www.etedrop.com;
+    index index.html;
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot|webp|map)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        try_files $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    access_log /var/log/nginx/etedrop-access.log;
+    error_log  /var/log/nginx/etedrop-error.log;
+}
+
+# =============================================================================
+# 可选：一张 SAN 证书合并两个 API 域名时，可删上面对 api-cn 的独立 server{}，改为：
+#
+#   server {
+#       listen 443 ssl http2;
+#       listen [::]:443 ssl http2;
+#       server_name api.etedrop.com api-cn.etedrop.com;
+#       ssl_certificate     /etc/letsencrypt/live/api.etedrop.com/fullchain.pem;
+#       ssl_certificate_key /etc/letsencrypt/live/api.etedrop.com/privkey.pem;
+#       ...
+#       location / { ... proxy_pass http://fast_send_backend; ... }
+#   }
+#
+# 申请：sudo certbot --nginx -d api.etedrop.com -d api-cn.etedrop.com
+# =============================================================================

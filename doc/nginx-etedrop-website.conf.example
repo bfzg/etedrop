@@ -3,5 +3,5 @@
 #
 #   doc/nginx-etedrop.conf.example
 #
-# 其中包含：api.etedrop.com / api-cn.etedrop.com 反代 + etedrop.com 官网静态站。
+# 官网根目录仍为 /home/app/www.etedrop.com/，见合并文件内注释。
 # =============================================================================
