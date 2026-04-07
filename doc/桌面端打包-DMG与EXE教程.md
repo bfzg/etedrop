@@ -268,12 +268,57 @@ build\windows\x64\runner\Release\
 ### 3.2 交付形式建议
 
 | 方式 | 说明 |
-|------|------|
+| ------ | ------ |
 | **ZIP 整包** | 将 `Release` 文件夹打包为 zip，用户解压后运行 `EteDrop.exe`。简单、与 Flutter 默认输出一致。 |
-| **安装程序** | 使用 [Inno Setup](https://jrsoftware.org/isinfo.php)、[WiX](https://wixtoolset.org/) 等把 `Release` 目录打成安装包（`.exe` 安装向导），便于开始菜单、卸载信息与升级。 |
+| **安装程序（推荐）** | 使用 [Inno Setup](https://jrsoftware.org/isinfo.php)、[WiX](https://wixtoolset.org/) 等把 `Release` 目录打成安装包（`.exe` 安装向导），便于开始菜单、卸载信息与**覆盖升级**。本仓库已提供 Inno 脚本：`fast_send_flutter/installer/windows/EteDrop.iss`。 |
 | **MSIX** | 适合企业或商店场景；需额外配置清单与证书，与「单个 EXE」不是同一路线。 |
 
-### 3.3 代码签名（可选，建议正式发行）
+### 3.3 Inno Setup：用户目录安装 + 覆盖升级（可作“升级包”）
+
+本仓库的脚本默认安装到用户目录（无需管理员权限，适合在线升级）：
+
+```text
+%LocalAppData%\EteDrop
+```
+
+并且**向导支持改安装目录**。
+
+#### 编译安装包
+
+先构建：
+
+```bash
+cd fast_send_flutter
+flutter build windows --release
+```
+
+再用 Inno Setup 的 `ISCC.exe` 编译（示例 PowerShell）：
+
+```powershell
+cd fast_send_flutter
+$ver = (Select-String -Path .\pubspec.yaml -Pattern '^version:\s*' | Select-Object -First 1).Line.Split(':')[1].Trim().Split('+')[0]
+& "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+  /DMyAppVersion=$ver `
+  /DReleaseDir="build\windows\x64\runner\Release" `
+  .\installer\windows\EteDrop.iss
+```
+
+输出在：
+
+```text
+fast_send_flutter\dist\
+```
+
+#### 升级包规则（最关键）
+
+- **保持脚本内 `AppId` 永久不变**：同一 AppId 的新 `Setup.exe` 会识别旧版本并覆盖升级  
+- 每次发版重新编译新的 `Setup.exe`，这个 `Setup.exe` 就是你的“升级包”
+
+### 3.4 在线升级建议（Windows）
+
+推荐策略是：应用内检查到新版本后，**下载新的安装包 `Setup.exe` 并执行静默升级**（安装前需退出主程序以释放文件占用）。
+
+### 3.5 代码签名（可选，建议正式发行）
 
 使用 Windows 代码签名证书，在构建完成后对 `EteDrop.exe` 及关键 `.dll` 执行 **signtool sign**（具体命令取决于证书介质与 CA）。签名可减少 SmartScreen 警告；安装包 `.exe` 也可在打包步骤中签名。
 

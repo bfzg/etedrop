@@ -20,6 +20,46 @@ class UpdateService {
 
   static final instance = UpdateService._();
 
+  Future<File> _downloadToTempFile(Uri url, {required String fileName}) async {
+    final client = HttpClient();
+    try {
+      final req = await client.getUrl(url);
+      req.headers.set(HttpHeaders.acceptHeader, '*/*');
+      final res = await req.close();
+      if (res.statusCode >= 400) {
+        throw HttpException('HTTP ${res.statusCode}', uri: url);
+      }
+      final dir = await Directory.systemTemp.createTemp('etedrop_update_');
+      final out = File('${dir.path}${Platform.pathSeparator}$fileName');
+      final sink = out.openWrite();
+      await res.pipe(sink);
+      await sink.flush();
+      await sink.close();
+      return out;
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  Future<void> _runWindowsInstallerAndExit(File installer) async {
+    // Inno Setup 常用静默升级参数：避免弹窗 + 不重启
+    final args = const [
+      '/VERYSILENT',
+      '/SUPPRESSMSGBOXES',
+      '/NORESTART',
+      '/CLOSEAPPLICATIONS',
+      '/RESTARTAPPLICATIONS',
+    ];
+    await Process.start(
+      installer.path,
+      args,
+      mode: ProcessStartMode.detached,
+      runInShell: true,
+    );
+    // 让安装器接管升级，主程序退出释放文件锁
+    exit(0);
+  }
+
   Future<UpdateManifest?> fetchManifest() async {
     final url = AppConstants.updateManifestUrl.trim();
     if (url.isEmpty) return null;
@@ -209,14 +249,38 @@ class UpdateService {
                     onPressed: (url == null || url.isEmpty)
                         ? null
                         : () async {
-                            final ok = await launchUrl(
-                              Uri.parse(url),
-                              mode: LaunchMode.externalApplication,
-                            );
-                            if (!ok && ctx.mounted) {
-                              ScaffoldMessenger.of(ctx).showSnackBar(
-                                SnackBar(content: Text(l10n.openLinkFailed)),
+                            try {
+                              // Windows：优先走“在线升级”（下载 Inno 安装包并执行）
+                              if (Platform.isWindows) {
+                                final installerUrl = Uri.parse(url);
+                                final isExe =
+                                    installerUrl.path.toLowerCase().endsWith('.exe');
+                                if (isExe) {
+                                  final file = await _downloadToTempFile(
+                                    installerUrl,
+                                    fileName: 'EteDrop-Setup-v$latest.exe',
+                                  );
+                                  await _runWindowsInstallerAndExit(file);
+                                  return;
+                                }
+                              }
+
+                              // 其他平台：保持现状，打开外部链接
+                              final ok = await launchUrl(
+                                Uri.parse(url),
+                                mode: LaunchMode.externalApplication,
                               );
+                              if (!ok && ctx.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text(l10n.openLinkFailed)),
+                                );
+                              }
+                            } catch (_) {
+                              if (ctx.mounted) {
+                                ScaffoldMessenger.of(ctx).showSnackBar(
+                                  SnackBar(content: Text(l10n.updateCheckFailed)),
+                                );
+                              }
                             }
                             ref
                                 ?.read(updateStateProvider.notifier)
