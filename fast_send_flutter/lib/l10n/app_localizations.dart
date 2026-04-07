@@ -1439,7 +1439,7 @@ abstract class AppLocalizations {
   /// No description provided for @webrtcBackgroundKeepaliveSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'When on, the app tries to keep the LAN WebRTC session while in background using a voice-style audio session. Android shows a low-priority notification and requests the microphone so mediaPlayback/microphone foreground service types meet system rules; iOS allows audio/voIP-style background. Does not replace system battery limits.'**
+  /// **'When on, tries to keep the LAN WebRTC data connection in background (file transfer only, no microphone). Android shows a low-priority foreground notification. iOS uses limited background refresh via the foreground-task plugin. Still subject to OS limits.'**
   String get webrtcBackgroundKeepaliveSubtitle;
 
   /// No description provided for @webrtcBackgroundFgNotificationTitle.
@@ -1457,7 +1457,7 @@ abstract class AppLocalizations {
   /// No description provided for @webrtcBackgroundKeepaliveEnableFailed.
   ///
   /// In en, this message translates to:
-  /// **'Could not enable background keep-alive. Allow notification and microphone access, then try again.'**
+  /// **'Could not enable background keep-alive. Allow notification access, then try again.'**
   String get webrtcBackgroundKeepaliveEnableFailed;
 }
 

@@ -8,7 +8,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   flutter_acrylic
   flutter_webrtc
   pasteboard
-  permission_handler_windows
   screen_retriever_windows
   tray_manager
   url_launcher_windows

@@ -734,7 +734,7 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get webrtcBackgroundKeepaliveSubtitle =>
-      '开启后尽量在应用进入后台时维持局域网 WebRTC 连接：使用语音通话类音频会话；Android 会显示低优先级常驻通知并请求麦克风，以满足前台服务的 mediaPlayback/microphone 类型；iOS 启用 audio/voip 相关后台能力。仍受系统省电与内存策略影响。';
+      '开启后尽量在后台维持局域网 WebRTC 数据传输（仅传文件，不使用麦克风）。Android 显示低优先级前台通知；iOS 为插件有限的定时后台。仍受系统省电与内存策略限制。';
 
   @override
   String get webrtcBackgroundFgNotificationTitle => '传输保活';
@@ -743,6 +743,5 @@ class AppLocalizationsZh extends AppLocalizations {
   String get webrtcBackgroundFgNotificationBody => '点击返回应用';
 
   @override
-  String get webrtcBackgroundKeepaliveEnableFailed =>
-      '无法开启后台保活，请允许通知与麦克风权限后重试。';
+  String get webrtcBackgroundKeepaliveEnableFailed => '无法开启后台保活，请允许通知权限后重试。';
 }

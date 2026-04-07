@@ -738,7 +738,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get webrtcBackgroundKeepaliveSubtitle =>
-      'When on, the app tries to keep the LAN WebRTC session while in background. Android shows a notification and may request the microphone for foreground service types. iOS uses audio/voIP-related background modes. System limits still apply.';
+      'When on, tries to keep the LAN WebRTC data connection in background (file transfer only, no microphone). Android shows a low-priority foreground notification. iOS uses limited background refresh. System limits still apply.';
 
   @override
   String get webrtcBackgroundFgNotificationTitle => 'Keeping transfer active';
@@ -748,5 +748,5 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get webrtcBackgroundKeepaliveEnableFailed =>
-      'Could not enable background keep-alive. Allow notification and microphone access, then try again.';
+      'Could not enable background keep-alive. Allow notification access, then try again.';
 }

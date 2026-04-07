@@ -1,14 +1,14 @@
 import 'dart:io';
 
-import 'package:audio_session/audio_session.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import 'logger_service.dart';
 import 'webrtc_background_keepalive_callback.dart';
 
-/// 为局域网 WebRTC 在后台尽量保活：配置语音通话类音频会话，Android 再启前台服务。
+/// 为局域网 WebRTC（仅 DataChannel 传文件）在后台尽量保活：不配置语音/麦克风。
+/// Android：前台服务类型 [ForegroundServiceTypes.mediaPlayback] + 通知权限。
+/// iOS：[flutter_foreground_task] 的受限后台任务（与云端实时音视频方案不同，效果有限）。
 class WebRtcBackgroundKeepalive {
   WebRtcBackgroundKeepalive._();
 
@@ -24,7 +24,7 @@ class WebRtcBackgroundKeepalive {
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'etedrop_webrtc_keepalive',
         channelName: '传输保活',
-        channelDescription: '保持局域网 WebRTC/传输连接',
+        channelDescription: '保持局域网 WebRTC 数据传输',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
       ),
@@ -43,52 +43,17 @@ class WebRtcBackgroundKeepalive {
   }
 
   static Future<bool> _ensureRuntimePermissions() async {
-    if (Platform.isAndroid) {
-      final notif = await FlutterForegroundTask.checkNotificationPermission();
-      if (notif != NotificationPermission.granted) {
-        await FlutterForegroundTask.requestNotificationPermission();
-      }
-      final again = await FlutterForegroundTask.checkNotificationPermission();
-      if (again != NotificationPermission.granted) {
-        logger.w('WebRTC keepalive: notification permission denied');
-        return false;
-      }
+    if (!Platform.isAndroid) return true;
+    final notif = await FlutterForegroundTask.checkNotificationPermission();
+    if (notif != NotificationPermission.granted) {
+      await FlutterForegroundTask.requestNotificationPermission();
     }
-    final mic = await Permission.microphone.request();
-    if (!mic.isGranted) {
-      logger.w('WebRTC keepalive: microphone permission denied');
+    final again = await FlutterForegroundTask.checkNotificationPermission();
+    if (again != NotificationPermission.granted) {
+      logger.w('WebRTC keepalive: notification permission denied');
       return false;
     }
     return true;
-  }
-
-  static Future<void> configureAudioSession() async {
-    if (!isSupportedMobile) return;
-    final session = await AudioSession.instance;
-    await session.configure(
-      AudioSessionConfiguration(
-        avAudioSessionCategory: AVAudioSessionCategory.playAndRecord,
-        avAudioSessionCategoryOptions:
-            AVAudioSessionCategoryOptions.defaultToSpeaker |
-                AVAudioSessionCategoryOptions.allowBluetooth |
-                AVAudioSessionCategoryOptions.mixWithOthers,
-        avAudioSessionMode: AVAudioSessionMode.voiceChat,
-        androidAudioAttributes: const AndroidAudioAttributes(
-          contentType: AndroidAudioContentType.speech,
-          usage: AndroidAudioUsage.voiceCommunication,
-        ),
-        androidAudioFocusGainType: AndroidAudioFocusGainType.gain,
-        androidWillPauseWhenDucked: false,
-      ),
-    );
-    await session.setActive(true);
-  }
-
-  static Future<void> resetAudioSession() async {
-    if (!isSupportedMobile) return;
-    final session = await AudioSession.instance;
-    await session.setActive(false);
-    await session.configure(const AudioSessionConfiguration.music());
   }
 
   /// 启动保活（需先 [initForegroundTaskPlugin]。）
@@ -100,16 +65,12 @@ class WebRtcBackgroundKeepalive {
     initForegroundTaskPlugin();
     final ok = await _ensureRuntimePermissions();
     if (!ok) return false;
-    await configureAudioSession();
     if (Platform.isAndroid) {
       final result = await FlutterForegroundTask.startService(
         notificationTitle: notificationTitle,
         notificationText: notificationText,
         callback: webrtcBackgroundKeepaliveStartCallback,
-        serviceTypes: const [
-          ForegroundServiceTypes.mediaPlayback,
-          ForegroundServiceTypes.microphone,
-        ],
+        serviceTypes: const [ForegroundServiceTypes.mediaPlayback],
       );
       if (result is ServiceRequestFailure) {
         logger.e('WebRTC keepalive foreground service: ${result.error}');
@@ -134,12 +95,8 @@ class WebRtcBackgroundKeepalive {
     if (await FlutterForegroundTask.isRunningService) {
       await FlutterForegroundTask.stopService();
     }
-    await resetAudioSession();
   }
 
-  /// 从挂起恢复后调用，重新绑定音频会话（系统可能已回收）。
-  static Future<void> refreshAudioSessionIfActive() async {
-    if (!isSupportedMobile) return;
-    await configureAudioSession();
-  }
+  /// 回到前台时调用（无音频会话时可作占位；预留与系统策略变更对齐）。
+  static Future<void> refreshAudioSessionIfActive() async {}
 }
