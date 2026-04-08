@@ -5,12 +5,12 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
   title: "EteDrop",
-  tagline: "快速、安全的文件传输与分享",
+  tagline: "快速、隐私、简单、安全的文件传输与分享",
   favicon: "/favicon.ico",
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
-  url: "https://fasteddy.com",
+  url: "https://etedrop.com",
   baseUrl: "/",
   projectName: "EteDrop",
   onBrokenLinks: "throw",
@@ -45,7 +45,7 @@ const config: Config = {
 
   scripts: [
     {
-      src: "https://hm.baidu.com/hm.js?5a4a07b95eeecd2ad5b617aee9592657",
+      src: "https://hm.baidu.com/hm.js?b077fe346c836d558d307ca07fbd615a",
       async: true,
     },
   ],
