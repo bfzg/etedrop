@@ -51,6 +51,7 @@ const config: Config = {
   ],
 
   clientModules: [
+    require.resolve("./src/scripts/auto-locale.js"),
     require.resolve("./src/scripts/dev-i18n-hint.js"),
     require.resolve("./src/scripts/fix-double-locale.js"),
     require.resolve("./src/scripts/navbar-scroll.js"),
