@@ -6,6 +6,43 @@ const DEFAULT_LOCALE = "zh-Hans";
 const LOCALES = new Set(["zh-Hans", "en", "ja", "es", "ko"]);
 
 const SKIP_AUTO_KEY = "etedrop.i18n.skipAuto";
+/** 用户手动选择或曾停留过的语言；存在时优先于浏览器语言 */
+const USER_LOCALE_KEY = "etedrop.i18n.userLocale";
+/** 记录 userLocale 的来源：user=用户选择/明确进入；auto=自动识别跳转 */
+const USER_LOCALE_SOURCE_KEY = "etedrop.i18n.userLocaleSource";
+
+function getUserLocalePref() {
+  try {
+    const v = globalThis.localStorage?.getItem(USER_LOCALE_KEY);
+    if (v && LOCALES.has(v)) {
+      return v;
+    }
+  } catch {
+    /* private mode */
+  }
+  return null;
+}
+
+function getUserLocaleSource() {
+  try {
+    const v = globalThis.localStorage?.getItem(USER_LOCALE_SOURCE_KEY);
+    return v === "auto" || v === "user" ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+function setUserLocalePref(locale, source = "user") {
+  if (!LOCALES.has(locale)) {
+    return;
+  }
+  try {
+    globalThis.localStorage?.setItem(USER_LOCALE_KEY, locale);
+    globalThis.localStorage?.setItem(USER_LOCALE_SOURCE_KEY, source);
+  } catch {
+    /* ignore */
+  }
+}
 
 /**
  * 将浏览器语言映射到站点 locale（仅支持站内已启用的语言）。
@@ -40,13 +77,15 @@ function preferredLocaleFromNavigator() {
     navigator.languages.length > 0
       ? navigator.languages
       : [navigator.language];
+
+  // 严格遵循浏览器偏好顺序：取第一个能映射到站点 locale 的语言。
   for (const raw of list) {
     const loc = browserTagToLocale(raw);
-    if (loc !== DEFAULT_LOCALE) {
+    if (LOCALES.has(loc)) {
       return loc;
     }
   }
-  return browserTagToLocale(navigator.language);
+  return DEFAULT_LOCALE;
 }
 
 /**
@@ -80,6 +119,23 @@ function pathForLocaleSwitch(pathname) {
   return pathname || "/";
 }
 
+/**
+ * SPA 内从 /en/... 等切到无前缀路径，视为用户选择了简体中文版。
+ */
+export function onRouteUpdate({ previousLocation, location } = {}) {
+  if (!ExecutionEnvironment.canUseDOM) {
+    return;
+  }
+  if (previousLocation?.pathname != null && location?.pathname != null) {
+    const prevLocale = pathImpliedLocale(previousLocation.pathname);
+    const nextLocale = pathImpliedLocale(location.pathname);
+    if (prevLocale !== DEFAULT_LOCALE && nextLocale === DEFAULT_LOCALE) {
+      setUserLocalePref(DEFAULT_LOCALE, "user");
+    }
+  }
+  tryRedirect();
+}
+
 function tryRedirect() {
   if (!ExecutionEnvironment.canUseDOM) {
     return;
@@ -101,6 +157,7 @@ function tryRedirect() {
   if (url.searchParams.has("noredir")) {
     try {
       globalThis.localStorage?.setItem(SKIP_AUTO_KEY, "1");
+      setUserLocalePref(DEFAULT_LOCALE, "user");
     } catch {
       /* ignore */
     }
@@ -112,28 +169,58 @@ function tryRedirect() {
 
   const { pathname, search, hash } = window.location;
   const implied = pathImpliedLocale(pathname);
-  if (implied !== DEFAULT_LOCALE) {
-    return;
-  }
 
-  const preferred = preferredLocaleFromNavigator();
-  if (preferred === DEFAULT_LOCALE) {
+  /** 已在带前缀的语言路径上：记入偏好并勿再跳转 */
+  if (implied !== DEFAULT_LOCALE) {
+    setUserLocalePref(implied, "user");
     return;
   }
 
   const basePath = pathForLocaleSwitch(pathname);
-  const nextPath = buildLocalizedPath(basePath, preferred);
-  const dest = nextPath + search + hash;
-  if (dest === pathname + search + hash) {
+  const saved = getUserLocalePref();
+  const savedSource = getUserLocaleSource();
+  const destFor = (locale) =>
+    locale === DEFAULT_LOCALE
+      ? basePath + search + hash
+      : buildLocalizedPath(basePath, locale) + search + hash;
+
+  /** 用户曾选过非默认语言：回到无前缀 URL 时仍应进对应语言前缀 */
+  if (saved && saved !== DEFAULT_LOCALE) {
+    // 若该偏好来源于自动识别，而浏览器当前明确偏好中文，则不要强制跳回英文等。
+    const navPreferred = preferredLocaleFromNavigator();
+    if (savedSource === "auto" && navPreferred === DEFAULT_LOCALE) {
+      setUserLocalePref(DEFAULT_LOCALE, "auto");
+      return;
+    }
+    const dest = destFor(saved);
+    if (dest !== pathname + search + hash) {
+      window.location.replace(dest);
+    }
     return;
   }
-  window.location.replace(dest);
+
+  /**
+   * 以下：当前为默认（无前缀）路径，且保存的偏好为 null 或 zh-Hans。
+   * saved === zh-Hans：明确要中文版，不要用浏览器覆盖。
+   */
+  if (saved === DEFAULT_LOCALE) {
+    return;
+  }
+
+  /** 从未保存过偏好：仅此时按浏览器语言自动跳转 */
+  const preferred = preferredLocaleFromNavigator();
+  if (preferred === DEFAULT_LOCALE) {
+    setUserLocalePref(DEFAULT_LOCALE, "auto");
+    return;
+  }
+
+  const dest = destFor(preferred);
+  if (dest !== pathname + search + hash) {
+    setUserLocalePref(preferred, "auto");
+    window.location.replace(dest);
+  }
 }
 
 if (ExecutionEnvironment.canUseDOM) {
-  tryRedirect();
-}
-
-export function onRouteUpdate() {
   tryRedirect();
 }
