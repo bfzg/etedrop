@@ -1,22 +1,28 @@
-import type {ReactNode} from 'react';
-import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
-import Heading from '@theme/Heading';
-import Translate from '@docusaurus/Translate';
+import type { ReactNode } from "react";
+import useBaseUrl from "@docusaurus/useBaseUrl";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
 
 export default function Footer(): ReactNode {
-  const {siteConfig} = useDocusaurusContext();
+  const { siteConfig } = useDocusaurusContext();
+  const wechatQrSrc = useBaseUrl("/img/wechat_qr.jpg");
 
   return (
     <footer className="py-12 lg:py-16 border-t border-slate-200 bg-white text-slate-900 dark:border-slate-700/40 dark:bg-slate-950/90 dark:text-slate-100">
       <div className="mx-auto max-w-[1180px] px-4 pb-5 pt-9">
         <div className="flex flex-col items-start justify-between gap-9 lg:flex-row">
           <div className="max-w-[32ch]">
-            <Heading as="h3" className="m-0 text-[1.1rem] font-semibold tracking-[-0.01em]">
+            <Heading
+              as="h3"
+              className="m-0 text-[1.1rem] font-semibold tracking-[-0.01em]"
+            >
               {siteConfig.title}
             </Heading>
             <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300/90">
-              <Translate id="footer.tagline">快速、安全的文件传输与分享</Translate>
+              <Translate id="footer.tagline">
+                快速、安全的文件传输与分享
+              </Translate>
             </p>
           </div>
 
@@ -72,19 +78,35 @@ export default function Footer(): ReactNode {
           </div>
         </div>
 
-        <div className="mt-6 flex items-center gap-2 border-t border-slate-200 pt-4 text-sm text-slate-600 dark:border-slate-700/40 dark:text-slate-300/80">
-          <span>
-            © {new Date().getFullYear()} {siteConfig.title}
-          </span>
-          <span aria-hidden="true" className="opacity-60">
-            ·
-          </span>
-          <span className="opacity-90">
-            <Translate id="footer.builtWith">Continuously updating</Translate>
-          </span>
+        <div className="mt-3 flex flex-col items-center gap-6 border-t border-slate-200 pt-6 text-sm text-slate-600 dark:border-slate-700/40 dark:text-slate-300/80 sm:flex-row sm:items-end sm:justify-between sm:pt-4">
+          <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
+            <span>
+              © {new Date().getFullYear()} {siteConfig.title}
+            </span>
+            <span aria-hidden="true" className="opacity-60">
+              ·
+            </span>
+            <span className="opacity-90">
+              <Translate id="footer.builtWith">Continuously updating</Translate>
+            </span>
+          </div>
+
+          <div>
+            <img
+              src={wechatQrSrc}
+              alt=""
+              width={112}
+              height={112}
+              className="h-28 w-28 rounded-lg border border-slate-200 bg-white object-cover dark:border-slate-600"
+              loading="lazy"
+              decoding="async"
+            />
+            <div className="text-center text-sm text-slate-500 dark:text-slate-400">
+              <Translate id="footer.wechatOfficial">微信公众号</Translate>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
   );
 }
-
