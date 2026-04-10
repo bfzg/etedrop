@@ -119,6 +119,65 @@ function pathForLocaleSwitch(pathname) {
   return pathname || "/";
 }
 
+function sameOriginReferrerLocale() {
+  try {
+    if (!document.referrer) {
+      return null;
+    }
+    const ref = new URL(document.referrer);
+    const cur = new URL(window.location.href);
+    if (ref.origin !== cur.origin) {
+      return null;
+    }
+    return pathImpliedLocale(ref.pathname);
+  } catch {
+    return null;
+  }
+}
+
+function bindLocaleLinkPreferenceCapture() {
+  if (!ExecutionEnvironment.canUseDOM) {
+    return;
+  }
+  if (globalThis.__etedropLocaleClickBound) {
+    return;
+  }
+  globalThis.__etedropLocaleClickBound = true;
+
+  document.addEventListener(
+    "click",
+    (ev) => {
+      const target = ev.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+      const link = target.closest("a[href]");
+      if (!(link instanceof HTMLAnchorElement)) {
+        return;
+      }
+      const rawHref = link.getAttribute("href");
+      if (!rawHref) {
+        return;
+      }
+      // 只处理同站跳转；语言下拉通常是站内链接。
+      let nextUrl;
+      try {
+        nextUrl = new URL(rawHref, window.location.origin);
+      } catch {
+        return;
+      }
+      if (nextUrl.origin !== window.location.origin) {
+        return;
+      }
+      const nextLocale = pathImpliedLocale(nextUrl.pathname);
+      if (LOCALES.has(nextLocale)) {
+        setUserLocalePref(nextLocale, "user");
+      }
+    },
+    true,
+  );
+}
+
 /**
  * SPA 内从 /en/... 等切到无前缀路径，视为用户选择了简体中文版。
  */
@@ -172,8 +231,20 @@ function tryRedirect() {
 
   /** 已在带前缀的语言路径上：记入偏好并勿再跳转 */
   if (implied !== DEFAULT_LOCALE) {
+    const saved = getUserLocalePref();
+    const savedSource = getUserLocaleSource();
+    // 若这是自动跳转落地页，不要把 auto 覆盖成 user。
+    if (saved === implied && savedSource) {
+      return;
+    }
     setUserLocalePref(implied, "user");
     return;
+  }
+
+  // 从 /en/... 等切回无前缀（中文）时，即使是整页跳转也应保留“用户选择中文”。
+  const refLocale = sameOriginReferrerLocale();
+  if (refLocale && refLocale !== DEFAULT_LOCALE) {
+    setUserLocalePref(DEFAULT_LOCALE, "user");
   }
 
   const basePath = pathForLocaleSwitch(pathname);
@@ -222,5 +293,6 @@ function tryRedirect() {
 }
 
 if (ExecutionEnvironment.canUseDOM) {
+  bindLocaleLinkPreferenceCapture();
   tryRedirect();
 }
