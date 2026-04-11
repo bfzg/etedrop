@@ -590,6 +590,12 @@ abstract class AppLocalizations {
   /// **'Looking for nearby devices...'**
   String get lookingForNearbyDevices;
 
+  /// No description provided for @macLanLocalNetworkHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If the list stays empty: System Settings → Privacy & Security → Local Network → enable this app. Your own device is not listed; only other devices on the same LAN appear.'**
+  String get macLanLocalNetworkHint;
+
   /// No description provided for @offline.
   ///
   /// In en, this message translates to:

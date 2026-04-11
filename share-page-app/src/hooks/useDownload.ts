@@ -14,6 +14,7 @@ import {
   touchDownloadSessionActivity,
 } from "../utils/shareDownloadStorage";
 import { DOWNLOAD_ACK_WINDOW_BYTES } from "../constants/downloadAck";
+import { p2pLog } from "../utils/p2pDebug";
 import {
   shouldUseOpfsResumeFromPartial,
   shouldUseStreamSaverSink,
@@ -99,12 +100,14 @@ export function useDownload(
     const resumeBelow = flowResumeBytesRef.current;
     if (!downloadPausedRef.current && pending > pauseAt) {
       downloadPausedRef.current = true;
+      p2pLog("flow-control pause", { pending, pauseAt });
       sendJson({ type: "download-pause" });
     } else if (
       downloadPausedRef.current &&
       pending < resumeBelow
     ) {
       downloadPausedRef.current = false;
+      p2pLog("flow-control resume", { pending, resumeBelow });
       sendJson({ type: "download-resume" });
     }
   }, [sendJson]);
@@ -118,6 +121,7 @@ export function useDownload(
       const pending = pendingWriteBytesRef.current;
       if (pending < flowPauseBytesRef.current) {
         downloadPausedRef.current = false;
+        p2pLog("flow-control resume (watchdog)", { pending });
         sendJson({ type: "download-resume" });
       }
     }, FLOW_RESUME_WATCHDOG_MS);
@@ -217,6 +221,14 @@ export function useDownload(
               const name = uniqueStreamSaverFileName(fi?.fileName ?? "download");
               const ws = streamSaver.createWriteStream(name, {
                 size: m.fileSize,
+                // Allow up to 64 chunks (64 × 64 KB ≈ 4 MB) to be buffered in the
+                // TransformStream before backpressure kicks in. Without this, the
+                // default highWaterMark of 1 means every `await w.write(chunk)` in the
+                // write chain must wait for the SW/browser to pull that specific chunk
+                // before resolving, making writes as slow as the download consumer.
+                // With 64, the write chain can process a full ACK window without blocking.
+                writableStrategy: { highWaterMark: 64 },
+                readableStrategy: { highWaterMark: 64 },
               });
               streamSaverWriterRef.current = ws.getWriter();
             } catch (e) {
@@ -276,6 +288,12 @@ export function useDownload(
       }
 
       setShowProgress(true);
+      p2pLog("file-meta", {
+        chunkPrefixBytes: prefix,
+        resumeEcho,
+        fileSize: m.fileSize,
+        ackWindowBytes: DOWNLOAD_ACK_WINDOW_BYTES,
+      });
     },
     [closeOpfsWriter, deviceId, shareCode],
   );
@@ -299,6 +317,30 @@ export function useDownload(
     const pendingWeight = buf.byteLength;
     pendingWriteBytesRef.current += pendingWeight;
     updateFlowControl();
+
+    // Send ACK immediately upon receive, decoupled from write-chain completion.
+    // Previously the ACK was sent inside the write chain after `await w.write()`, which
+    // forced Flutter to stop-and-wait for the entire serial write pipeline (TransformStream
+    // IPC to the Service Worker) before sending the next window. This capped throughput
+    // to ~100 KB/s even on fast networks.
+    // dataBytes = actual file content (buf.byteLength minus the 8-byte offset prefix).
+    if (
+      mode === "prefixed-opfs" ||
+      mode === "prefixed-streamsaver" ||
+      mode === "prefixed-memory"
+    ) {
+      const dataBytes = buf.byteLength > 8 ? buf.byteLength - 8 : 0;
+      bytesSinceAckRef.current += dataBytes;
+      if (bytesSinceAckRef.current >= DOWNLOAD_ACK_WINDOW_BYTES) {
+        p2pLog("send download-ack (window-rx)", {
+          ackWindowBytes: DOWNLOAD_ACK_WINDOW_BYTES,
+          pendingWriteQueueApprox: pendingWriteBytesRef.current,
+        });
+        sendJson({ type: "download-ack" });
+        bytesSinceAckRef.current = 0;
+      }
+    }
+
     writeChainRef.current = writeChainRef.current
       .then(async () => {
         await opfsGateRef.current;
@@ -336,24 +378,22 @@ export function useDownload(
         lastProgressAtMsRef.current = Date.now();
         lastProgressBytesRef.current = expectedNextOffsetRef.current;
 
+        // Window ACKs are now sent outside the chain (immediately on receive).
+        // Only handle the final-partial ACK here, where we can confirm the file is complete.
         const ackMode = binaryModeRef.current;
         if (
-          ackMode === "prefixed-opfs" ||
-          ackMode === "prefixed-streamsaver" ||
-          ackMode === "prefixed-memory"
+          (ackMode === "prefixed-opfs" ||
+            ackMode === "prefixed-streamsaver" ||
+            ackMode === "prefixed-memory") &&
+          expectedNextOffsetRef.current >= totalBytes &&
+          bytesSinceAckRef.current > 0
         ) {
-          bytesSinceAckRef.current += data.byteLength;
-          if (bytesSinceAckRef.current >= DOWNLOAD_ACK_WINDOW_BYTES) {
-            sendJson({ type: "download-ack" });
-            bytesSinceAckRef.current = 0;
-          }
-          if (
-            expectedNextOffsetRef.current >= totalBytes &&
-            bytesSinceAckRef.current > 0
-          ) {
-            sendJson({ type: "download-ack" });
-            bytesSinceAckRef.current = 0;
-          }
+          p2pLog("send download-ack (final partial)", {
+            tailBytes: bytesSinceAckRef.current,
+            receivedTotal: expectedNextOffsetRef.current,
+          });
+          sendJson({ type: "download-ack" });
+          bytesSinceAckRef.current = 0;
         }
 
         if (binaryModeRef.current === "prefixed-opfs") {

@@ -261,6 +261,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get lookingForNearbyDevices => 'Buscando dispositivos cercanos...';
 
   @override
+  String get macLanLocalNetworkHint =>
+      'Si la lista sigue vacía: Ajustes del sistema → Privacidad y seguridad → Red local → permita esta app. No verá su propio dispositivo; solo otros en la misma LAN.';
+
+  @override
   String get offline => 'Sin conexión';
 
   @override

@@ -48,18 +48,24 @@ class AppConstants {
   /// 32KB→64KB 可减少帧数与 SCTP 开销，利于跨网吞吐；若个别环境单帧异常可再回调。
   static const int defaultBlockSize = 65536;
 
-  /// WebRTC ICE（默认公共 STUN；跨网稳定性最终取决于 TURN）
+  /// WebRTC ICE：STUN 仅用于发现地址；顺序与 `share-page-app` 中 `pubIceServers` 一致。
+  /// 公网列表参考 https://gist.github.com/mondain/b0ec1cf5f60ae726202e ；不宜塞入过多 URL。
+  /// 复杂 NAT 需自建 TURN，仅靠 STUN 无法中继。
   static const List<Map<String, dynamic>> pubIceServers = [
     {
       'urls': [
-        'stun:stun.cloudflare.com:3478',
         'stun:stun.qq.com:3478',
         'stun:stun.miwifi.com:3478',
+        'stun:stun.chat.bilibili.com:3478',
+        'stun:stun.cloudflare.com:3478',
+        'stun:stun.fbsbx.com:3478',
         'stun:stun.l.google.com:19302',
         'stun:stun1.l.google.com:19302',
         'stun:stun2.l.google.com:19302',
         'stun:stun3.l.google.com:19302',
         'stun:stun4.l.google.com:19302',
+        'stun:stun.counterpath.net:3478',
+        'stun:stun.stunprotocol.org:3478',
       ],
     },
   ];

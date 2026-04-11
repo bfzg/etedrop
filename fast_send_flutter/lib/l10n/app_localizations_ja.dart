@@ -260,6 +260,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get lookingForNearbyDevices => '近くのデバイスを探しています...';
 
   @override
+  String get macLanLocalNetworkHint =>
+      '一覧が空のままの場合：システム設定 → プライバシーとセキュリティ → ローカルネットワークでこのアプリを許可してください。自分自身の端末は表示されません。';
+
+  @override
   String get offline => 'オフライン';
 
   @override

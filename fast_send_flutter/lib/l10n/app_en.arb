@@ -106,6 +106,7 @@
   },
   "findingNearbyUsers": "Finding nearby users...",
   "lookingForNearbyDevices": "Looking for nearby devices...",
+  "macLanLocalNetworkHint": "If the list stays empty: System Settings → Privacy & Security → Local Network → enable this app. Your own device is not listed; only other devices on the same LAN appear.",
   "offline": "Offline",
   "weakSignal": "Weak signal",
   "youLabel": "You",

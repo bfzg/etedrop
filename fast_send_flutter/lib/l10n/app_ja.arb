@@ -106,6 +106,7 @@
   },
   "findingNearbyUsers": "ユーザーを検索中...",
   "lookingForNearbyDevices": "近くのデバイスを探しています...",
+  "macLanLocalNetworkHint": "一覧が空のままの場合：システム設定 → プライバシーとセキュリティ → ローカルネットワークでこのアプリを許可してください。自分自身の端末は表示されません。",
   "offline": "オフライン",
   "weakSignal": "電波が弱い",
   "youLabel": "自分",

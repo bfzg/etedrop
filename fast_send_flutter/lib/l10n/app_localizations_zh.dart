@@ -260,6 +260,10 @@ class AppLocalizationsZh extends AppLocalizations {
   String get lookingForNearbyDevices => '正在寻找附近的设备...';
 
   @override
+  String get macLanLocalNetworkHint =>
+      '若一直没有设备：请打开「系统设置 → 隐私与安全性 → 本地网络」，允许本应用。列表不会显示本机，仅显示同一局域网中的其他设备。';
+
+  @override
   String get offline => '离线';
 
   @override

@@ -106,6 +106,7 @@
   },
   "findingNearbyUsers": "Buscando usuarios...",
   "lookingForNearbyDevices": "Buscando dispositivos cercanos...",
+  "macLanLocalNetworkHint": "Si la lista sigue vacía: Ajustes del sistema → Privacidad y seguridad → Red local → permita esta app. No verá su propio dispositivo; solo otros en la misma LAN.",
   "offline": "Sin conexión",
   "weakSignal": "Señal débil",
   "youLabel": "Tú",

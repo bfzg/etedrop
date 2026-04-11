@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { pubIceServers } from "../constants/constants";
+import {
+  isP2pDebugEnabled,
+  logWebRtcTransportSnapshot,
+  p2pLog,
+  summarizeIceCandidate,
+} from "../utils/p2pDebug";
 
 export type StatusKind = "pending" | "online" | "error";
 
@@ -30,6 +36,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
     resolve: () => void;
     reject: (e: Error) => void;
   } | null>(null);
+  const p2pStatsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const setStatusState = useCallback((kind: StatusKind, text: string) => {
     statusKindRef.current = kind;
@@ -81,6 +88,10 @@ export function useSignaling(deviceId: string, shareCode: string) {
   }, []);
 
   const closePcDcOnly = useCallback(() => {
+    if (p2pStatsTimerRef.current != null) {
+      window.clearInterval(p2pStatsTimerRef.current);
+      p2pStatsTimerRef.current = null;
+    }
     stopBrowserHeartbeat();
     if (dcRef.current) {
       try {
@@ -132,7 +143,20 @@ export function useSignaling(deviceId: string, shareCode: string) {
       });
       pcRef.current = pc;
 
+      const urlCount = Array.isArray(pubIceServers[0]?.urls)
+        ? (pubIceServers[0]!.urls as string[]).length
+        : 0;
+      p2pLog("RTCPeerConnection created", {
+        iceServerUrlCount: urlCount,
+        hint: "add ?p2pDebug=1 to URL for verbose logs",
+      });
+
+      pc.onicegatheringstatechange = () => {
+        p2pLog("iceGatheringState", pc.iceGatheringState);
+      };
+
       pc.onconnectionstatechange = () => {
+        p2pLog("pc.connectionState", pc.connectionState);
         // 故意 closePcDcOnly 再 startRTC 时也会经过 closed，不能据此 reject
         if (pc.connectionState === "failed") {
           setStatusState("error", t("status.p2pFailed"));
@@ -147,6 +171,20 @@ export function useSignaling(deviceId: string, shareCode: string) {
 
       dc.onopen = () => {
         setStatusState("online", t("status.p2pConnected"));
+        p2pLog("DataChannel open", {
+          label: dc.label,
+          ordered: dc.ordered,
+          bufferedAmount: dc.bufferedAmount,
+        });
+        void logWebRtcTransportSnapshot(pc, "dc-open");
+        if (isP2pDebugEnabled()) {
+          if (p2pStatsTimerRef.current != null) {
+            window.clearInterval(p2pStatsTimerRef.current);
+          }
+          p2pStatsTimerRef.current = window.setInterval(() => {
+            void logWebRtcTransportSnapshot(pc, "interval");
+          }, 4000);
+        }
         dc.send(JSON.stringify({ type: "share-request", shareCode }));
         startBrowserHeartbeat(ws);
         resolvePendingDcOpen();
@@ -163,6 +201,14 @@ export function useSignaling(deviceId: string, shareCode: string) {
       };
 
       pc.onicecandidate = (ev) => {
+        if (ev.candidate?.candidate) {
+          p2pLog(
+            "local ICE → signaling",
+            summarizeIceCandidate(ev.candidate.candidate),
+          );
+        } else {
+          p2pLog("local ICE gathering complete (end-of-candidates)");
+        }
         if (ev.candidate && ws.readyState === WebSocket.OPEN) {
           ws.send(
             JSON.stringify({
@@ -178,6 +224,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
       };
 
       pc.oniceconnectionstatechange = () => {
+        p2pLog("iceConnectionState", pc.iceConnectionState);
         if (pc.iceConnectionState === "failed") {
           setStatusState("error", t("status.p2pFailed"));
           setShowReconnect(true);
@@ -244,6 +291,10 @@ export function useSignaling(deviceId: string, shareCode: string) {
   }, []);
 
   const cleanup = useCallback(() => {
+    if (p2pStatsTimerRef.current != null) {
+      window.clearInterval(p2pStatsTimerRef.current);
+      p2pStatsTimerRef.current = null;
+    }
     stopBrowserHeartbeat();
     if (dcRef.current) {
       try {

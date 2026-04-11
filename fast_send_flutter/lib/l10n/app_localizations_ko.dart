@@ -260,6 +260,10 @@ class AppLocalizationsKo extends AppLocalizations {
   String get lookingForNearbyDevices => '주변 기기를 찾는 중...';
 
   @override
+  String get macLanLocalNetworkHint =>
+      '목록이 비어 있으면: 시스템 설정 → 개인 정보 보호 및 보안 → 로컬 네트워크에서 이 앱을 허용하세요. 이 기기 자신은 목록에 나오지 않습니다.';
+
+  @override
   String get offline => '오프라인';
 
   @override

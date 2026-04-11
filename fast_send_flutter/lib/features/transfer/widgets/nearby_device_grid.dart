@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
@@ -81,25 +84,41 @@ class NearbyDeviceGrid extends ConsumerWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: Spacing.xl),
             child: SizedBox(
-              height: 100,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              height: !kIsWeb && Platform.isMacOS ? 140 : 100,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: 0.4,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onSurfaceVariant.withValues(
+                            alpha: 0.4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        l10n.findingNearbyUsers,
+                        style: AppTextStyles.secondary(context),
+                      ),
+                    ],
+                  ),
+                  if (!kIsWeb && Platform.isMacOS) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      l10n.macLanLocalNetworkHint,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.35,
+                        fontSize: 11,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    l10n.findingNearbyUsers,
-                    style: AppTextStyles.secondary(context),
-                  ),
+                  ],
                 ],
               ),
             ),
