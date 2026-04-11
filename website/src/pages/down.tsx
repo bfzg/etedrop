@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "@docusaurus/Link";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
@@ -197,7 +198,7 @@ function PlatformCard({
         href={isReady ? href : undefined}
         download={isReady ? true : undefined}
         className={clsx(
-          "group relative flex h-[220px] w-[190px] flex-col items-center justify-center rounded-[28px] bg-white p-6 transition-all duration-300 dark:bg-slate-900",
+          "group relative flex h-[220px] w-[190px] flex-col items-center justify-center rounded-[28px] bg-white p-6 no-underline transition-all duration-300 hover:no-underline focus:no-underline dark:bg-slate-900 [&_*]:no-underline hover:[&_*]:no-underline",
           isReady
             ? "cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.03)] hover:-translate-y-1.5 hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)] dark:hover:shadow-[0_12px_32px_rgba(0,0,0,0.6)]"
             : "cursor-not-allowed border border-slate-100 bg-slate-50/50 opacity-90 dark:border-slate-800 dark:bg-slate-900/50",
@@ -232,15 +233,25 @@ function PlatformCard({
         <PlatformTitleHint id={row.id} />
       </Wrapper>
 
-      <div className="mt-4 text-[13px] text-slate-400 dark:text-slate-500">
-        {isReady ? (
-          <>
-            <Translate id="download.platform.status.ready">最新版本</Translate>
-            {version ? ` · v${version}` : null}
-          </>
-        ) : (
-          <Translate id="download.platform.status.soon">敬请期待</Translate>
-        )}
+      <div className="mt-4 flex flex-col items-center gap-2 text-[13px] text-slate-400 dark:text-slate-500">
+        <div className="text-center">
+          {isReady ? (
+            <>
+              <Translate id="download.platform.status.ready">最新版本</Translate>
+              {version ? ` · v${version}` : null}
+            </>
+          ) : (
+            <Translate id="download.platform.status.soon">敬请期待</Translate>
+          )}
+        </div>
+        {row.id === "macos" ? (
+          <Link
+            to="/docs/doc/mac-install-damaged"
+            className="text-[13px] font-medium text-blue-600 no-underline hover:text-blue-700 hover:no-underline dark:text-blue-400 dark:hover:text-blue-300"
+          >
+            <Translate id="download.platform.macos.installDoc">查看安装文档</Translate>
+          </Link>
+        ) : null}
       </div>
     </div>
   );
