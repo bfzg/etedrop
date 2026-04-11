@@ -9,6 +9,7 @@
 function resolveAckWindowBytes(): number {
   const qs = new URLSearchParams(window.location.search).get("ackMb");
   const mb = Number(qs);
+  console.log("mb", mb);
   if (mb === 2) return 2 * 1024 * 1024;
   if (mb === 8) return 8 * 1024 * 1024;
   return 4 * 1024 * 1024;
