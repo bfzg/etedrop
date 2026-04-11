@@ -1,25 +1,12 @@
 /// 全局常量配置
 ///
-/// 生产环境 HTTPS 线路由 [ServerEndpoints] / 设置「服务器线路」解析；
-/// 此处 [apiBaseUrl] 仅作未注入前的占位及本地调试（与 [DeviceManager] 初始值一致）。
+/// API / 分享 WS / 信令 WS 均由 [ServerEndpoints.resolve]（设置「服务器线路」）解析；
+/// [DeviceManager] 首帧用 [resolveServerEndpointsSync] 与 [serverEndpointsProvider] 对齐。
+///
+/// 自建或调试后端：改 [ServerEndpoints] 里 `API_BASE_GLOBAL` / `API_BASE_MAINLAND` 的
+/// `String.fromEnvironment` 默认值，或编译时传入 `--dart-define=API_BASE_GLOBAL=http://...`。
 class AppConstants {
   AppConstants._();
-
-  /// REST API 基础地址（本地调试；生产见 `ServerEndpoints`）
-  // static const String apiBaseUrl = 'https://api.etedrop.com';
-  static const String apiBaseUrl = 'http://43.153.143.37:40321';
-  // static const String apiBaseUrl = 'http://192.168.1.9:3000';
-
-  /// 信令服务器地址（WebRTC 文件传输用）
-  // static const String signalingServerUrl = 'wss://api.etedrop.com/api/connect';
-  static const String signalingServerUrl =
-      'ws://43.153.143.37:40321/api/connect';
-  // static const String signalingServerUrl = 'ws://192.168.1.9:3000/api/connect';
-
-  /// 设备管理 WebSocket 地址（分享功能用）
-  // static const String shareServerUrl = 'wss://api.etedrop.com/api/share';
-  static const String shareServerUrl = 'ws://43.153.143.37:40321/api/share';
-  // static const String shareServerUrl = 'ws://192.168.1.9:3000/api/share';
 
   /// 应用名称
   static const String appName = 'EteDrop';
@@ -77,7 +64,7 @@ class AppConstants {
   static const String sharesFileName = 'shares.json';
 
   /// WebSocket 心跳间隔（毫秒）
-  static const int heartbeatInterval = 30000;
+  static const int heartbeatInterval = 15000;
 
   /// WebSocket 重连间隔（毫秒）
   static const int reconnectInterval = 5000;

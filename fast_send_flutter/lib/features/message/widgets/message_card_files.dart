@@ -123,50 +123,52 @@ Widget revealableFileChip(
 }) {
   final path = localPreviewPath;
   final thumbOk = path != null && isImage && File(path).existsSync();
-  final chip = Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+    final chip = Container(
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
     decoration: BoxDecoration(
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: theme.colorScheme.outlineVariant),
+      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+      borderRadius: BorderRadius.circular(12),
     ),
     child: Row(
       children: [
         if (thumbOk)
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(6),
             child: Image.file(
               File(path),
               key: ValueKey(path),
-              width: 40,
-              height: 40,
+              width: 36,
+              height: 36,
               fit: BoxFit.cover,
-              cacheWidth: 80,
+              cacheWidth: 72,
               errorBuilder: (_, _, _) => messageFileTypeAssetIcon(
                 context,
                 fileName,
-                boxSide: 40,
+                boxSide: 36,
               ),
             ),
           )
         else
-          messageFileTypeAssetIcon(context, fileName, boxSide: 40),
-        const SizedBox(width: 4),
+          messageFileTypeAssetIcon(context, fileName, boxSide: 36),
+        const SizedBox(width: 10),
         Expanded(
-          child: Text(
-            fileName,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.fileName(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                fileName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTextStyles.fileName(context).copyWith(fontSize: 14),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                FormatUtils.fileSize(fileSize),
+                style: AppTextStyles.hint(context).copyWith(fontSize: 12),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 6),
-        Text(
-          FormatUtils.fileSize(fileSize),
-          maxLines: 1,
-          overflow: TextOverflow.fade,
-          softWrap: false,
-          style: AppTextStyles.secondary(context),
         ),
       ],
     ),
@@ -212,58 +214,53 @@ Widget revealableSingleFileBlock(
     children: [
       if (thumbOk) ...[
         ClipRRect(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(12),
           child: Image.file(
             File(path),
             key: ValueKey(path),
-            width: 160,
-            height: 160,
+            width: 200,
+            height: 200,
             fit: BoxFit.cover,
-            cacheWidth: 320,
+            cacheWidth: 400,
             errorBuilder: (_, _, _) => const SizedBox.shrink(),
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
       ],
-      if (!thumbOk)
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
           children: [
-            messageFileTypeAssetIcon(context, message.fileName, boxSide: 44),
-            const SizedBox(width: 10),
+            if (!thumbOk) ...[
+              messageFileTypeAssetIcon(context, message.fileName, boxSide: 36),
+              const SizedBox(width: 10),
+            ],
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     message.fileName,
-                    style: AppTextStyles.fileName(context),
-                    maxLines: 2,
+                    style: AppTextStyles.fileName(context).copyWith(fontSize: 14),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2),
                   Text(
-                    '${FormatUtils.fileSize(message.fileSize)} · ${FormatUtils.dateTime(message.timestamp)}',
-                    style: AppTextStyles.hint(context),
+                    FormatUtils.fileSize(message.fileSize),
+                    style: AppTextStyles.hint(context).copyWith(fontSize: 12),
                   ),
                 ],
               ),
             ),
           ],
-        )
-      else ...[
-        Text(
-          message.fileName,
-          style: AppTextStyles.fileName(context),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 4),
-        Text(
-          '${FormatUtils.fileSize(message.fileSize)} · ${FormatUtils.dateTime(message.timestamp)}',
-          style: AppTextStyles.hint(context),
-        ),
-      ],
+      ),
       if (canReveal &&
           path != null &&
           File(path).existsSync() &&

@@ -21,6 +21,7 @@ import {
   trySaveBlobViaFileSystemPicker,
   uniqueStreamSaverFileName,
 } from "../utils/downloadSink";
+import { guessMimeTypeForFileName } from "../utils/shareFilePreviewKind";
 
 export type DownloadIntent = "download" | "play";
 type BinaryMode =
@@ -472,7 +473,15 @@ export function useDownload(
 
       const triggerPlay = (blob: Blob) => {
         if (blob.size === 0) return;
-        const url = URL.createObjectURL(blob);
+        const mime =
+          blob.type && blob.type !== "application/octet-stream"
+            ? blob.type
+            : guessMimeTypeForFileName(fi?.fileName ?? "");
+        const typed =
+          mime && (!blob.type || blob.type === "application/octet-stream")
+            ? new Blob([blob], { type: mime })
+            : blob;
+        const url = URL.createObjectURL(typed);
         if (playUrlRef.current) {
           try { URL.revokeObjectURL(playUrlRef.current); } catch { /* ignore */ }
         }

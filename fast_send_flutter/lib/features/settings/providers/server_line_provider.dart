@@ -34,6 +34,25 @@ Locale _resolvedLocale(Locale? appLocale) {
   return PlatformDispatcher.instance.locale;
 }
 
+/// 不依赖 [Ref] 的线路解析：偏好读 [_serverLineKey]（与 [ServerLinePreferenceNotifier] 一致），
+/// [appLocale] 为 null 时等同未改语言设置，使用 [PlatformDispatcher.instance.locale]。
+///
+/// 用于 [DeviceManager] 等无法在字段初始化里 `watch` Provider 的占位，须与
+/// [serverEndpointsProvider] 在相同偏好+语言下一致。
+ServerEndpoints resolveServerEndpointsSync({Locale? appLocale}) {
+  final raw = LocalStorageService.instance.get<String>(_serverLineKey);
+  final pref = raw == null
+      ? ServerLinePreference.auto
+      : ServerLinePreference.values.firstWhere(
+          (e) => e.name == raw,
+          orElse: () => ServerLinePreference.auto,
+        );
+  return ServerEndpoints.resolve(
+    preference: pref,
+    resolvedLocale: _resolvedLocale(appLocale),
+  );
+}
+
 @riverpod
 ServerEndpoints serverEndpoints(Ref ref) {
   final pref = ref.watch(serverLinePreferenceProvider);

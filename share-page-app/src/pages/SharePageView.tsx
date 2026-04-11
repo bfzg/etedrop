@@ -4,19 +4,14 @@ import { useTranslation } from "react-i18next";
 import { useSharePage } from "../hooks/useSharePage";
 import { formatBytes } from "../utils/format";
 import { FileIconSvg } from "../components/fileIconSvgComponent";
-import { VideoPlayer } from "../components/VideoPlayer";
+import { ShareFilePreview } from "../components/ShareFilePreview";
 import { isIOS, isMobile, isSafari, isWeChat } from "../utils/env";
+import {
+  getPlayDownloadOptions,
+  getSharePreviewKind,
+} from "../utils/shareFilePreviewKind";
 import { hasOpfs } from "../utils/shareDownloadStorage";
 import { SUPPORTED } from "../i18n";
-
-const VIDEO_EXTS = new Set(["mp4"]);
-
-function isLikelyVideo(fileName: string) {
-  const i = fileName.lastIndexOf(".");
-  if (i < 0) return false;
-  const ext = fileName.slice(i + 1).toLowerCase();
-  return VIDEO_EXTS.has(ext);
-}
 
 const STATUS_CLASSES = {
   pending: {
@@ -40,9 +35,6 @@ const LANG_LABELS: Record<string, string> = {
   ko: "한국어",
   es: "Español",
 };
-
-/** 与「使用提示」第 4 条一并恢复 */
-// const ETEDROP_DOWNLOAD_URL = "https://etedrop.com/download/";
 
 export function SharePageView() {
   const { t, i18n } = useTranslation();
@@ -87,7 +79,8 @@ export function SharePageView() {
     setPlaybackTime,
   } = useSharePage(deviceId, shareCode);
 
-  const videoSrc = mseUrl || playUrl;
+  const previewMediaUrl = mseUrl || playUrl;
+  const previewKind = getSharePreviewKind(fileInfo?.fileName ?? "");
   const inWeChat = isWeChat();
   const safariBrowser = isSafari();
   const isWechatIOS = inWeChat && isIOS();
@@ -100,10 +93,12 @@ export function SharePageView() {
   /** 微信内：仍展示下载按钮但禁用，并提示用系统浏览器（如 Chrome）打开 */
   const showDownloadUi = showDownloadBtn;
   const downloadActionEnabled = showDownloadBtn && !inWeChat;
+  const wechatAllowsInBrowserPreview =
+    previewKind !== "video" || wechatCanPlay;
   const showPlayAction =
     showDownloadBtn &&
-    isLikelyVideo(fileInfo?.fileName ?? "") &&
-    (!inWeChat || wechatCanPlay);
+    previewKind !== "none" &&
+    (!inWeChat || wechatAllowsInBrowserPreview);
   const canPlayWithoutMse = isIOS() && !mediaSourceAvailable;
 
   const statusStyle = STATUS_CLASSES[status.kind] ?? STATUS_CLASSES.error;
@@ -223,14 +218,16 @@ export function SharePageView() {
             </div>
           )}
 
-          {videoSrc && (
-            <VideoPlayer
-              src={videoSrc}
+          {previewMediaUrl && (
+            <ShareFilePreview
+              fileName={fileInfo?.fileName ?? ""}
+              mediaUrl={previewMediaUrl}
               streaming={streaming}
-              duration={streamDuration}
+              streamDuration={streamDuration}
+              fileSize={fileInfo?.fileSize}
               onSeek={sendSeek}
               onPlaybackTime={setPlaybackTime}
-              onError={(err) => {
+              onVideoError={(err) => {
                 console.error("[fastsend] video error", err);
               }}
             />
@@ -259,13 +256,13 @@ export function SharePageView() {
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handleVerify()}
                   placeholder={t("share.passwordPlaceholder")}
-                  className="w-full min-w-0 min-h-[44px] py-2.5 px-3.5 bg-gray-100 rounded-lg text-base outline-none border border-transparent focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 sm:flex-1"
+                  className="w-full min-w-0 min-h-[44px] py-2.5 px-3.5 bg-gray-100 rounded-lg text-base outline-none border border-transparent focus:border-[#0052D9] focus:ring-1 focus:ring-[#0052D9] sm:flex-1"
                 />
                 <button
                   type="button"
                   disabled={verifyLoading}
                   onClick={handleVerify}
-                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-2.5 px-5 rounded-lg text-base font-medium bg-indigo-600 text-white cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto sm:min-w-[100px] sm:shrink-0"
+                  className="inline-flex items-center justify-center gap-1.5 min-h-[44px] py-2.5 px-5 rounded-lg text-base font-medium bg-[#0052D9] text-white cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto sm:min-w-[100px] sm:shrink-0"
                 >
                   {t("share.verify")}
                 </button>
@@ -287,30 +284,37 @@ export function SharePageView() {
                   <button
                     type="button"
                     disabled={
-                      !fileInfo ||
-                      !isLikelyVideo(fileInfo?.fileName ?? "") ||
-                      safariBrowser
+                      !fileInfo || (safariBrowser && previewKind === "video")
                     }
                     title={
-                      safariBrowser
+                      safariBrowser && previewKind === "video"
                         ? t("share.safariPlayNotSupported")
                         : undefined
                     }
                     aria-label={
-                      safariBrowser
-                        ? `${t("share.play")} — ${t("share.safariPlayNotSupported")}`
-                        : t("share.play")
+                      safariBrowser && previewKind === "video"
+                        ? `${t("share.preview")} — ${t("share.safariPlayNotSupported")}`
+                        : previewKind === "video"
+                          ? t("share.play")
+                          : t("share.preview")
                     }
                     onClick={() => {
+                      if (!fileInfo) return;
+                      const opts = getPlayDownloadOptions(
+                        fileInfo.fileName,
+                        canPlayWithoutMse,
+                      );
                       void sendDownloadStart({
                         intent: "play",
-                        remuxFmp4: true,
-                        stream: !canPlayWithoutMse,
+                        remuxFmp4: opts.remuxFmp4,
+                        stream: opts.stream,
                       });
                     }}
-                    className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-indigo-600 text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center justify-center gap-1.5 py-3 px-6 rounded-lg text-[15px] font-medium bg-[#0052D9] text-white cursor-pointer w-full hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {t("share.play")}
+                    {previewKind === "video"
+                      ? t("share.play")
+                      : t("share.preview")}
                   </button>
                 )}
 
@@ -353,7 +357,9 @@ export function SharePageView() {
                   {t("share.wechatDownloadNotSupported")}
                 </p>
               )}
-              {safariBrowser && showPlayAction && (
+              {safariBrowser &&
+                showPlayAction &&
+                previewKind === "video" && (
                 <p className="mt-2 text-xs text-slate-500 text-left">
                   {t("share.safariPlayNotSupported")}
                 </p>
@@ -361,7 +367,7 @@ export function SharePageView() {
             </>
           )}
 
-          {canPlayWithoutMse && isLikelyVideo(fileInfo?.fileName ?? "") && (
+          {canPlayWithoutMse && previewKind === "video" && (
             <div className="mt-2 text-xs text-slate-600 text-center">
               {t("share.iosNoStream")}
             </div>
@@ -369,7 +375,10 @@ export function SharePageView() {
 
           {inWeChat && showDownloadBtn && (
             <div className="mt-3 text-xs text-slate-600 text-center">
-              {isWechatIOS && !wechatCanPlay && t("share.wechatNoPlay")}
+              {isWechatIOS &&
+                !wechatCanPlay &&
+                previewKind === "video" &&
+                t("share.wechatNoPlay")}
             </div>
           )}
 
@@ -395,7 +404,10 @@ export function SharePageView() {
             </div>
           )}
 
-          {showDone && !streaming && doneKind !== "stream" && (
+          {showDone &&
+            !streaming &&
+            doneKind !== "stream" &&
+            !playUrl && (
             <div className="text-center py-5">
               <div className="text-4xl mb-2">✅</div>
               <p className="text-green-600 font-medium">
@@ -421,21 +433,6 @@ export function SharePageView() {
             <ol className="list-decimal pl-4 space-y-2 text-base leading-relaxed text-slate-600 marker:text-slate-400">
               <li>{t("share.compatibilityTip1")}</li>
               <li>{t("share.compatibilityTip2")}</li>
-              {/* 发版暂缓：第 3–5 条（iOS App / 下载页 / 链接在客户端打开） */}
-              {/* <li>{t("share.compatibilityTip3")}</li> */}
-              {/* <li> */}
-              {/*   <span>{t("share.compatibilityTip4a")}</span> */}
-              {/*   <a */}
-              {/*     href={ETEDROP_DOWNLOAD_URL} */}
-              {/*     target="_blank" */}
-              {/*     rel="noopener noreferrer" */}
-              {/*     className="text-indigo-600 underline underline-offset-2 break-all" */}
-              {/*   > */}
-              {/*     {ETEDROP_DOWNLOAD_URL} */}
-              {/*   </a> */}
-              {/*   <span>{t("share.compatibilityTip4b")}</span> */}
-              {/* </li> */}
-              {/* <li>{t("share.compatibilityTip5")}</li> */}
             </ol>
             <p className="mt-4 text-sm text-slate-600 leading-relaxed">
               <span className="font-medium text-slate-700">
@@ -444,7 +441,7 @@ export function SharePageView() {
               <span className="mx-1">{t("share.feedbackEmailLabel")}</span>
               <a
                 href="mailto:yuanzhou_cn@qq.com"
-                className="text-indigo-600 underline underline-offset-2 break-all"
+                className="text-[#0052D9] underline underline-offset-2 break-all"
               >
                 yuanzhou_cn@qq.com
               </a>

@@ -12,6 +12,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../../../core/config/constants.dart';
 import '../../../core/config/server_endpoints.dart';
 import '../../../core/utils/nickname_utils.dart';
+import '../../settings/providers/server_line_provider.dart';
 import '../models/device_config.dart';
 import 'share_p2p_handler.dart';
 
@@ -19,6 +20,12 @@ enum DeviceConnectionState { disconnected, connecting, connected }
 
 /// 设备管理服务
 class DeviceManager {
+  DeviceManager() {
+    final boot = resolveServerEndpointsSync();
+    _apiBaseUrl = boot.apiBaseUrl;
+    _shareServerUrl = boot.shareServerUrl;
+  }
+
   DeviceConfig? _config;
   WebSocketChannel? _ws;
   DeviceConnectionState _state = DeviceConnectionState.disconnected;
@@ -29,9 +36,9 @@ class DeviceManager {
   bool _disposed = false;
   final Map<String, ShareP2PHandler> _p2pHandlers = {};
 
-  /// 由 [ServerEndpoints] 注入，默认与首次 [applyEndpoints] 前使用 [AppConstants] 行为一致需由启动流程赋值
-  String _apiBaseUrl = AppConstants.apiBaseUrl;
-  String _shareServerUrl = AppConstants.shareServerUrl;
+  /// 由 [ServerEndpoints] / [resolveServerEndpointsSync] 初始化，随后随 [applyEndpoints] 与线路设置同步。
+  late String _apiBaseUrl;
+  late String _shareServerUrl;
 
   final _stateController = StreamController<int>.broadcast();
   int _stateTick = 0;

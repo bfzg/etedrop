@@ -23,6 +23,7 @@ class MessageCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final receiveSpeeds = ref.watch(transferReceiveSpeedProvider);
+    final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
     final receiveSpeedKey = message.shareId ?? message.id;
     final receiveBps = !message.isOutgoing
         ? receiveSpeeds[receiveSpeedKey]
@@ -36,17 +37,14 @@ class MessageCard extends ConsumerWidget {
 
     return Card(
       elevation: 0,
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(18),
-        side: BorderSide(color: theme.colorScheme.outlineVariant, width: 1),
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5), width: 1),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: Spacing.sm,
-          vertical: Spacing.xs,
-        ),
+        padding: const EdgeInsets.all(Spacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -55,32 +53,36 @@ class MessageCard extends ConsumerWidget {
             if (trimCaption(message) != null) ...[
               SelectableText(
                 trimCaption(message)!,
-                style: Theme.of(context).textTheme.bodyLarge,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  height: 1.4,
+                ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
             ],
             if (batch != null && batch.isNotEmpty) ...[
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  for (var i = 0; i < batch.length; i++) ...[
-                    if (i > 0) const SizedBox(height: 6),
-                    revealableFileChip(
-                      context,
-                      ref,
-                      theme,
-                      l10n,
-                      canRevealInFolder,
-                      fileIndex: i,
-                      fileName: batch[i]['name'] as String? ?? '',
-                      fileSize: (batch[i]['size'] as num?)?.toInt() ?? 0,
-                      message: message,
-                      localPreviewPath: pathAt(decodedLocalPaths(message), i),
-                      isImage: isLikelyImageFileName(
-                        batch[i]['name'] as String? ?? '',
+                  for (var i = 0; i < batch.length; i++)
+                    SizedBox(
+                      width: isDesktopLayout ? 300 : double.infinity,
+                      child: revealableFileChip(
+                        context,
+                        ref,
+                        theme,
+                        l10n,
+                        canRevealInFolder,
+                        fileIndex: i,
+                        fileName: batch[i]['name'] as String? ?? '',
+                        fileSize: (batch[i]['size'] as num?)?.toInt() ?? 0,
+                        message: message,
+                        localPreviewPath: pathAt(decodedLocalPaths(message), i),
+                        isImage: isLikelyImageFileName(
+                          batch[i]['name'] as String? ?? '',
+                        ),
                       ),
                     ),
-                  ],
                 ],
               ),
               if (batch.length == 1 &&
@@ -93,27 +95,30 @@ class MessageCard extends ConsumerWidget {
                     final pth = pathAt(decodedLocalPaths(message), 0);
                     if (pth == null) return const SizedBox.shrink();
                     return Padding(
-                      padding: const EdgeInsets.only(top: 8),
+                      padding: const EdgeInsets.only(top: 12),
                       child: TextFilePreviewBox(path: pth),
                     );
                   },
                 ),
               ],
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
               Text(
                 l10n.totalSizeLine(FormatUtils.fileSize(message.fileSize)),
-                style: AppTextStyles.hint(context),
+                style: AppTextStyles.hint(context).copyWith(fontSize: 12),
               ),
             ] else if (!message.isBatch) ...[
-              revealableSingleFileBlock(
-                context,
-                ref,
-                theme,
-                l10n,
-                canRevealInFolder,
-                message: message,
-                localPreviewPath: pathAt(decodedLocalPaths(message), 0),
-                isImage: isLikelyImageFileName(message.fileName),
+              SizedBox(
+                width: isDesktopLayout ? 350 : double.infinity,
+                child: revealableSingleFileBlock(
+                  context,
+                  ref,
+                  theme,
+                  l10n,
+                  canRevealInFolder,
+                  message: message,
+                  localPreviewPath: pathAt(decodedLocalPaths(message), 0),
+                  isImage: isLikelyImageFileName(message.fileName),
+                ),
               ),
             ],
             if (message.status == TransferMessageStatus.receiving) ...[

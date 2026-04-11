@@ -171,6 +171,7 @@ export function useSignaling(deviceId: string, shareCode: string) {
 
       dc.onopen = () => {
         setStatusState("online", t("status.p2pConnected"));
+        setShowReconnect(false);
         p2pLog("DataChannel open", {
           label: dc.label,
           ordered: dc.ordered,
