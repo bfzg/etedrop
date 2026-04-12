@@ -135,5 +135,13 @@
   "homepage.useCases.6.title": { "message": "Multi-dispositivo" },
   "homepage.useCases.6.desc": {
     "message": "Envío directo entre equipos; sincronización llegará después."
-  }
+  },
+  "cnMirror.banner.title": {
+    "message": "Puede que estés en China continental"
+  },
+  "cnMirror.banner.body": {
+    "message": "El espejo en China suele cargar más rápido (dominio y TLS aparte; apunta cn en DNS a tu servidor en China)."
+  },
+  "cnMirror.banner.cta": { "message": "Abrir espejo China" },
+  "cnMirror.banner.dismiss": { "message": "No volver a mostrar" }
 }

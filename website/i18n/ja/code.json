@@ -135,5 +135,13 @@
   "homepage.useCases.6.title": { "message": "マルチデバイス" },
   "homepage.useCases.6.desc": {
     "message": "端末同士で直接送信（同期機能は順次）。"
-  }
+  },
+  "cnMirror.banner.title": {
+    "message": "中国本土からのアクセスの可能性があります"
+  },
+  "cnMirror.banner.body": {
+    "message": "中国向けミラーの方が読み込みが速いことが多いです（別ドメイン・別証明書。cn を中国サーバーへ向けてください）。"
+  },
+  "cnMirror.banner.cta": { "message": "中国ミラーを開く" },
+  "cnMirror.banner.dismiss": { "message": "次回から表示しない" }
 }

@@ -135,5 +135,13 @@
   "homepage.useCases.6.title": { "message": "다중 기기" },
   "homepage.useCases.6.desc": {
     "message": "기기 간 직접 전송(동기화는 추후)."
-  }
+  },
+  "cnMirror.banner.title": {
+    "message": "중국 본토에서 접속 중일 수 있습니다"
+  },
+  "cnMirror.banner.body": {
+    "message": "중국 미러가 더 빠른 경우가 많습니다(별도 도메인·인증서, DNS에서 cn을 중국 서버로 지정)."
+  },
+  "cnMirror.banner.cta": { "message": "중국 미러 열기" },
+  "cnMirror.banner.dismiss": { "message": "다시 표시 안 함" }
 }

@@ -235,5 +235,17 @@
   },
   "homepage.useCases.6.desc": {
     "message": "多台设备直接互相发送（后续支持多设备文件同步）"
+  },
+  "cnMirror.banner.title": {
+    "message": "检测到您可能位于中国大陆"
+  },
+  "cnMirror.banner.body": {
+    "message": "访问国内节点页面加载通常更快（独立域名与证书，需在 DNS 将 cn 指向中国服务器）。"
+  },
+  "cnMirror.banner.cta": {
+    "message": "前往国内站点"
+  },
+  "cnMirror.banner.dismiss": {
+    "message": "不再提示"
   }
 }

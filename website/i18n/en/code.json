@@ -135,5 +135,13 @@
   "homepage.useCases.6.title": { "message": "Multi-device" },
   "homepage.useCases.6.desc": {
     "message": "Send directly between devices—multi-device sync coming later."
-  }
+  },
+  "cnMirror.banner.title": {
+    "message": "You may be in mainland China"
+  },
+  "cnMirror.banner.body": {
+    "message": "The China mirror is often faster (separate domain and TLS; point cn in DNS to your China origin)."
+  },
+  "cnMirror.banner.cta": { "message": "Open China mirror" },
+  "cnMirror.banner.dismiss": { "message": "Don’t show again" }
 }

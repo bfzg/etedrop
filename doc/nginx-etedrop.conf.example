@@ -1,7 +1,9 @@
 # =============================================================================
 # EteDrop — 统一 Nginx 配置（官网静态站 + fast_send_server 反代）
 #
-# 用途：整份复制到服务器后按需改证书路径与网站根目录，替换 sites-enabled 里零散配置。
+# 用途：整份复制到服务器后按需改证书路径与网站根目录。
+# 海外机：可保留 api + etedrop 主域；国内机勿整份照搬（会引用不存在的 api 等证书），
+# 请改用 **`doc/nginx-etedrop-cn.conf.example`**，或在本文件中注释掉本机不签证书的 server{}。
 #
 # 官网根目录（Docusaurus build 产物）：
 #   /home/app/www.etedrop.com/
@@ -17,8 +19,9 @@
 #   若证书路径与下文不一致，请统一改成 certbot certificates 中的实际路径。
 #
 # 启用：
-#   sudo cp nginx-etedrop.conf.example /etc/nginx/sites-available/etedrop
-#   sudo ln -sf /etc/nginx/sites-available/etedrop /etc/nginx/sites-enabled/etedrop
+#   sudo cp nginx-etedrop.conf.example /etc/nginx/sites-available/api
+#   sudo ln -sf /etc/nginx/sites-available/api /etc/nginx/sites-enabled/api
+#   # 编辑配置请改 sites-available 下文件；勿直接 vim 写 sites-enabled 里的软链，否则 Vim 可能报 E166。
 #   # 删掉与上述 server_name 冲突的旧 conf 后：
 #   sudo nginx -t && sudo systemctl reload nginx
 #
