@@ -53,6 +53,14 @@ const config: Config = {
 
   scripts: [
     {
+      src: "https://www.googletagmanager.com/gtag/js?id=G-C5CZDLVNCJ",
+      async: true,
+    },
+    {
+      src: "/js/gtag-init.js",
+      async: false,
+    },
+    {
       src: "https://hm.baidu.com/hm.js?b077fe346c836d558d307ca07fbd615a",
       async: true,
     },
