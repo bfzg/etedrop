@@ -51,6 +51,16 @@
     "message": "Files, text, clipboard images, and more—batch send and receive."
   },
   "homepage.lanTransfer.p3": { "message": "Simple workflow with batch sending." },
+  "homepage.preview.kicker": { "message": "Share page" },
+  "homepage.preview.title": { "message": "In-browser preview" },
+  "homepage.preview.lead": {
+    "message": "Preview directly in the browser—no app install needed for common formats."
+  },
+  "homepage.preview.pdf.title": { "message": "PDF" },
+  "homepage.preview.image.title": { "message": "Images" },
+  "homepage.preview.video.title": { "message": "Video" },
+  "homepage.preview.audio.title": { "message": "Audio" },
+  "homepage.preview.text.title": { "message": "Text & code" },
   "homepage.useCases.title": { "message": "Use cases" },
   "homepage.useCases.subtitle": {
     "message": "Not “another cloud drive”—faster, lighter, and more control over your transfers."
@@ -82,15 +92,15 @@
   },
   "homepage.faq.3.q": { "message": "Which preview formats are supported?" },
   "homepage.faq.3.a": {
-    "message": "In-browser preview is MP4-only for now. More formats are planned."
+    "message": "MP4 video (including play-while-receiving), common images, PDF, common audio, and plain text / many code & markup files. Office, archives, etc.: download and open locally. See the FAQ doc for limits."
   },
   "homepage.faq.4.q": { "message": "How do I report issues?" },
   "homepage.faq.4.a": {
     "message": "Send a screenshot and a short description to yuanzhou_cn@qq.com"
   },
-  "homepage.publicE2e.feature.play.title": { "message": "MP4 playback" },
+  "homepage.publicE2e.feature.play.title": { "message": "Rich in-browser preview" },
   "homepage.publicE2e.feature.play.text": {
-    "message": "Stream MP4 and more in the browser—large files while downloading."
+    "message": "Preview PDF, images, audio, text & code, and MP4 video in the browser; video supports play-while-receiving."
   },
   "homepage.publicE2e.feature.download.title": { "message": "Fast downloads" },
   "homepage.publicE2e.feature.download.text": {
@@ -130,7 +140,7 @@
   },
   "homepage.useCases.5.title": { "message": "Remote preview" },
   "homepage.useCases.5.desc": {
-    "message": "MP4 preview in the browser—quick start, minimal waiting."
+    "message": "Preview PDF, images, media, and text in the browser; MP4 can play while receiving."
   },
   "homepage.useCases.6.title": { "message": "Multi-device" },
   "homepage.useCases.6.desc": {

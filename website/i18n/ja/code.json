@@ -51,6 +51,16 @@
     "message": "ファイル・テキスト・クリップボード画像など。一括送受信。"
   },
   "homepage.lanTransfer.p3": { "message": "シンプル操作で一括送信に対応。" },
+  "homepage.preview.kicker": { "message": "共有ページ" },
+  "homepage.preview.title": { "message": "ブラウザでプレビュー" },
+  "homepage.preview.lead": {
+    "message": "ブラウザ上で直接プレビュー。主要フォーマットはアプリ不要で閲覧できます。"
+  },
+  "homepage.preview.pdf.title": { "message": "PDF" },
+  "homepage.preview.image.title": { "message": "画像" },
+  "homepage.preview.video.title": { "message": "動画" },
+  "homepage.preview.audio.title": { "message": "音声" },
+  "homepage.preview.text.title": { "message": "テキストとコード" },
   "homepage.useCases.title": { "message": "活用シーン" },
   "homepage.useCases.subtitle": {
     "message": "「また.cloud」ではなく、より速く・軽く・コントロールしやすい転送を。"
@@ -82,15 +92,15 @@
   },
   "homepage.faq.3.q": { "message": "ブラウザプレビューはどの形式？" },
   "homepage.faq.3.a": {
-    "message": "現状は MP4 のみ。画像・文書・音声などは順次対応予定です。"
+    "message": "MP4 動画（受信しながら再生）、一般的な画像・PDF・音声、プレーンテキストと多くのコード／マークアップ形式。Office や圧縮ファイルはダウンロード後にローカルで開いてください。詳細はドキュメントの「よくある質問」を参照。"
   },
   "homepage.faq.4.q": { "message": "問題の報告方法は？" },
   "homepage.faq.4.a": {
     "message": "スクリーンショットと内容を yuanzhou_cn@qq.com までメールでお送りください。"
   },
-  "homepage.publicE2e.feature.play.title": { "message": "MP4 再生" },
+  "homepage.publicE2e.feature.play.title": { "message": "多形式ブラウザプレビュー" },
   "homepage.publicE2e.feature.play.text": {
-    "message": "MP4 などをブラウザで再生。大容量も受信しながら視聴。"
+    "message": "PDF・画像・音声・テキスト・コード・MP4 をブラウザでプレビュー。動画は受信しながら再生可能。"
   },
   "homepage.publicE2e.feature.download.title": { "message": "高速ダウンロード" },
   "homepage.publicE2e.feature.download.text": {
@@ -130,7 +140,7 @@
   },
   "homepage.useCases.5.title": { "message": "リモートプレビュー" },
   "homepage.useCases.5.desc": {
-    "message": "MP4をダウンロード前にプレビュー。すぐ再生。"
+    "message": "PDF・画像・メディア・テキストをブラウザでプレビュー。MP4 は受信しながら再生。"
   },
   "homepage.useCases.6.title": { "message": "マルチデバイス" },
   "homepage.useCases.6.desc": {

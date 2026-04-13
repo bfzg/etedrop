@@ -36,7 +36,7 @@ export default function HomeHero(): ReactNode {
         download: true,
       } as const;
     }
-    if (platform === "linux" && manifest.linuxDownloadUrl.trim().isNotEmpty) {
+    if (platform === "linux" && manifest.linuxDownloadUrl.trim() !== "") {
       return {
         to: linuxHref,
         icon: linuxIcon,
@@ -51,7 +51,7 @@ export default function HomeHero(): ReactNode {
   }, [platform, macHref, winHref, linuxHref, macIcon, winIcon, linuxIcon, manifest.linuxDownloadUrl]);
 
   return (
-    <header className="relative overflow-hidden pb-14 pt-48">
+    <header className="relative overflow-hidden pb-12 pt-48 md:pb-24">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-0"

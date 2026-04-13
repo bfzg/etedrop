@@ -4,6 +4,7 @@ import Layout from "@theme/Layout";
 import { translate } from "@docusaurus/Translate";
 import {
   HomeHero,
+  HomeOnlinePreview,
   HomeCapabilityGrid,
   HomeLanTransfer,
   HomeLanNotify,
@@ -34,9 +35,9 @@ export default function Home(): ReactNode {
         <HomeCapabilityGrid />
         <HomeLanTransfer />
         <HomeLanNotify />
+        <HomeOnlinePreview />
         <HomeUseCases />
         <HomeFaq />
-        {/* <HomeFinalCta /> */}
       </main>
       <Footer />
     </Layout>

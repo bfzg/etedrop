@@ -51,6 +51,16 @@
     "message": "파일·텍스트·클립보드 이미지 등. 대량 송·수신."
   },
   "homepage.lanTransfer.p3": { "message": "간단한 조작과 대량 전송 지원." },
+  "homepage.preview.kicker": { "message": "공유 페이지" },
+  "homepage.preview.title": { "message": "브라우저 미리보기" },
+  "homepage.preview.lead": {
+    "message": "브라우저에서 바로 미리보기, 앱 설치 없이 주요 형식을 미리볼 수 있습니다."
+  },
+  "homepage.preview.pdf.title": { "message": "PDF" },
+  "homepage.preview.image.title": { "message": "이미지" },
+  "homepage.preview.video.title": { "message": "동영상" },
+  "homepage.preview.audio.title": { "message": "오디오" },
+  "homepage.preview.text.title": { "message": "텍스트 및 코드" },
   "homepage.useCases.title": { "message": "활용 사례" },
   "homepage.useCases.subtitle": {
     "message": "‘또 다른 클라우드’가 아니라 더 빠르고 가볍고 제어 가능한 전송."
@@ -82,15 +92,15 @@
   },
   "homepage.faq.3.q": { "message": "브라우저 미리보기 형식은?" },
   "homepage.faq.3.a": {
-    "message": "현재 MP4만 지원. 이미지·문서·오디오 등은 예정입니다."
+    "message": "MP4 동영상(받는 중 재생 포함), 일반 이미지, PDF, 일반 오디오, 일반 텍스트 및 여러 코드·마크업 파일. Office, 압축 파일 등은 다운로드 후 로컬에서 여세요. 자세한 제한은 문서 FAQ를 참고하세요."
   },
   "homepage.faq.4.q": { "message": "문제는 어떻게 제보하나요?" },
   "homepage.faq.4.a": {
     "message": "스크린샷과 설명을 yuanzhou_cn@qq.com 으로 보내 주세요."
   },
-  "homepage.publicE2e.feature.play.title": { "message": "MP4 재생" },
+  "homepage.publicE2e.feature.play.title": { "message": "다양한 브라우저 미리보기" },
   "homepage.publicE2e.feature.play.text": {
-    "message": "MP4 등 브라우저에서 재생. 큰 파일도 받으며 시청."
+    "message": "PDF, 이미지, 오디오, 텍스트·코드, MP4 동영상을 브라우저에서 미리보기. 동영상은 받는 중 재생을 지원합니다."
   },
   "homepage.publicE2e.feature.download.title": { "message": "고속 다운로드" },
   "homepage.publicE2e.feature.download.text": {
@@ -130,7 +140,7 @@
   },
   "homepage.useCases.5.title": { "message": "원격 미리보기" },
   "homepage.useCases.5.desc": {
-    "message": "MP4 미리보기, 전체 다운로드 없이 빠른 시작."
+    "message": "브라우저에서 PDF·이미지·미디어·텍스트 미리보기. MP4는 받는 중 재생 가능."
   },
   "homepage.useCases.6.title": { "message": "다중 기기" },
   "homepage.useCases.6.desc": {

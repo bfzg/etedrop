@@ -93,80 +93,79 @@ export default function HomeFaq(): ReactNode {
   const [openId, setOpenId] = useState<string | null>("faq-1");
 
   return (
-    <section className="w-full py-16">
-      <Container>
-        <div className="mb-10 text-center">
-          <Heading
-            as="h2"
-            className="text-4xl font-bold tracking-wide text-slate-900 dark:text-white"
-          >
-            <Translate id="homepage.faq.title">常见问题</Translate>
-          </Heading>
-        </div>
+    <Container>
+      <div className="mb-12 text-center md:mb-14">
+        <Heading
+          as="h2"
+          className="text-4xl font-bold tracking-wide text-slate-900 dark:text-white"
+        >
+          <Translate id="homepage.faq.title">常见问题</Translate>
+        </Heading>
+      </div>
 
-        <ul className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-0 list-none">
-          <FaqItem
-            panelId={`${baseId}-faq-1-panel`}
-            buttonId={`${baseId}-faq-1-btn`}
-            isOpen={openId === "faq-1"}
-            onToggle={() =>
-              setOpenId((prev) => (prev === "faq-1" ? null : "faq-1"))
-            }
-            q={
-              <Translate id="homepage.faq.1.q">是否依赖中心化存储？</Translate>
-            }
-            a={
-              <Translate id="homepage.faq.1.a">
-                核心传输尽量走端到端直连；服务端主要负责在线管理与信令转发。
-              </Translate>
-            }
-          />
-          <FaqItem
-            panelId={`${baseId}-faq-2-panel`}
-            buttonId={`${baseId}-faq-2-btn`}
-            isOpen={openId === "faq-2"}
-            onToggle={() =>
-              setOpenId((prev) => (prev === "faq-2" ? null : "faq-2"))
-            }
-            q={<Translate id="homepage.faq.2.q">公网环境能用吗？</Translate>}
-            a={
-              <Translate id="homepage.faq.2.a">
-                支持的，80% 的用户网络环境支持 p2p 传输。如不支持请截图联系我们。
-              </Translate>
-            }
-          />
-          <FaqItem
-            panelId={`${baseId}-faq-3-panel`}
-            buttonId={`${baseId}-faq-3-btn`}
-            isOpen={openId === "faq-3"}
-            onToggle={() =>
-              setOpenId((prev) => (prev === "faq-3" ? null : "faq-3"))
-            }
-            q={
-              <Translate id="homepage.faq.3.q">支持哪些文件类型在线预览？</Translate>
-            }
-            a={
-              <Translate id="homepage.faq.3.a">
-                目前仅支持 Mp4 视频在线预览。其他格式如图片、文档、音频等，后续会支持。
-              </Translate>
-            }
-          />
-          <FaqItem
-            panelId={`${baseId}-faq-4-panel`}
-            buttonId={`${baseId}-faq-4-btn`}
-            isOpen={openId === "faq-4"}
-            onToggle={() =>
-              setOpenId((prev) => (prev === "faq-4" ? null : "faq-4"))
-            }
-            q={<Translate id="homepage.faq.4.q">如何反馈问题？</Translate>}
-            a={
-              <Translate id="homepage.faq.4.a">
-                请截图，并描述问题，发送邮件至 yuanzhou_cn@qq.com
-              </Translate>
-            }
-          />
-        </ul>
-      </Container>
-    </section>
+      <ul className="mx-auto flex w-full max-w-4xl flex-col gap-5 p-0 list-none">
+        <FaqItem
+          panelId={`${baseId}-faq-1-panel`}
+          buttonId={`${baseId}-faq-1-btn`}
+          isOpen={openId === "faq-1"}
+          onToggle={() =>
+            setOpenId((prev) => (prev === "faq-1" ? null : "faq-1"))
+          }
+          q={<Translate id="homepage.faq.1.q">是否依赖中心化存储？</Translate>}
+          a={
+            <Translate id="homepage.faq.1.a">
+              核心传输尽量走端到端直连；服务端主要负责在线管理与信令转发。
+            </Translate>
+          }
+        />
+        <FaqItem
+          panelId={`${baseId}-faq-2-panel`}
+          buttonId={`${baseId}-faq-2-btn`}
+          isOpen={openId === "faq-2"}
+          onToggle={() =>
+            setOpenId((prev) => (prev === "faq-2" ? null : "faq-2"))
+          }
+          q={<Translate id="homepage.faq.2.q">公网环境能用吗？</Translate>}
+          a={
+            <Translate id="homepage.faq.2.a">
+              支持的，80% 的用户网络环境支持 p2p 传输。如不支持请截图联系我们。
+            </Translate>
+          }
+        />
+        <FaqItem
+          panelId={`${baseId}-faq-3-panel`}
+          buttonId={`${baseId}-faq-3-btn`}
+          isOpen={openId === "faq-3"}
+          onToggle={() =>
+            setOpenId((prev) => (prev === "faq-3" ? null : "faq-3"))
+          }
+          q={
+            <Translate id="homepage.faq.3.q">
+              支持哪些文件类型在线预览？
+            </Translate>
+          }
+          a={
+            <Translate id="homepage.faq.3.a">
+              支持 MP4
+              视频（可边收边看）、常见图片、PDF、常见音频，以及纯文本与多种代码/标记文件。Office、压缩包等请下载后用本机打开；具体限制见文档「常见问题」。
+            </Translate>
+          }
+        />
+        <FaqItem
+          panelId={`${baseId}-faq-4-panel`}
+          buttonId={`${baseId}-faq-4-btn`}
+          isOpen={openId === "faq-4"}
+          onToggle={() =>
+            setOpenId((prev) => (prev === "faq-4" ? null : "faq-4"))
+          }
+          q={<Translate id="homepage.faq.4.q">如何反馈问题？</Translate>}
+          a={
+            <Translate id="homepage.faq.4.a">
+              请截图，并描述问题，发送邮件至 yuanzhou_cn@qq.com
+            </Translate>
+          }
+        />
+      </ul>
+    </Container>
   );
 }

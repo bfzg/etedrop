@@ -5,9 +5,8 @@ import Container from "../Container";
 
 export default function HomeUseCases(): ReactNode {
   return (
-    <section className="py-12">
       <Container>
-        <div className="mb-5 grid gap-1">
+        <div className="mb-10 grid gap-1 md:mb-12">
           <div className="text-4xl font-medium text-center">
             <Translate id="homepage.useCases.title">适用场景</Translate>
           </div>
@@ -65,7 +64,7 @@ export default function HomeUseCases(): ReactNode {
             </Heading>
             <p className="mt-2 text-slate-600 dark:text-slate-300/90">
               <Translate id="homepage.useCases.5.desc">
-                支持mp4文件预览，无需下载。秒播机制，无需等待。
+                PDF、图片、音视频与文本等在浏览器中预览；MP4 可边收边看。
               </Translate>
             </p>
           </div>
@@ -81,6 +80,5 @@ export default function HomeUseCases(): ReactNode {
           </div>
         </div>
       </Container>
-    </section>
   );
 }

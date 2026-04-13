@@ -83,6 +83,30 @@
   "homepage.lanTransfer.p3": {
     "message": "操作简单、支持批量发送。"
   },
+  "homepage.preview.kicker": {
+    "message": "分享页"
+  },
+  "homepage.preview.title": {
+    "message": "在线预览"
+  },
+  "homepage.preview.lead": {
+    "message": "直接在浏览器中预览，无需安装客户端即可预览常见格式；"
+  },
+  "homepage.preview.pdf.title": {
+    "message": "PDF"
+  },
+  "homepage.preview.image.title": {
+    "message": "图片"
+  },
+  "homepage.preview.video.title": {
+    "message": "视频"
+  },
+  "homepage.preview.audio.title": {
+    "message": "音频"
+  },
+  "homepage.preview.text.title": {
+    "message": "文本与代码"
+  },
   "homepage.useCases.title": {
     "message": "适用场景"
   },
@@ -156,7 +180,7 @@
     "message": "支持哪些文件类型在线预览？"
   },
   "homepage.faq.3.a": {
-    "message": "目前仅支持 Mp4 视频在线预览。其他格式如图片、文档、音频等，后续会支持。"
+    "message": "支持 MP4 视频（可边收边看）、常见图片、PDF、常见音频，以及纯文本与多种代码/标记文件。Office、压缩包等请下载后用本机打开；具体限制见文档「常见问题」。"
   },
   "homepage.faq.4.q": {
     "message": "如何反馈问题？"
@@ -165,10 +189,10 @@
     "message": "请截图，并描述问题，发送邮件至 yuanzhou_cn@qq.com"
   },
   "homepage.publicE2e.feature.play.title": {
-    "message": "Mp4 播放"
+    "message": "多格式在线预览"
   },
   "homepage.publicE2e.feature.play.text": {
-    "message": "支持 MP4 等视频在线播放，大文件也能边收边看。"
+    "message": "PDF、图片、音频、文本与代码、MP4 视频等可在浏览器中预览；视频支持边收边看。"
   },
   "homepage.publicE2e.feature.download.title": {
     "message": "高速下载"
@@ -228,7 +252,7 @@
     "message": "异地预览"
   },
   "homepage.useCases.5.desc": {
-    "message": "支持mp4文件预览，无需下载。秒播机制，无需等待。"
+    "message": "PDF、图片、音视频与文本等在浏览器中预览；MP4 可边收边看。"
   },
   "homepage.useCases.6.title": {
     "message": "多设备同步"
