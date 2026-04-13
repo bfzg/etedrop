@@ -15,35 +15,15 @@ import clsx from "clsx";
 type PlatformRow = {
   id: string;
   icon: string;
-  fileKey?: "windows" | "macos" | "linux" | "ios" | "android";
+  fileKey: "windows" | "macos" | "linux" | "ios" | "android";
 };
 
 const platforms: PlatformRow[] = [
-  {
-    id: "windows",
-    icon: "/img/windows.png",
-    fileKey: "windows",
-  },
-  {
-    id: "macos",
-    icon: "/img/macos.png",
-    fileKey: "macos",
-  },
-  {
-    id: "linux",
-    icon: "/img/linux.png",
-    fileKey: "linux",
-  },
-  {
-    id: "ios",
-    icon: "/img/ios.png",
-    fileKey: "ios",
-  },
-  {
-    id: "android",
-    icon: "/img/android.png",
-    fileKey: "android",
-  },
+  { id: "windows", icon: "/img/windows.png", fileKey: "windows" },
+  { id: "macos", icon: "/img/macos.png", fileKey: "macos" },
+  { id: "linux", icon: "/img/linux.png", fileKey: "linux" },
+  { id: "ios", icon: "/img/ios.png", fileKey: "ios" },
+  { id: "android", icon: "/img/android.png", fileKey: "android" },
 ];
 
 function DownloadIcon() {
@@ -164,32 +144,16 @@ function PlatformTitleHint({ id }: { id: string }): ReactNode {
 
 function PlatformCard({
   row,
-  windowsHref,
-  macosHref,
-  linuxHref,
-  iosHref,
-  androidHref,
+  downloadHref,
   version,
 }: {
   row: PlatformRow;
-  windowsHref: string;
-  macosHref: string;
-  linuxHref: string;
-  iosHref: string;
-  androidHref: string;
+  downloadHref: string;
   version: string;
 }): ReactNode {
   const iconSrc = useBaseUrl(row.icon);
-  const hrefByKey: Record<string, string> = {
-    windows: windowsHref,
-    macos: macosHref,
-    linux: linuxHref,
-    ios: iosHref,
-    android: androidHref,
-  };
-  const href = row.fileKey ? hrefByKey[row.fileKey] : "";
-
-  const isReady = href.trim().length > 0;
+  const href = downloadHref.trim();
+  const isReady = href.length > 0;
   const Wrapper = isReady ? "a" : "div";
 
   return (
@@ -259,11 +223,14 @@ function PlatformCard({
 
 export default function DownPage(): ReactNode {
   const manifest = useReleaseManifest();
-  const windowsHref = useResolvedDownloadHref(manifest.windowsDownloadUrl);
-  const macosHref = useResolvedDownloadHref(manifest.macDownloadUrl);
-  const linuxHref = useResolvedDownloadHref(manifest.linuxDownloadUrl);
-  const iosHref = useResolvedDownloadHref(manifest.iosDownloadUrl);
-  const androidHref = useResolvedDownloadHref(manifest.androidDownloadUrl);
+  /** `version.json` 中填完整 https 链接时，各语言路由不会改写路径；相对路径仍走 `useResolvedDownloadHref` */
+  const hrefByKey = {
+    windows: useResolvedDownloadHref(manifest.windowsDownloadUrl),
+    macos: useResolvedDownloadHref(manifest.macDownloadUrl),
+    linux: useResolvedDownloadHref(manifest.linuxDownloadUrl),
+    ios: useResolvedDownloadHref(manifest.iosDownloadUrl),
+    android: useResolvedDownloadHref(manifest.androidDownloadUrl),
+  } as const;
 
   return (
     <Layout
@@ -294,11 +261,7 @@ export default function DownPage(): ReactNode {
               <PlatformCard
                 key={row.id}
                 row={row}
-                windowsHref={windowsHref}
-                macosHref={macosHref}
-                linuxHref={linuxHref}
-                iosHref={iosHref}
-                androidHref={androidHref}
+                downloadHref={hrefByKey[row.fileKey]}
                 version={manifest.latestVersion}
               />
             ))}

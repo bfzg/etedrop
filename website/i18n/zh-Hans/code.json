@@ -125,6 +125,9 @@
   "download.platform.macos.hint": {
     "message": "适用于 macOS 12 及以上"
   },
+  "download.platform.macos.installDoc": {
+    "message": "查看安装文档"
+  },
   "download.platform.linux.name": {
     "message": "Linux"
   },

@@ -69,6 +69,7 @@
   "download.platform.windows.hint": { "message": "라이트·XP용 빌드 포함" },
   "download.platform.macos.name": { "message": "macOS" },
   "download.platform.macos.hint": { "message": "macOS 12 이상" },
+  "download.platform.macos.installDoc": { "message": "설치 안내" },
   "download.platform.linux.name": { "message": "Linux" },
   "download.platform.linux.hint": { "message": "주요 데스크톱 배포판" },
   "download.platform.ios.name": { "message": "iOS" },

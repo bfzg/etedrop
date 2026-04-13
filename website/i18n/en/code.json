@@ -69,6 +69,7 @@
   "download.platform.windows.hint": { "message": "Includes lite and XP-focused builds" },
   "download.platform.macos.name": { "message": "macOS" },
   "download.platform.macos.hint": { "message": "For macOS 12 and later" },
+  "download.platform.macos.installDoc": { "message": "Installation guide" },
   "download.platform.linux.name": { "message": "Linux" },
   "download.platform.linux.hint": { "message": "Common desktop distributions" },
   "download.platform.ios.name": { "message": "iOS" },

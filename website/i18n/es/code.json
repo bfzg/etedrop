@@ -69,6 +69,7 @@
   "download.platform.windows.hint": { "message": "Incluye versiones lite y para XP" },
   "download.platform.macos.name": { "message": "macOS" },
   "download.platform.macos.hint": { "message": "Para macOS 12 o posterior" },
+  "download.platform.macos.installDoc": { "message": "Guía de instalación" },
   "download.platform.linux.name": { "message": "Linux" },
   "download.platform.linux.hint": { "message": "Distribuciones de escritorio habituales" },
   "download.platform.ios.name": { "message": "iOS" },

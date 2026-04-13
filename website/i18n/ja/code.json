@@ -69,6 +69,7 @@
   "download.platform.windows.hint": { "message": "ライト版・XP向けビルド同梱" },
   "download.platform.macos.name": { "message": "macOS" },
   "download.platform.macos.hint": { "message": "macOS 12 以降" },
+  "download.platform.macos.installDoc": { "message": "インストール手順" },
   "download.platform.linux.name": { "message": "Linux" },
   "download.platform.linux.hint": { "message": "主要デスクトップディストリビューション" },
   "download.platform.ios.name": { "message": "iOS" },
