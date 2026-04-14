@@ -55,6 +55,7 @@
     --disable-everything \
     --disable-doc \
     --disable-debug \
+    --disable-ffplay \
     --enable-ffmpeg \
     --enable-ffprobe \
     --enable-avformat \
@@ -140,6 +141,16 @@
   - build-win/install/bin/ffmpeg.exe
   - build-win/install/bin/ffprobe.exe
 
+## 产物体积与 ffplay（Windows / macOS 常见疑问）
+
+**体积差（例如 Windows `ffmpeg.exe` 约 11MB、macOS `ffmpeg` 约 7MB）多数算正常**，常见原因包括：
+
+- **链接方式**：MinGW 下常把更多依赖 **静态链进** `ffmpeg.exe`；macOS 侧 **x264 等可能以 `.dylib` 动态链接**，主程序文件会显得更瘦（总占用要连依赖一起看）。
+- **运行时与 PE**：Windows 可执行文件格式、C/C++ 运行库与 **macOS Mach-O** 体积模型不同，同功能差 **百分之几十** 不奇怪。
+- **符号表**：若 Windows 侧未 **strip**，会再大一截。安装目录可试：`strip install/bin/ffmpeg.exe install/bin/ffprobe.exe`（MinGW 自带 `strip`）。
+
+**ffplay**：教程只应产出 **ffmpeg** 与 **ffprobe**。若仍出现 **`ffplay.exe`**，多半是旧目录残留、或曾用未带 `--disable-everything` 的配置编过；**configure 里已写 `--disable-ffplay`** 后 **clean 再编**（删掉 `build-win` 重来），`install/bin` 里不应再生成 ffplay。**不要**把 ffplay 打进 Flutter assets。
+
 ## Android：用 NDK 交叉编译（产出无后缀的 ffmpeg / ffprobe）
 
 Flutter 里使用方式与桌面类似：把可执行文件打进 `assets`，首次运行解压到应用私有目录并 `chmod +x` 再 `Process.start`。
@@ -195,6 +206,7 @@ mkdir -p build-android-arm64 && cd build-android-arm64
   --disable-everything \
   --disable-doc \
   --disable-debug \
+  --disable-ffplay \
   --enable-ffmpeg \
   --enable-ffprobe \
   --enable-avformat \
