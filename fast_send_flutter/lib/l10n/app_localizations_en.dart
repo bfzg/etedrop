@@ -739,7 +739,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get invalidPickupCode => 'Invalid pickup code';
 
   @override
-  String get transferReceiveSection => 'Nearby transfer';
+  String get transferReceiveSection => 'Transfer';
 
   @override
   String get transferAutoReceiveTitle => 'Auto receive';
@@ -747,6 +747,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get transferAutoReceiveSubtitle =>
       'When on, LAN share offers begin without tapping Receive in Messages. Default is off.';
+
+  @override
+  String get videoTranscodeTitle => 'Video transcoding';
+
+  @override
+  String get videoTranscodeSubtitle =>
+      'When on, videos in unsupported formats (non H.264+AAC) are automatically transcoded for online playback, enabling any format to stream. This uses extra CPU. When off, only compatible formats stream directly — saves resources but some formats won\'t play online.';
 
   @override
   String get transferAutoReceivingHint =>

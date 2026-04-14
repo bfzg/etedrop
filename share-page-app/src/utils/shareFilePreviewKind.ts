@@ -2,7 +2,25 @@
 
 export type SharePreviewKind = "video" | "image" | "pdf" | "audio" | "text" | "none";
 
-const VIDEO_STREAM_EXTS = new Set(["mp4"]);
+/**
+ * 支持通过 ffmpeg 转推（remux / transcode）的常见单文件视频格式。
+ * 不含 HLS（m3u8）、FLV、DASH 等分段/流式容器。
+ */
+const VIDEO_STREAM_EXTS = new Set([
+  "mp4",
+  "m4v",  // MPEG-4 Video
+  "mov",  // QuickTime
+  "mkv",  // Matroska
+  "webm", // WebM (Matroska-based)
+  "avi",  // AVI
+  "wmv",  // Windows Media Video
+  "3gp",  // 3GPP
+  "3g2",  // 3GPP2
+  "mpeg", // MPEG Program Stream
+  "mpg",  // MPEG Program Stream (短扩展名)
+  "m2ts", // MPEG-2 Transport Stream
+  "mts",  // MPEG-2 Transport Stream (短扩展名)
+]);
 
 const IMAGE_EXTS = new Set([
   "jpg",
@@ -109,6 +127,18 @@ export function guessMimeTypeForFileName(fileName: string): string | undefined {
   const ext = fileExtension(fileName);
   const map: Record<string, string> = {
     mp4: "video/mp4",
+    m4v: "video/mp4",
+    mov: "video/quicktime",
+    mkv: "video/x-matroska",
+    webm: "video/webm",
+    avi: "video/x-msvideo",
+    wmv: "video/x-ms-wmv",
+    "3gp": "video/3gpp",
+    "3g2": "video/3gpp2",
+    mpeg: "video/mpeg",
+    mpg: "video/mpeg",
+    m2ts: "video/mp2t",
+    mts: "video/mp2t",
     webp: "image/webp",
     png: "image/png",
     jpg: "image/jpeg",

@@ -16,6 +16,9 @@ class StorageKeys {
 
   /// 是否开启 WebRTC/传输后台保活（Audio Session + Android 前台服务）
   static const String webrtcBackgroundKeepalive = 'webrtc_background_keepalive_v1';
+
+  /// 在线播放时是否对不兼容格式进行转码（默认开启）
+  static const String videoTranscodeStream = 'video_transcode_stream_v1';
 }
 
 /// 通用本地存储服务

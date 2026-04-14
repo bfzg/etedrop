@@ -731,6 +731,13 @@ class AppLocalizationsJa extends AppLocalizations {
       'オンの場合、LAN共有はメッセージで「受信」を押さずに開始します。既定はオフ。';
 
   @override
+  String get videoTranscodeTitle => '動画トランスコード';
+
+  @override
+  String get videoTranscodeSubtitle =>
+      'オンにすると、H.264+AAC 以外の形式の動画を自動でトランスコードしてストリーミングします。あらゆる形式を再生できますが、CPU 使用率が上がります。オフにすると互換形式のみ直接ストリーミングし、CPU を節約しますが一部の形式はオンライン再生できません。';
+
+  @override
   String get transferAutoReceivingHint => '自動受信がオンです。接続してバックグラウンドで受信中です。';
 
   @override

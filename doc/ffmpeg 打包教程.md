@@ -76,6 +76,7 @@
     --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mpeg2video \
     --enable-decoder=aac,mp3,ac3,eac3,flac,vorbis,opus \
     --enable-encoder=aac \
+    --enable-encoder=libx264 \
     --enable-libx264 \
     --enable-gpl \
     --enable-swscale \
@@ -84,6 +85,8 @@
   ```
 
   若某条 `--enable-decoder=…` 报错，可拆成多行 `--enable-decoder=h264` 等。
+
+  注意：在 `--disable-everything` 的前提下，仅写 `--enable-libx264` 可能仍不会把 `libx264` 编码器实际注册进最终二进制；为避免 `ffmpeg -encoders` 里看不到 `libx264`，请显式追加 `--enable-encoder=libx264`。
 
   **仍报 x264 / pkg-config**：确认用的是 **本机终端** 而不是未加载 Homebrew 的脚本环境；Apple Silicon 上 Homebrew 一般在 `/opt/homebrew`，需安装过 **Command Line Tools** 与 **brew 的 x264**。
 
@@ -227,6 +230,7 @@ mkdir -p build-android-arm64 && cd build-android-arm64
   --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mpeg2video \
   --enable-decoder=aac,mp3,ac3,eac3,flac,vorbis,opus \
   --enable-encoder=aac \
+  --enable-encoder=libx264 \
   --enable-libx264 \
   --enable-gpl \
   --enable-swscale \

@@ -25,6 +25,7 @@ export default defineConfig([
       "no-empty": "off",
       "react-hooks/immutability": "off",
       "react-hooks/rules-of-hooks": "off",
+      "react-hooks/refs": "off",
     },
   },
 ]);

@@ -1409,7 +1409,7 @@ abstract class AppLocalizations {
   /// No description provided for @transferReceiveSection.
   ///
   /// In en, this message translates to:
-  /// **'Nearby transfer'**
+  /// **'Transfer'**
   String get transferReceiveSection;
 
   /// No description provided for @transferAutoReceiveTitle.
@@ -1423,6 +1423,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'When on, LAN share offers begin without tapping Receive in Messages. Default is off.'**
   String get transferAutoReceiveSubtitle;
+
+  /// No description provided for @videoTranscodeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Video transcoding'**
+  String get videoTranscodeTitle;
+
+  /// No description provided for @videoTranscodeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'When on, videos in unsupported formats (non H.264+AAC) are automatically transcoded for online playback, enabling any format to stream. This uses extra CPU. When off, only compatible formats stream directly — saves resources but some formats won\'t play online.'**
+  String get videoTranscodeSubtitle;
 
   /// No description provided for @transferAutoReceivingHint.
   ///

@@ -719,13 +719,20 @@ class AppLocalizationsZh extends AppLocalizations {
   String get invalidPickupCode => '取件码无效';
 
   @override
-  String get transferReceiveSection => '附近传输';
+  String get transferReceiveSection => '传输';
 
   @override
   String get transferAutoReceiveTitle => '自动接收';
 
   @override
   String get transferAutoReceiveSubtitle => '开启后，局域网分享无需在消息里手动点「接收」。默认关闭。';
+
+  @override
+  String get videoTranscodeTitle => '视频在线转码';
+
+  @override
+  String get videoTranscodeSubtitle =>
+      '开启后，播放非 H.264+AAC 格式的视频时会自动转码，支持任意格式在线播放，但会消耗更多 CPU 性能。关闭后仅直推兼容格式，节省性能，但部分格式将无法在线播放。';
 
   @override
   String get transferAutoReceivingHint => '已开启自动接收，正在连接并后台接收。';

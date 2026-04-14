@@ -348,7 +348,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "echo \"$PRODUCT_NAME.app\" > \"$PROJECT_DIR\"/Flutter/ephemeral/.app_filename && \"$FLUTTER_ROOT\"/packages/flutter_tools/bin/macos_assemble.sh embed\n";
+			shellScript = "echo \"$PRODUCT_NAME.app\" > \"$PROJECT_DIR\"/Flutter/ephemeral/.app_filename && \"$FLUTTER_ROOT\"/packages/flutter_tools/bin/macos_assemble.sh embed\nFFMPEG_SRC_DIR=\"$PROJECT_DIR/../assets/ffmpeg/macos\"\nFFMPEG_DST_DIR=\"$TARGET_BUILD_DIR/$CONTENTS_FOLDER_PATH/Frameworks/App.framework/Resources/flutter_assets/assets/ffmpeg/macos\"\nmkdir -p \"$FFMPEG_DST_DIR\"\ncp \"$FFMPEG_SRC_DIR/ffmpeg\" \"$FFMPEG_DST_DIR/ffmpeg\"\ncp \"$FFMPEG_SRC_DIR/ffprobe\" \"$FFMPEG_DST_DIR/ffprobe\"\nchmod +x \"$FFMPEG_DST_DIR/ffmpeg\" \"$FFMPEG_DST_DIR/ffprobe\"\n";
 		};
 		33CC111E2044C6BF0003C045 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;

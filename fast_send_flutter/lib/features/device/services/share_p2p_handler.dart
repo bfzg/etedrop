@@ -342,26 +342,62 @@ class ShareP2PHandler {
       filePath,
       streamSelector: 'a:0',
     );
-    final vOk = vCodec == null || vCodec == 'h264' || vCodec == 'hevc';
+    // 仅 mp4/m4v/mov 在 ffprobe 无法探测时才假设兼容；
+    // webm/mkv/avi/wmv 等格式探测返回 null 通常意味着 VP9/Opus 等不兼容编码，
+    // 此时必须触发转码，否则 -c copy 会把不兼容编码塞进 mp4 容器导致 sent=0。
+    const _nativeCompatExts = {'mp4', 'm4v', 'mov'};
+    final _fileExt = p.extension(filePath).toLowerCase().replaceFirst('.', '');
+    final vOk = vCodec == 'h264' ||
+        vCodec == 'hevc' ||
+        (vCodec == null && _nativeCompatExts.contains(_fileExt));
     final aOk = aCodec == null || aCodec == 'aac';
-    if (!vOk || !aOk) {
-      _sendJson({
-        'type': 'error',
-        'code': 'UNSUPPORTED_CODEC',
-        'message': '该视频编码不支持在线播放，请点击“下载”后用本地播放器打开',
-      });
-      return;
+    final needsTranscode = !vOk || !aOk;
+
+    if (needsTranscode) {
+      // 读取用户「视频在线转码」偏好（默认开启）
+      final transcodeEnabled =
+          LocalStorageService.instance.get<bool>(
+            StorageKeys.videoTranscodeStream,
+          ) ??
+          true;
+      if (!transcodeEnabled) {
+        _sendJson({
+          'type': 'error',
+          'code': 'UNSUPPORTED_CODEC',
+          'message': '该视频编码不支持在线播放，请点击“下载”后用本地播放器打开',
+        });
+        return;
+      }
+      final transcodeSupported = await _ffmpegSupportsH264Transcode(
+        bins.ffmpegPath,
+      );
+      if (!transcodeSupported) {
+        _sendJson({
+          'type': 'error',
+          'code': 'TRANSCODE_UNAVAILABLE',
+          'message': '当前设备内置 ffmpeg 未包含 libx264，无法转码播放该视频，请更新 ffmpeg 产物或下载后本地播放',
+        });
+        return;
+      }
     }
 
     final duration = await _probeDuration(bins.ffprobePath, filePath);
 
     print(
-      '[ShareP2P] stream probe: vCodec=$vCodec aCodec=$aCodec duration=$duration',
+      '[ShareP2P] stream probe: vCodec=$vCodec aCodec=$aCodec duration=$duration needsTranscode=$needsTranscode',
     );
 
-    final videoCodecStr = vCodec == 'hevc' ? 'hev1.1.6.L93.B0' : 'avc1.42E01E';
-    final codecParts = <String>[videoCodecStr];
-    if (aCodec == 'aac') codecParts.add('mp4a.40.2');
+    // 转码时输出固定为 H.264+AAC，直推时保留原始编码描述。
+    final String videoCodecStr;
+    final List<String> codecParts;
+    if (needsTranscode) {
+      videoCodecStr = 'avc1.42E01E';
+      codecParts = ['avc1.42E01E', 'mp4a.40.2'];
+    } else {
+      videoCodecStr = vCodec == 'hevc' ? 'hev1.1.6.L93.B0' : 'avc1.42E01E';
+      codecParts = [videoCodecStr];
+      if (aCodec == 'aac') codecParts.add('mp4a.40.2');
+    }
     final mime = 'video/mp4; codecs="${codecParts.join(', ')}"';
 
     // Invalidate any previous pipeline and reset flow control.
@@ -380,13 +416,16 @@ class ShareP2PHandler {
       'binaryMode': 'init-segment-v1',
     });
 
-    await _runStreamPipeline(bins.ffmpegPath, filePath);
+    _activeStreamNeedsTranscode = needsTranscode;
+    await _runStreamPipeline(bins.ffmpegPath, filePath, needsTranscode: needsTranscode);
   }
 
   Process? _activeStreamProc;
   String? _activeStreamFile;
   String? _activeStreamFfmpeg;
+  bool _activeStreamNeedsTranscode = false;
   bool? _ffmpegPipeSupported;
+  bool? _ffmpegHasLibx264;
 
   /// Incremented on each new stream / seek; old pipelines check this and bail out.
   int _streamGeneration = 0;
@@ -406,10 +445,26 @@ class ShareP2PHandler {
     return _ffmpegPipeSupported!;
   }
 
+  Future<bool> _ffmpegSupportsH264Transcode(String ffmpegPath) async {
+    if (_ffmpegHasLibx264 != null) return _ffmpegHasLibx264!;
+    try {
+      final res = await Process.run(ffmpegPath, [
+        '-encoders',
+      ], stdoutEncoding: const SystemEncoding());
+      final stdout = (res.stdout ?? '').toString();
+      _ffmpegHasLibx264 = stdout.contains(' libx264 ');
+    } catch (_) {
+      _ffmpegHasLibx264 = false;
+    }
+    print('[ShareP2P] ffmpeg libx264 supported: $_ffmpegHasLibx264');
+    return _ffmpegHasLibx264!;
+  }
+
   Future<void> _runStreamPipeline(
     String ffmpegPath,
     String filePath, {
     double? seekTime,
+    bool needsTranscode = false,
   }) async {
     final gen = _streamGeneration;
     _activeStreamFile = filePath;
@@ -432,10 +487,18 @@ class ShareP2PHandler {
       if (seekTime != null) ...['-ss', seekTime.toStringAsFixed(3)],
       '-i',
       filePath,
-      '-map',
-      '0',
-      '-c',
-      'copy',
+      if (needsTranscode) ...[
+        '-map', '0:v:0',
+        '-map', '0:a:0?',
+        '-c:v', 'libx264',
+        '-preset', 'veryfast',
+        '-crf', '23',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+      ] else ...[
+        '-map', '0',
+        '-c', 'copy',
+      ],
       '-movflags',
       '+frag_keyframe+empty_moov+default_base_moof',
       '-f',
@@ -603,6 +666,27 @@ class ShareP2PHandler {
 
       if (usePipe) {
         await processChunks(proc.stdout);
+        final code = await proc.exitCode;
+        _activeStreamProc = null;
+        final stderr = stderrBuf.toString().trim();
+        print('[ShareP2P] ffmpeg exited: code=$code');
+        if (stderr.isNotEmpty) print('[ShareP2P] ffmpeg stderr: $stderr');
+        if (code != 0) {
+          _sendJson({
+            'type': 'error',
+            'code': 'STREAM_TRANSCODE_FAILED',
+            'message': '视频转码失败，当前设备内置 ffmpeg 可能缺少对应格式或编码支持',
+          });
+          return;
+        }
+        if (!initSent && pending.isEmpty && totalBytesSent == 0) {
+          _sendJson({
+            'type': 'error',
+            'code': 'STREAM_EMPTY_OUTPUT',
+            'message': '视频转码未产出可播放数据，请尝试下载后使用本地播放器打开',
+          });
+          return;
+        }
       } else {
         final code = await proc.exitCode;
         _activeStreamProc = null;
@@ -671,7 +755,7 @@ class ShareP2PHandler {
 
     _sendJson({'type': 'stream-seeked', 'actualTime': targetTime});
 
-    await _runStreamPipeline(ffmpegPath, filePath, seekTime: targetTime);
+    await _runStreamPipeline(ffmpegPath, filePath, seekTime: targetTime, needsTranscode: _activeStreamNeedsTranscode);
   }
 
   Future<double?> _probeDuration(String ffprobePath, String inputPath) async {
