@@ -57,6 +57,9 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
   /// true：打开对话框时该文件已有分享；false：本次会话内刚创建。
   bool _isExistingShare = false;
 
+  /// 已有分享时，取消分享改为同弹窗内确认，避免再叠一层 [showDialog]。
+  bool _confirmingCancelShare = false;
+
   List<(String, int?)> _expireOptions(AppLocalizations l10n) => [
         (l10n.expireNever, null),
         (l10n.expireOneHour, 3600000),
@@ -106,6 +109,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       if (existing != null) {
         _result = existing;
         _isExistingShare = true;
+        _confirmingCancelShare = false;
       }
     });
   }
@@ -130,6 +134,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       setState(() {
         _result = info;
         _isExistingShare = false;
+        _confirmingCancelShare = false;
       });
       final deviceId = ref.read(deviceIdProvider);
       if (deviceId != null && deviceId.isNotEmpty && mounted) {
@@ -153,30 +158,19 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     }
   }
 
-  Future<void> _confirmCancelShare() async {
+  void _beginCancelShareConfirmation() {
+    if (_cancelling) return;
+    setState(() => _confirmingCancelShare = true);
+  }
+
+  void _leaveCancelShareConfirmation() {
+    if (_cancelling) return;
+    setState(() => _confirmingCancelShare = false);
+  }
+
+  Future<void> _performCancelShare() async {
     final l10n = AppLocalizations.of(context)!;
     if (_result == null) return;
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.cancelShareTitle),
-        content: Text(l10n.cancelShareBody),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.backButton),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
-            ),
-            child: Text(l10n.cancelShareButton),
-          ),
-        ],
-      ),
-    );
-    if (ok != true || !mounted) return;
 
     setState(() => _cancelling = true);
     try {
@@ -186,6 +180,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
       setState(() {
         _result = null;
         _cancelling = false;
+        _confirmingCancelShare = false;
       });
       if (mounted) {
         ScaffoldMessenger.of(
@@ -313,6 +308,29 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
     AppLocalizations l10n, {
     required bool isExistingFlow,
   }) {
+    if (isExistingFlow && _confirmingCancelShare) {
+      return EDialog.alert(
+        title: Text(l10n.cancelShareTitle),
+        content: EDialog.scrollableFormBody(
+          context,
+          Text(l10n.cancelShareBody),
+        ),
+        actions: [
+          EButton(
+            text: l10n.backButton,
+            variant: EButtonVariant.secondary,
+            onPressed: _cancelling ? null : _leaveCancelShareConfirmation,
+          ),
+          EButton(
+            text: l10n.cancelShareButton,
+            variant: EButtonVariant.danger,
+            loading: _cancelling,
+            onPressed: _cancelling ? null : _performCancelShare,
+          ),
+        ],
+      );
+    }
+
     final info = _result!;
     final deviceId = ref.read(deviceIdProvider);
     final shareService = ref.read(shareServiceProvider);
@@ -423,7 +441,7 @@ class _ShareDialogState extends ConsumerState<ShareDialog> {
             text: l10n.cancelShareButton,
             variant: EButtonVariant.danger,
             loading: _cancelling,
-            onPressed: _cancelling ? null : _confirmCancelShare,
+            onPressed: _cancelling ? null : _beginCancelShareConfirmation,
           ),
         EButton(
           text: l10n.doneButton,

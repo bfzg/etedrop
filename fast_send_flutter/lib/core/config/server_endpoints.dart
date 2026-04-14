@@ -18,11 +18,15 @@ class ServerEndpoints {
     required this.apiBaseUrl,
     required this.shareServerUrl,
     required this.signalingServerUrl,
+    required this.mainlandStunPreferred,
   });
 
   final String apiBaseUrl;
   final String shareServerUrl;
   final String signalingServerUrl;
+
+  /// 与当前解析出的 API 线路一致：选到大陆节点时为 true，用于 STUN 列表优先境内可达服务器。
+  final bool mainlandStunPreferred;
 
   /// 由 HTTPS 基址推导 `wss://host/...` 与 `ws://host/...`
   static String wsShareUrlFromApiBase(String apiBase) {
@@ -88,6 +92,7 @@ class ServerEndpoints {
       apiBaseUrl: pick,
       shareServerUrl: wsShareUrlFromApiBase(pick),
       signalingServerUrl: wsConnectUrlFromApiBase(pick),
+      mainlandStunPreferred: pick == mainlandBase,
     );
   }
 

@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../core/config/constants.dart';
 import '../../../l10n/l10n_utils.dart';
 import 'peer_data_channel.dart';
 
@@ -42,17 +43,6 @@ class SignalingCallbacks {
   });
 }
 
-/// ICE 服务器配置
-/// 对应 Electron: src/utils/iceServers.ts → pubIceServers
-final List<Map<String, dynamic>> defaultIceServers = [
-  {
-    'urls': ['stun:stun.l.google.com:19302'],
-  },
-  {
-    'urls': ['stun:stun.cloudflare.com:3478'],
-  },
-];
-
 /// 信令服务 — 用于建立 WebRTC 连接
 /// 对应 Electron: src/utils/SignalingService.ts → SignalingService class
 class SignalingService {
@@ -60,12 +50,20 @@ class SignalingService {
   PeerDataChannel? _pdc;
   SignalingCallbacks _callbacks;
   final String _serverUrl;
+  final List<Map<String, dynamic>> _iceServers;
   SignalingStatus _status = SignalingStatus.connecting;
   String _code = '';
   StreamSubscription? _wsSubscription;
 
-  SignalingService(this._serverUrl, {SignalingCallbacks? callbacks})
-      : _callbacks = callbacks ?? SignalingCallbacks();
+  /// [iceServers] 为空时使用与「全球线」一致的 STUN 顺序；与 [DeviceManager] 场景请传入
+  /// [AppConstants.pubIceServersForRegion] 以与当前 API 线路对齐。
+  SignalingService(
+    this._serverUrl, {
+    SignalingCallbacks? callbacks,
+    List<Map<String, dynamic>>? iceServers,
+  })  : _callbacks = callbacks ?? SignalingCallbacks(),
+        _iceServers = iceServers ??
+            AppConstants.pubIceServersForRegion(mainlandStunPreferred: false);
 
   SignalingStatus get status => _status;
   String get code => _code;
@@ -235,7 +233,7 @@ class SignalingService {
   void _initPDC(bool initializeDataChannel) {
     _pdc = PeerDataChannel(
       configuration: {
-        'iceServers': defaultIceServers,
+        'iceServers': _iceServers,
       },
       initializeDataChannel: initializeDataChannel,
     );

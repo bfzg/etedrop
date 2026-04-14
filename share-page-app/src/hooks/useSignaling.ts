@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { pubIceServers } from "../constants/constants";
+import { pubIceServersForHost } from "../constants/constants";
 import {
   isP2pDebugEnabled,
   logWebRtcTransportSnapshot,
@@ -138,13 +138,17 @@ export function useSignaling(deviceId: string, shareCode: string) {
     (ws: WebSocket) => {
       closePcDcOnly();
 
+      const iceServers = pubIceServersForHost(
+        typeof location !== "undefined" ? location.hostname : "",
+      );
+
       const pc = new RTCPeerConnection({
-        iceServers: pubIceServers,
+        iceServers,
       });
       pcRef.current = pc;
 
-      const urlCount = Array.isArray(pubIceServers[0]?.urls)
-        ? (pubIceServers[0]!.urls as string[]).length
+      const urlCount = Array.isArray(iceServers[0]?.urls)
+        ? (iceServers[0]!.urls as string[]).length
         : 0;
       p2pLog("RTCPeerConnection created", {
         iceServerUrlCount: urlCount,

@@ -2,6 +2,7 @@
 ///
 /// API / 分享 WS / 信令 WS 均由 [ServerEndpoints.resolve]（设置「服务器线路」）解析；
 /// [DeviceManager] 首帧用 [resolveServerEndpointsSync] 与 [serverEndpointsProvider] 对齐。
+/// WebRTC STUN 顺序由 [ServerEndpoints.mainlandStunPreferred] 与 [pubIceServersForRegion] 对齐。
 ///
 /// 自建或调试后端：改 [ServerEndpoints] 里 `API_BASE_GLOBAL` / `API_BASE_MAINLAND` 的
 /// `String.fromEnvironment` 默认值，或编译时传入 `--dart-define=API_BASE_GLOBAL=http://...`。
@@ -35,25 +36,46 @@ class AppConstants {
   /// 32KB→64KB 可减少帧数与 SCTP 开销，利于跨网吞吐；若个别环境单帧异常可再回调。
   static const int defaultBlockSize = 65536;
 
-  /// WebRTC ICE：STUN 仅用于发现地址；顺序与 `share-page-app` 中 `pubIceServers` 一致。
+  /// WebRTC ICE：STUN 仅用于发现地址；顺序与 `share-page-app` 中 `pubIceServersForHost` 规则对齐。
   /// 公网列表参考 https://gist.github.com/mondain/b0ec1cf5f60ae726202e ；不宜塞入过多 URL。
   /// 复杂 NAT 需自建 TURN，仅靠 STUN 无法中继。
-  static const List<Map<String, dynamic>> pubIceServers = [
-    {
-      'urls': [
-        'stun:stun.chat.bilibili.com:3478',
-        'stun:stun.cloudflare.com:3478',
-        'stun:stun.fbsbx.com:3478',
-        'stun:stun.l.google.com:19302',
-        'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-        'stun:stun3.l.google.com:19302',
-        'stun:stun4.l.google.com:19302',
-        'stun:stun.counterpath.net:3478',
-        'stun:stun.stunprotocol.org:3478',
-      ],
-    },
+  static const List<String> _pubStunUrlsMainlandFirst = [
+    'stun:stun.chat.bilibili.com:3478',
+    'stun:stun.cloudflare.com:3478',
+    'stun:stun.fbsbx.com:3478',
+    'stun:stun.l.google.com:19302',
+    'stun:stun1.l.google.com:19302',
+    'stun:stun2.l.google.com:19302',
+    'stun:stun3.l.google.com:19302',
+    'stun:stun4.l.google.com:19302',
+    'stun:stun.counterpath.net:3478',
+    'stun:stun.stunprotocol.org:3478',
   ];
+
+  /// 海外/全球线：Google 系优先，其次公网常用 STUN（含境内友好节点作兜底）。
+  static const List<String> _pubStunUrlsGlobalFirst = [
+    'stun:stun.l.google.com:19302',
+    'stun:stun1.l.google.com:19302',
+    'stun:stun2.l.google.com:19302',
+    'stun:stun3.l.google.com:19302',
+    'stun:stun4.l.google.com:19302',
+    'stun:stun.cloudflare.com:3478',
+    'stun:stun.fbsbx.com:3478',
+    'stun:stun.chat.bilibili.com:3478',
+    'stun:stun.counterpath.net:3478',
+    'stun:stun.stunprotocol.org:3478',
+  ];
+
+  /// 与 [ServerEndpoints.mainlandStunPreferred] 一致：大陆 API 线时 [mainlandStunPreferred] 为 true。
+  static List<Map<String, dynamic>> pubIceServersForRegion({
+    required bool mainlandStunPreferred,
+  }) {
+    final urls =
+        mainlandStunPreferred ? _pubStunUrlsMainlandFirst : _pubStunUrlsGlobalFirst;
+    return [
+      <String, dynamic>{'urls': List<String>.from(urls)},
+    ];
+  }
 
   /// 设备配置文件名
   static const String deviceConfigFileName = 'device-config.json';

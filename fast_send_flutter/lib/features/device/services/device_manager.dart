@@ -24,6 +24,9 @@ class DeviceManager {
     final boot = resolveServerEndpointsSync();
     _apiBaseUrl = boot.apiBaseUrl;
     _shareServerUrl = boot.shareServerUrl;
+    _pubIceServers = AppConstants.pubIceServersForRegion(
+      mainlandStunPreferred: boot.mainlandStunPreferred,
+    );
   }
 
   DeviceConfig? _config;
@@ -39,6 +42,7 @@ class DeviceManager {
   /// 由 [ServerEndpoints] / [resolveServerEndpointsSync] 初始化，随后随 [applyEndpoints] 与线路设置同步。
   late String _apiBaseUrl;
   late String _shareServerUrl;
+  late List<Map<String, dynamic>> _pubIceServers;
 
   final _stateController = StreamController<int>.broadcast();
   int _stateTick = 0;
@@ -131,6 +135,9 @@ class DeviceManager {
 
   /// 切换线路（设置页 / 启动时调用）。地址变化且当前已连接时会断开并重连。
   void applyEndpoints(ServerEndpoints endpoints) {
+    _pubIceServers = AppConstants.pubIceServersForRegion(
+      mainlandStunPreferred: endpoints.mainlandStunPreferred,
+    );
     final changed =
         _apiBaseUrl != endpoints.apiBaseUrl ||
         _shareServerUrl != endpoints.shareServerUrl;
@@ -248,6 +255,7 @@ class DeviceManager {
         onSessionEnded: () {
           unawaited(_removeP2pSession(peerId, h));
         },
+        iceServers: _pubIceServers,
       );
       _p2pHandlers[peerId] = h;
       handler = h;

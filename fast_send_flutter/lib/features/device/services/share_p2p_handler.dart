@@ -59,6 +59,8 @@ class ShareP2PHandler {
   final void Function(Map<String, dynamic> message) sendSignaling;
   /// P2P 断开时通知 [DeviceManager] 从多会话表中移除（避免仅依赖 dispose）
   void Function()? onSessionEnded;
+  /// 与当前服务器线路一致（见 [AppConstants.pubIceServersForRegion]）。
+  final List<Map<String, dynamic>> iceServers;
   final ShareService _shareService = ShareService();
 
   RTCPeerConnection? _pc;
@@ -82,7 +84,11 @@ class ShareP2PHandler {
   Timer? _seekDebounceTimer;
   Map<String, dynamic>? _pendingSeekMsg;
 
-  ShareP2PHandler({required this.sendSignaling, this.onSessionEnded});
+  ShareP2PHandler({
+    required this.sendSignaling,
+    this.onSessionEnded,
+    required this.iceServers,
+  });
 
   String get _storageDir =>
       LocalStorageService.instance.get<String>(kCloudStorageDirKey) ?? '';
@@ -115,7 +121,7 @@ class ShareP2PHandler {
     }
 
     _pc = await createPeerConnection({
-      'iceServers': AppConstants.pubIceServers,
+      'iceServers': iceServers,
     });
 
     _pc!.onConnectionState = (RTCPeerConnectionState state) {
