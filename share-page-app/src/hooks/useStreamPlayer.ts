@@ -13,6 +13,12 @@ const BUFFER_AHEAD_GATE_PLAYHEAD_S = 0.5;
 const FLOW_PAUSE_QUEUE_BYTES = 8 * 1024 * 1024;
 const FLOW_RESUME_QUEUE_BYTES = 2 * 1024 * 1024;
 const MSE_QUEUE_MAX_BYTES = 64 * 1024 * 1024;
+const STREAM_SEEK_DEBOUNCE_MS = 120;
+const HIGH_RES_4K_WIDTH = 3840;
+const HIGH_RES_4K_HEIGHT = 2160;
+const HIGH_RES_MAX_BUFFER_AHEAD_S = 20;
+const HIGH_RES_FLOW_PAUSE_QUEUE_BYTES = 4 * 1024 * 1024;
+const HIGH_RES_FLOW_RESUME_QUEUE_BYTES = 1 * 1024 * 1024;
 
 export interface StreamPlayerApi {
   mseUrl: string;
@@ -24,6 +30,8 @@ export interface StreamPlayerApi {
     mime?: string;
     codecs?: string;
     duration?: number;
+    width?: number;
+    height?: number;
     binaryMode?: string;
     seeked?: boolean;
     actualTime?: number;
@@ -73,6 +81,9 @@ export function useStreamPlayer(
   const quotaRetryCountRef = useRef(0);
   const streamPausedRef = useRef(false);
   const streamingActiveRef = useRef(false);
+  const maxBufferAheadSecRef = useRef(MAX_BUFFER_AHEAD_S);
+  const flowPauseQueueBytesRef = useRef(FLOW_PAUSE_QUEUE_BYTES);
+  const flowResumeQueueBytesRef = useRef(FLOW_RESUME_QUEUE_BYTES);
   streamingActiveRef.current = streaming;
 
   /** Send stream-pause or stream-resume to the Flutter sender based on queue depth
@@ -87,14 +98,15 @@ export function useStreamPlayer(
       if (b.length > 0) {
         const ahead = b.end(b.length - 1) - t;
         bufferAheadFull =
-          t >= BUFFER_AHEAD_GATE_PLAYHEAD_S && ahead > MAX_BUFFER_AHEAD_S;
+          t >= BUFFER_AHEAD_GATE_PLAYHEAD_S &&
+          ahead > maxBufferAheadSecRef.current;
       }
     }
 
-    if (!streamPausedRef.current && (qBytes > FLOW_PAUSE_QUEUE_BYTES || bufferAheadFull)) {
+    if (!streamPausedRef.current && (qBytes > flowPauseQueueBytesRef.current || bufferAheadFull)) {
       streamPausedRef.current = true;
       sendJson({ type: "stream-pause" });
-    } else if (streamPausedRef.current && qBytes < FLOW_RESUME_QUEUE_BYTES && !bufferAheadFull) {
+    } else if (streamPausedRef.current && qBytes < flowResumeQueueBytesRef.current && !bufferAheadFull) {
       streamPausedRef.current = false;
       sendJson({ type: "stream-resume" });
     }
@@ -158,7 +170,7 @@ export function useStreamPlayer(
       const ahead = bufferedEnd - t;
       if (
         t >= BUFFER_AHEAD_GATE_PLAYHEAD_S &&
-        ahead > MAX_BUFFER_AHEAD_S
+        ahead > maxBufferAheadSecRef.current
       ) {
         updateFlowControl();
         return;
@@ -409,6 +421,8 @@ export function useStreamPlayer(
       mime?: string;
       codecs?: string;
       duration?: number;
+      width?: number;
+      height?: number;
       binaryMode?: string;
       seeked?: boolean;
     }) => {
@@ -417,6 +431,28 @@ export function useStreamPlayer(
         streamDurationRef.current = m.duration;
         setStreamDuration(m.duration);
       }
+      const width = typeof m.width === "number" ? m.width : undefined;
+      const height = typeof m.height === "number" ? m.height : undefined;
+      const isHighRes4k =
+        (width != null && width >= HIGH_RES_4K_WIDTH) ||
+        (height != null && height >= HIGH_RES_4K_HEIGHT);
+      if (isHighRes4k) {
+        maxBufferAheadSecRef.current = HIGH_RES_MAX_BUFFER_AHEAD_S;
+        flowPauseQueueBytesRef.current = HIGH_RES_FLOW_PAUSE_QUEUE_BYTES;
+        flowResumeQueueBytesRef.current = HIGH_RES_FLOW_RESUME_QUEUE_BYTES;
+      } else {
+        maxBufferAheadSecRef.current = MAX_BUFFER_AHEAD_S;
+        flowPauseQueueBytesRef.current = FLOW_PAUSE_QUEUE_BYTES;
+        flowResumeQueueBytesRef.current = FLOW_RESUME_QUEUE_BYTES;
+      }
+      console.log("[fastsend] stream profile", {
+        width,
+        height,
+        highRes4k: isHighRes4k,
+        maxBufferAheadSec: maxBufferAheadSecRef.current,
+        pauseQueueBytes: flowPauseQueueBytesRef.current,
+        resumeQueueBytes: flowResumeQueueBytesRef.current,
+      });
       if (m.seeked) {
         seekingRef.current = false;
         mseQueueRef.current = [];
@@ -524,14 +560,14 @@ export function useStreamPlayer(
   const sendSeek = useCallback(
     (targetTime: number) => {
       streamEndedRef.current = false;
-      // Debounce: only send the seek after the user stops dragging for 500ms.
-      // This prevents dozens of ffmpeg start/kill cycles from rapid seeking events.
+      // Keep a short debounce to coalesce rapid drag events while still interrupting
+      // the old stream quickly and restarting from the target position.
       if (seekTimerRef.current) clearTimeout(seekTimerRef.current);
       seekTimerRef.current = setTimeout(() => {
         seekTimerRef.current = null;
         seekingRef.current = true;
         sendJson({ type: "stream-seek", targetTime });
-      }, 500);
+      }, STREAM_SEEK_DEBOUNCE_MS);
     },
     [sendJson],
   );
@@ -551,6 +587,9 @@ export function useStreamPlayer(
     streamModeRef.current = "none";
     streamEndedRef.current = false;
     streamPausedRef.current = false;
+    maxBufferAheadSecRef.current = MAX_BUFFER_AHEAD_S;
+    flowPauseQueueBytesRef.current = FLOW_PAUSE_QUEUE_BYTES;
+    flowResumeQueueBytesRef.current = FLOW_RESUME_QUEUE_BYTES;
     if (seekTimerRef.current) { clearTimeout(seekTimerRef.current); seekTimerRef.current = null; }
     mseQueueRef.current = [];
     mseQueueBytesRef.current = 0;

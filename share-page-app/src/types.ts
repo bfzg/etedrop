@@ -41,6 +41,8 @@ export interface StreamMeta {
   mime?: string
   codecs?: string
   duration?: number
+  width?: number
+  height?: number
   binaryMode?: 'raw-mp4' | 'init-segment-v1'
   /** seek 应答时携带，表明本次是从 seek 后的新位置开始 */
   seeked?: boolean

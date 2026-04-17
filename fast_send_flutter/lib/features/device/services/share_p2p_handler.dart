@@ -27,6 +27,8 @@ const int _smallFileSingleSendMaxBytes = 128 * 1024;
 
 /// 快速路径下无头分片的负载大小（可略大于带前缀路径）。
 const int _smallFileLegacyChunkBytes = 64 * 1024;
+const int _highRes4kWidth = 3840;
+const int _highRes4kHeight = 2160;
 
 /// 分片下载时发送侧 `bufferedAmount` 超过此值则等待再发下一包（SCTP/DC 背压，**应用层窗口无关**）。
 /// 默认 4MB；与下方 ack 窗口是两层逻辑：4 与 8 不会「冲突」，只是分别约束「待发缓冲」和「发满多少再等 ack」。
@@ -82,6 +84,7 @@ class ShareP2PHandler {
 
   /// Debounce rapid seek requests — only act on the latest one.
   Timer? _seekDebounceTimer;
+  Timer? _sessionEndTimer;
   Map<String, dynamic>? _pendingSeekMsg;
 
   ShareP2PHandler({
@@ -127,9 +130,28 @@ class ShareP2PHandler {
     _pc!.onConnectionState = (RTCPeerConnectionState state) {
       if (_disposeRequested) return;
       _shareDownloadLog('pc connectionState=$state');
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected ||
+          state == RTCPeerConnectionState.RTCPeerConnectionStateConnecting) {
+        _sessionEndTimer?.cancel();
+        _sessionEndTimer = null;
+        return;
+      }
+      if (state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+        _sessionEndTimer?.cancel();
+        // `disconnected` on macOS/WebRTC is often transient; ending the
+        // session immediately can race a successful reconnection and crash
+        // the native DataChannel bridge.
+        _sessionEndTimer = Timer(const Duration(seconds: 5), () {
+          _sessionEndTimer = null;
+          if (_disposeRequested) return;
+          if (_pc?.connectionState ==
+              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected) {
+            onSessionEnded?.call();
+          }
+        });
+        return;
+      }
       if (state == RTCPeerConnectionState.RTCPeerConnectionStateClosed ||
-          state ==
-              RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
           state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
         onSessionEnded?.call();
       }
@@ -245,6 +267,9 @@ class ShareP2PHandler {
           _streamFlowGate!.complete();
         }
         _streamFlowGate = null;
+        break;
+      case 'stream-stop':
+        _onStreamStop(msg);
         break;
       case 'download-pause':
         _shareDownloadLog(
@@ -382,9 +407,17 @@ class ShareP2PHandler {
     }
 
     final duration = await _probeDuration(bins.ffprobePath, filePath);
+    final videoSize = await _probeVideoSize(bins.ffprobePath, filePath);
+    final videoWidth = videoSize?.width;
+    final videoHeight = videoSize?.height;
+    final isHighRes4k =
+        (videoWidth != null && videoWidth >= _highRes4kWidth) ||
+        (videoHeight != null && videoHeight >= _highRes4kHeight);
 
     print(
-      '[ShareP2P] stream probe: vCodec=$vCodec aCodec=$aCodec duration=$duration needsTranscode=$needsTranscode',
+      '[ShareP2P] stream probe: vCodec=$vCodec aCodec=$aCodec '
+      'size=${videoWidth ?? "?"}x${videoHeight ?? "?"} duration=$duration '
+      'needsTranscode=$needsTranscode highRes4k=$isHighRes4k',
     );
 
     // 转码时输出固定为 H.264+AAC，直推时保留原始编码描述。
@@ -413,17 +446,26 @@ class ShareP2PHandler {
       'mime': mime,
       'codecs': codecParts.join(', '),
       if (duration != null) 'duration': duration,
+      if (videoWidth != null) 'width': videoWidth,
+      if (videoHeight != null) 'height': videoHeight,
       'binaryMode': 'init-segment-v1',
     });
 
     _activeStreamNeedsTranscode = needsTranscode;
-    await _runStreamPipeline(bins.ffmpegPath, filePath, needsTranscode: needsTranscode);
+    _activeStreamDownscaleForHighRes4k = isHighRes4k;
+    await _runStreamPipeline(
+      bins.ffmpegPath,
+      filePath,
+      needsTranscode: needsTranscode,
+      downscaleForHighRes4k: isHighRes4k,
+    );
   }
 
   Process? _activeStreamProc;
   String? _activeStreamFile;
   String? _activeStreamFfmpeg;
   bool _activeStreamNeedsTranscode = false;
+  bool _activeStreamDownscaleForHighRes4k = false;
   bool? _ffmpegPipeSupported;
   bool? _ffmpegHasLibx264;
 
@@ -465,6 +507,7 @@ class ShareP2PHandler {
     String filePath, {
     double? seekTime,
     bool needsTranscode = false,
+    bool downscaleForHighRes4k = false,
   }) async {
     final gen = _streamGeneration;
     _activeStreamFile = filePath;
@@ -480,11 +523,21 @@ class ShareP2PHandler {
             ),
           );
 
+    final useRealtimeInputPacing = !needsTranscode && downscaleForHighRes4k;
+
     final args = <String>[
       '-hide_banner',
       '-loglevel',
       'error',
-      if (seekTime != null) ...['-ss', seekTime.toStringAsFixed(3)],
+      if (useRealtimeInputPacing) ...[
+        // copy 模式下读取本地文件默认是“尽快读尽快吐”，seek 后容易瞬时灌入超大量数据，
+        // 把 DataChannel/浏览器缓冲打爆并触发断链。高分辨率时按实时时钟限速读取。
+        '-re',
+      ],
+      if (seekTime != null && needsTranscode) ...[
+        '-ss',
+        seekTime.toStringAsFixed(3),
+      ],
       '-i',
       filePath,
       if (needsTranscode) ...[
@@ -493,11 +546,23 @@ class ShareP2PHandler {
         '-c:v', 'libx264',
         '-preset', 'veryfast',
         '-crf', '23',
+        if (downscaleForHighRes4k) ...[
+          // 4K 长流在 DataChannel 下容易触发持续背压与链路抖动：
+          // 自动降到 1080p，显著降低吞吐压力。
+          '-vf', 'scale=-2:1080',
+          '-maxrate', '4M',
+          '-bufsize', '8M',
+        ],
         '-c:a', 'aac',
         '-b:a', '128k',
       ] else ...[
         '-map', '0',
         '-c', 'copy',
+        if (seekTime != null) ...[
+          // copy 模式下把 -ss 放在输入后，避免把时间锚点固定到前一个关键帧，
+          // 减少 seek 后播放器时间轴错位导致的“无法继续播放”。
+          '-ss', seekTime.toStringAsFixed(3),
+        ],
       ],
       '-movflags',
       '+frag_keyframe+empty_moov+default_base_moof',
@@ -669,9 +734,19 @@ class ShareP2PHandler {
         final code = await proc.exitCode;
         _activeStreamProc = null;
         final stderr = stderrBuf.toString().trim();
+        final brokenPipe = stderr.contains('Broken pipe') || stderr.contains('error code: -32');
+        final interrupted =
+            _streamGeneration != gen ||
+            _dc?.state != RTCDataChannelState.RTCDataChannelOpen;
         print('[ShareP2P] ffmpeg exited: code=$code');
         if (stderr.isNotEmpty) print('[ShareP2P] ffmpeg stderr: $stderr');
         if (code != 0) {
+          if (interrupted || brokenPipe) {
+            print(
+              '[ShareP2P] ignore ffmpeg non-zero exit (interrupted=$interrupted, brokenPipe=$brokenPipe, gen=$gen, current=${_streamGeneration}, dc=${_dc?.state})',
+            );
+            return;
+          }
           _sendJson({
             'type': 'error',
             'code': 'STREAM_TRANSCODE_FAILED',
@@ -691,9 +766,19 @@ class ShareP2PHandler {
         final code = await proc.exitCode;
         _activeStreamProc = null;
         final stderr = stderrBuf.toString().trim();
+        final brokenPipe = stderr.contains('Broken pipe') || stderr.contains('error code: -32');
+        final interrupted =
+            _streamGeneration != gen ||
+            _dc?.state != RTCDataChannelState.RTCDataChannelOpen;
         print('[ShareP2P] ffmpeg exited: code=$code');
         if (stderr.isNotEmpty) print('[ShareP2P] ffmpeg stderr: $stderr');
         if (code != 0 || !tempFile!.existsSync()) {
+          if (code != 0 && (interrupted || brokenPipe)) {
+            print(
+              '[ShareP2P] ignore ffmpeg non-zero exit (interrupted=$interrupted, brokenPipe=$brokenPipe, gen=$gen, current=${_streamGeneration}, dc=${_dc?.state})',
+            );
+            return;
+          }
           print('[ShareP2P] ffmpeg failed or no output file');
           return;
         }
@@ -735,6 +820,19 @@ class ShareP2PHandler {
     _activeStreamProc = null;
   }
 
+  void _onStreamStop(Map<String, dynamic> msg) {
+    final reason = msg['reason'] as String? ?? 'unknown';
+    print('[ShareP2P] rx stream-stop reason=$reason');
+
+    _streamGeneration++;
+    _killActiveStream();
+
+    if (_streamFlowGate != null && !_streamFlowGate!.isCompleted) {
+      _streamFlowGate!.complete();
+    }
+    _streamFlowGate = null;
+  }
+
   Future<void> _onStreamSeek(Map<String, dynamic> msg) async {
     final targetTime = (msg['targetTime'] as num?)?.toDouble() ?? 0.0;
     final ffmpegPath = _activeStreamFfmpeg;
@@ -753,9 +851,22 @@ class ShareP2PHandler {
     // Yield so the old pipeline's async loops notice the generation change and exit.
     await Future.delayed(Duration.zero);
 
-    _sendJson({'type': 'stream-seeked', 'actualTime': targetTime});
+    // 仅在转码模式下回传 actualTime 并设置 timestampOffset。
+    // copy 模式下起始时间点可能对齐到关键帧，强行用 targetTime 容易导致
+    // MSE 时间轴错位，表现为 seek 后卡住/不播。
+    if (_activeStreamNeedsTranscode) {
+      _sendJson({'type': 'stream-seeked', 'actualTime': targetTime});
+    } else {
+      _sendJson({'type': 'stream-seeked'});
+    }
 
-    await _runStreamPipeline(ffmpegPath, filePath, seekTime: targetTime, needsTranscode: _activeStreamNeedsTranscode);
+    await _runStreamPipeline(
+      ffmpegPath,
+      filePath,
+      seekTime: targetTime,
+      needsTranscode: _activeStreamNeedsTranscode,
+      downscaleForHighRes4k: _activeStreamDownscaleForHighRes4k,
+    );
   }
 
   Future<double?> _probeDuration(String ffprobePath, String inputPath) async {
@@ -799,6 +910,37 @@ class ShareP2PHandler {
       final out = (res.stdout ?? '').toString().trim();
       if (out.isEmpty) return null;
       return out.split(RegExp(r'\r?\n')).first.trim();
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<({int width, int height})?> _probeVideoSize(
+    String ffprobePath,
+    String inputPath,
+  ) async {
+    try {
+      final res = await Process.run(ffprobePath, [
+        '-v',
+        'error',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=width,height',
+        '-of',
+        'csv=p=0:s=x',
+        inputPath,
+      ]);
+      if (res.exitCode != 0) return null;
+      final out = (res.stdout ?? '').toString().trim();
+      if (out.isEmpty) return null;
+      final line = out.split(RegExp(r'\r?\n')).first.trim();
+      final parts = line.split('x');
+      if (parts.length != 2) return null;
+      final w = int.tryParse(parts[0]);
+      final h = int.tryParse(parts[1]);
+      if (w == null || h == null || w <= 0 || h <= 0) return null;
+      return (width: w, height: h);
     } catch (_) {
       return null;
     }
@@ -1092,6 +1234,8 @@ class ShareP2PHandler {
     if (_disposeRequested) return;
     _disposeRequested = true;
     onSessionEnded = null;
+    _sessionEndTimer?.cancel();
+    _sessionEndTimer = null;
     _killActiveStream();
     if (_downloadAckCompleter != null && !_downloadAckCompleter!.isCompleted) {
       _downloadAckCompleter!.complete();

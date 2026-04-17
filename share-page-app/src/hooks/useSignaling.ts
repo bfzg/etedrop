@@ -199,7 +199,37 @@ export function useSignaling(deviceId: string, shareCode: string) {
         dcMessageHandlerRef.current?.(ev);
       };
 
+      dc.onerror = (ev) => {
+        console.error("[fastsend] DataChannel error", {
+          readyState: dc.readyState,
+          bufferedAmount: dc.bufferedAmount,
+          event: ev,
+          pcConnectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+        });
+        p2pLog("DataChannel error", {
+          readyState: dc.readyState,
+          bufferedAmount: dc.bufferedAmount,
+          pcConnectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+        });
+        void logWebRtcTransportSnapshot(pc, "dc-error");
+      };
+
       dc.onclose = () => {
+        console.warn("[fastsend] DataChannel close", {
+          readyState: dc.readyState,
+          bufferedAmount: dc.bufferedAmount,
+          pcConnectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+        });
+        p2pLog("DataChannel close", {
+          readyState: dc.readyState,
+          bufferedAmount: dc.bufferedAmount,
+          pcConnectionState: pc.connectionState,
+          iceConnectionState: pc.iceConnectionState,
+        });
+        void logWebRtcTransportSnapshot(pc, "dc-close");
         dcMessageHandlerRef.current?.(
           new MessageEvent("close", { data: "__dc_close__" }),
         );

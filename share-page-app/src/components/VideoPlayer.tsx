@@ -13,14 +13,6 @@ interface VideoPlayerProps {
 
 const PLAYBACK_RATES = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
-function isInBufferedRange(media: HTMLMediaElement, t: number) {
-  const b = media.buffered;
-  for (let i = 0; i < b.length; i++) {
-    if (t >= b.start(i) - 0.5 && t <= b.end(i) + 0.5) return true;
-  }
-  return false;
-}
-
 export function VideoPlayer({ src, streaming, onSeek, onPlaybackTime, onError }: VideoPlayerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<Player | null>(null);
@@ -66,10 +58,8 @@ export function VideoPlayer({ src, streaming, onSeek, onPlaybackTime, onError }:
         if (!streamingRef.current || !onSeekRef.current) return;
         const target = media.currentTime;
         if (!Number.isFinite(target)) return;
-
-        if (!isInBufferedRange(media, target)) {
-          onSeekRef.current(target);
-        }
+        // 统一走远端 seek：中断当前流并从目标时间重新推流，避免旧流继续发送无用数据。
+        onSeekRef.current(target);
       };
       const onErrorEvt = () => onErrorRef.current?.(media.error);
 
