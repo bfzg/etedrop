@@ -108,32 +108,32 @@
   从 https://www.msys2.org/ 安装。打开 "MSYS2 MinGW x64" 终端。
 
 2) 安装编译工具链与依赖
-  ```
-  pacman -Syu
-  # 关掉窗口再打开同一个 "MinGW x64" 终端
+
+  ```bash
+  pacman -Syu --needed
+  # 关掉窗口再打开同一个 "MSYS2 MinGW x64" 终端
 
   pacman -S --needed \
     base-devel \
     git \
+    make \
+    diffutils \
+    pkgconf \
     mingw-w64-x86_64-toolchain \
     mingw-w64-x86_64-nasm \
-    mingw-w64-x86_64-yasm \
-    mingw-w64-x86_64-pkg-config \
-    mingw-w64-x86_64-x264
+    mingw-w64-x86_64-yasm
   ```
 
-3) 拉源码与 checkout 8.1
-  ```
-  git clone https://github.com/FFmpeg/FFmpeg.git
-  cd FFmpeg
-  git checkout n8.1
-  mkdir -p build-win && cd build-win
-  ```
+3) （强烈推荐）产出“真正单文件”的 ffmpeg.exe：先编译静态 x264
 
-4) 配置裁剪
+> 说明：用 MSYS2 自带的 `mingw-w64-x86_64-x264` 很容易把 `libx264-xxx.dll` 动态依赖带进最终 `ffmpeg.exe`，在别的机器/目录运行时就会报 “找不到 libx264-xxx.dll”。  
+> 为了做到 **单个 exe**（不依赖 `/mingw64/bin/*.dll`），这里改为 **手动编译静态 x264（`libx264.a`）**。
 
-  与 **macOS 第 3 步** 使用 **同一套** `../configure` 参数块（同一 enable 列表）；若 `pkg-config` 找不到 x264，在 MSYS2 下确认 `mingw-w64-x86_64-x264` 已装，或手动加 `--extra-cflags` / `--extra-ldflags`。
+```bash
+# 建议在一个固定工作目录，比如 /d/project
+cd /d/project
 
+<<<<<<< HEAD
 5) 编译安装
   ```
   make -j"$(nproc)"
@@ -143,6 +143,108 @@
   产物在：
   - build-win/install/bin/ffmpeg.exe
   - build-win/install/bin/ffprobe.exe
+=======
+rm -rf x264 x264-install
+git clone https://code.videolan.org/videolan/x264.git
+cd x264
+
+./configure --prefix="/d/project/x264-install" --enable-static --disable-shared
+make -j"$(nproc)"
+make install
+
+ls -la /d/project/x264-install/lib/libx264.a
+```
+
+4) 拉 FFmpeg 源码与 checkout 8.1
+
+```bash
+cd /d/project
+rm -rf FFmpeg
+git clone https://github.com/FFmpeg/FFmpeg.git
+cd FFmpeg
+git checkout n8.1
+mkdir -p build-win && cd build-win
+```
+
+5) 配置裁剪并全静态链接（真正单文件）
+
+> 关键点：
+> - 用 `PKG_CONFIG_LIBDIR` **隔离** pkg-config 搜索路径，只让它看到你编译的静态 x264。
+> - 加 `-static -static-libgcc -static-libstdc++` 尽量把运行时也静态链进 exe。
+> - 为了避免引入 `/mingw64/bin/zlib1.dll`、`/mingw64/bin/libiconv-2.dll` 等动态依赖，这里直接 `--disable-zlib --disable-iconv`（会牺牲少量相关能力，但换来“真单文件”稳定性）。
+
+```bash
+export PKG_CONFIG_LIBDIR="/d/project/x264-install/lib/pkgconfig"
+unset PKG_CONFIG_PATH
+
+rm -f config.h config.mak config.log ffbuild/.config
+
+../configure \
+  --prefix="$PWD/install" \
+  --target-os=mingw32 \
+  --arch=x86_64 \
+  --disable-everything \
+  --disable-doc \
+  --disable-debug \
+  --disable-ffplay \
+  --disable-iconv \
+  --disable-zlib \
+  --enable-ffmpeg \
+  --enable-ffprobe \
+  --enable-avformat \
+  --enable-avcodec \
+  --enable-avutil \
+  --disable-shared \
+  --enable-static \
+  --pkg-config-flags=--static \
+  --extra-cflags="-I/d/project/x264-install/include" \
+  --extra-ldflags="-L/d/project/x264-install/lib -static -static-libgcc -static-libstdc++" \
+  --enable-protocol=file \
+  --enable-protocol=pipe \
+  --enable-demuxer=mov \
+  --enable-demuxer=matroska \
+  --enable-demuxer=avi \
+  --enable-demuxer=asf \
+  --enable-demuxer=mpegps \
+  --enable-demuxer=mpegvideo \
+  --enable-muxer=mp4 \
+  --enable-parser=h264 \
+  --enable-parser=hevc \
+  --enable-parser=aac \
+  --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mpeg2video \
+  --enable-decoder=aac,mp3,ac3,eac3,flac,vorbis,opus \
+  --enable-bsf=aac_adtstoasc \
+  --enable-swscale \
+  --enable-filter=scale \
+  --enable-encoder=aac \
+  --enable-encoder=libx264 \
+  --enable-libx264 \
+  --enable-gpl \
+  --disable-vaapi \
+  --disable-libdrm \
+  --disable-bzlib
+```
+
+6) 编译安装与验证（是否“真单文件”）
+
+```bash
+make -j"$(nproc)"
+make install
+strip install/bin/ffmpeg.exe install/bin/ffprobe.exe
+
+install/bin/ffmpeg.exe -version
+install/bin/ffprobe.exe -version
+ldd install/bin/ffmpeg.exe
+```
+
+验证标准：
+- `ldd install/bin/ffmpeg.exe` 输出里 **不应出现** `/mingw64/bin/*.dll`（如 `libx264-*.dll`、`zlib1.dll`、`libiconv-2.dll`、`libwinpthread-1.dll` 等）。
+- 仍会看到 `KERNEL32.dll` / `ntdll.dll` 等 **Windows 系统 DLL**，这是正常的。
+
+产物在：
+- `build-win/install/bin/ffmpeg.exe`
+- `build-win/install/bin/ffprobe.exe`
+>>>>>>> 2371a5b (修改使用裁剪版的ffmpeg)
 
 ## 产物体积与 ffplay（Windows / macOS 常见疑问）
 
