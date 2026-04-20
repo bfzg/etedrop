@@ -30,6 +30,7 @@ import {
   closeWsServer,
   createWsServer,
 } from './utils/ws-upgrade.util';
+import { UsageAnalyticsService } from './usage-analytics.service';
 
 @Injectable()
 export class SignalingService implements OnModuleInit, OnModuleDestroy {
@@ -49,13 +50,17 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
   /** 浏览器连接 → 该次访问的 P2P 会话 ID（多浏览器并发互不抢占） */
   private readonly browserToPeerId = new Map<WebSocket, string>();
   /** 设备 ID → (peerId → 浏览器 WebSocket) */
-  private readonly devicePeerBrowsers = new Map<string, Map<string, WebSocket>>();
+  private readonly devicePeerBrowsers = new Map<
+    string,
+    Map<string, WebSocket>
+  >();
 
   private heartbeatTimer?: NodeJS.Timeout;
 
   constructor(
     @Inject(HttpAdapterHost)
     private readonly httpAdapterHost: HttpAdapterHost,
+    private readonly usageAnalyticsService: UsageAnalyticsService,
   ) {}
 
   onModuleInit(): void {
@@ -122,6 +127,30 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       waitingSessions,
       pairedSessions,
     };
+  }
+
+  getUsageSummary() {
+    return this.usageAnalyticsService.getUsageSummary([...this.devices.keys()]);
+  }
+
+  getKnownDevices(limit = 200) {
+    return this.usageAnalyticsService.getKnownDevices(
+      [...this.devices.keys()],
+      limit,
+    );
+  }
+
+  getRecentUsageEvents(limit = 200) {
+    return this.usageAnalyticsService.getRecentEvents(limit);
+  }
+
+  getPrometheusMetrics(): string {
+    const runtimeStats = this.getRuntimeStats();
+    const usageSummary = this.getUsageSummary();
+    return this.usageAnalyticsService.renderPrometheusMetrics(
+      runtimeStats,
+      usageSummary,
+    );
   }
 
   private handleConnectSocket(ws: WebSocket): void {
@@ -385,6 +414,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
 
     this.sendSafe(ws, { type: 'device-online', deviceId, peerId });
     this.logger.log(`Browser connected to device ${deviceId} peer=${peerId}`);
+    this.usageAnalyticsService.recordBrowserConnect(deviceId, peerId);
   }
 
   /** 心跳/ ping：仅设备更新 lastSeen；浏览器回 ping；未识别连接提示先发 device-online 或 connect */
@@ -509,9 +539,16 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       deviceId,
       serverTime: Date.now(),
     });
+    const onlineResult = this.usageAnalyticsService.recordDeviceOnline(
+      deviceId,
+      deviceName || 'unknown-device',
+    );
     this.logger.log(
       `Device online: ${deviceId} (${deviceName || 'unknown-device'})`,
     );
+    if (onlineResult.isFirstSeen) {
+      this.logger.log(`New installed device detected: ${deviceId}`);
+    }
   }
 
   private updateDeviceHeartbeat(ws: WebSocket): void {
@@ -531,6 +568,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
     }
 
     device.lastSeenAt = Date.now();
+    this.usageAnalyticsService.touchDeviceHeartbeat(deviceId);
   }
 
   private forwardPeerConnect(message: WsMessage): void {
@@ -559,6 +597,10 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
       if (state && state.ws === ws) {
         this.devices.delete(deviceIdAsDevice);
         this.logger.log(`Device offline: ${deviceIdAsDevice}`);
+        this.usageAnalyticsService.recordDeviceOffline(
+          deviceIdAsDevice,
+          'socket_closed',
+        );
         const peers = this.devicePeerBrowsers.get(deviceIdAsDevice);
         if (peers) {
           for (const browserWs of peers.values()) {
@@ -606,6 +648,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
     for (const [deviceId, state] of this.devices.entries()) {
       if (now - state.lastSeenAt > DEVICE_INACTIVE_TIMEOUT_MS) {
         this.logger.log(`Device timeout: ${deviceId}`);
+        this.usageAnalyticsService.recordDeviceOffline(deviceId, 'timeout');
         const peers = this.devicePeerBrowsers.get(deviceId);
         if (peers) {
           for (const browserWs of peers.values()) {
