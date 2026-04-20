@@ -12,5 +12,13 @@
   "item.label.下载": {
     "message": "Download",
     "description": "Navbar item with label 下载"
+  },
+  "item.label.常见问题": {
+    "message": "FAQ",
+    "description": "Navbar item with label 常见问题"
+  },
+  "item.label.联系我们": {
+    "message": "Contact us",
+    "description": "Navbar item with label 联系我们"
   }
 }

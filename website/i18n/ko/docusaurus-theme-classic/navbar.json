@@ -12,5 +12,13 @@
   "item.label.下载": {
     "message": "다운로드",
     "description": "Navbar item with label 下载"
+  },
+  "item.label.常见问题": {
+    "message": "자주 묻는 질문",
+    "description": "Navbar item with label 常见问题"
+  },
+  "item.label.联系我们": {
+    "message": "문의하기",
+    "description": "Navbar item with label 联系我们"
   }
 }
