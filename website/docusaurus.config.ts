@@ -12,6 +12,31 @@ const config: Config = {
   },
   url: "https://etedrop.com",
   baseUrl: "/",
+  headTags: [
+    {
+      tagName: "script",
+      attributes: { type: "application/ld+json" },
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        name: "EteDrop",
+        url: "https://etedrop.com",
+        logo: "https://etedrop.com/img/app_icon.png",
+      }),
+    },
+    {
+      tagName: "script",
+      attributes: { type: "application/ld+json" },
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        name: "EteDrop",
+        url: "https://etedrop.com",
+        inLanguage: ["zh-Hans", "en", "ja", "es", "ko"],
+      }),
+    },
+  ],
+
   projectName: "EteDrop",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -80,6 +105,11 @@ const config: Config = {
         docs: {
           sidebarPath: "./sidebars.ts",
         },
+        sitemap: {
+          changefreq: "weekly",
+          priority: 0.7,
+          filename: "sitemap.xml",
+        },
         theme: {
           customCss: "./src/css/custom.css",
         },
@@ -88,6 +118,10 @@ const config: Config = {
   ],
 
   themeConfig: {
+    metadata: [
+      { name: "application-name", content: "EteDrop" },
+      { name: "apple-mobile-web-app-title", content: "EteDrop" },
+    ],
     navbar: {
       hideOnScroll: false,
       title: "EteDrop",
@@ -108,6 +142,18 @@ const config: Config = {
           position: "left",
           label: "下载",
           exact: true,
+        },
+        {
+          to: "/docs/doc/faq",
+          position: "left",
+          label: "常见问题",
+          exact: false,
+        },
+        {
+          to: "/docs/doc/contact-us",
+          position: "left",
+          label: "联系我们",
+          exact: false,
         },
         {
           type: "localeDropdown",
