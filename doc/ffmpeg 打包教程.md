@@ -13,16 +13,120 @@
 
 ---
 
+## 手机：只要切片分发、不转码（Mac 上操作）
+
+**目标**：二进制尽量小、省电；只做 **MP4/MOV 进 → fMP4 出（`-c copy` + fragmented mux）**，不编 x264、不编 AAC 编码器、不要 `scale`/`swscale`。
+
+**运行时命令（与桌面「关闭转码」一致）**：
+
+```bash
+ffmpeg -hide_banner -loglevel error -i input.mp4 -map 0 -c copy \
+  -movflags +frag_keyframe+empty_moov+default_base_moof -f mp4 pipe:1
+```
+
+### Android（NDK 交叉编译，仅 arm64-v8a）
+
+**0. 一次性准备**
+
+- 已装 Android Studio / `sdkmanager`，本机有 NDK（文档以 r26+ 为例）。
+- 终端里能指向 NDK 根目录，例如：
+
+```bash
+# 按你本机版本改数字
+export ANDROID_NDK_HOME="$HOME/Library/Android/sdk/ndk/26.1.10909125"
+```
+
+- 确认预编译工具链目录（Apple Silicon / Intel 二选一，不存在就换路径看下）：
+
+```bash
+# Apple Silicon
+export LLVM_BIN="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-arm64/bin"
+```
+
+**1. 拉 FFmpeg 源码**
+
+```bash
+cd ~/work   # 任意目录
+git clone https://github.com/FFmpeg/FFmpeg.git
+cd FFmpeg
+git checkout n8.1
+```
+
+**2. 配置（API 与工程 `minSdk` 对齐，示例 24）**
+
+```bash
+API=24
+export CC="$LLVM_BIN/aarch64-linux-android${API}-clang"
+export CXX="$LLVM_BIN/aarch64-linux-android${API}-clang++"
+export AR="$LLVM_BIN/llvm-ar"
+export RANLIB="$LLVM_BIN/llvm-ranlib"
+
+mkdir -p build-android-arm64-remux && cd build-android-arm64-remux
+
+../configure \
+  --prefix="$PWD/install" \
+  --enable-cross-compile \
+  --target-os=android \
+  --arch=aarch64 \
+  --sysroot="$LLVM_BIN/../sysroot" \
+  --cc="$CC" --cxx="$CXX" --ar="$AR" --ranlib="$RANLIB" \
+  --disable-everything \
+  --disable-doc --disable-debug --disable-ffplay \
+  --enable-ffmpeg --enable-ffprobe \
+  --enable-avformat --enable-avcodec --enable-avutil \
+  --enable-protocol=file --enable-protocol=pipe \
+  --enable-demuxer=mov \
+  --enable-muxer=mp4 \
+  --enable-parser=h264 --enable-parser=hevc --enable-parser=aac \
+  --enable-bsf=aac_adtstoasc
+```
+
+若 `configure` 或后续链接报错，可再打开最小编解码器（仍不做转码，仅便于拷贝路径走通）：
+
+```bash
+# 在上一段 ../configure 末尾追加（同一行或续行）例如：
+# --enable-decoder=h264,hevc,aac
+```
+
+**3. 编译安装**
+
+```bash
+make -j"$(sysctl -n hw.ncpu)"
+make install
+```
+
+**4. 产物**
+
+- `build-android-arm64-remux/install/bin/ffmpeg`
+- `build-android-arm64-remux/install/bin/ffprobe`
+
+拷进 Flutter 工程（示例路径，需在 `pubspec.yaml` 里登记 assets）：
+
+- `assets/ffmpeg/android/arm64-v8a/ffmpeg`
+- `assets/ffmpeg/android/arm64-v8a/ffprobe`
+
+应用内：**解压到应用私有目录 → `chmod +x` → `Process.start`**（勿从共享存储直接执行）。
+
+### iOS
+
+- **不能像 Android 一样**把未嵌入签名的 `ffmpeg` 可执行文件打进包再在沙盒里当普通程序跑；App Store / 沙盒下一般不采用「独立 ffmpeg 二进制 + Process」方案。
+- **可行路径**（择一）：
+  - 用 **`ffmpeg_kit_flutter`** 等现成 FFmpeg 套件，按官方文档选 **`min` / `video` 等子包**，在 Dart 层调 remux（体积与能力按套件划分，非本文 configure 列表）。
+  - 或 **Xcode 交叉编译多架构 `libav*.a` + FFI**：工作量大，需单独工程维护。
+- **产品侧**：若 iPhone **只负责传文件**、浏览器/桌面负责 MSE 播放，可 **不在 iOS 内置 ffmpeg**，与「手机性能只做传输」一致。
+
+---
+
 ## macOS：原生编译裁剪版（产出 ffmpeg / ffprobe）
 
 1. 依赖
-  xcode-select --install
-  brew install pkg-config nasm yasm x264
+    xcode-select --install
+    brew install pkg-config nasm yasm x264
 
 2. 获取源码（8.1）
-  git clone https://github.com/FFmpeg/FFmpeg.git
-  cd FFmpeg
-  git checkout n8.1
+    git clone https://github.com/FFmpeg/FFmpeg.git
+    cd FFmpeg
+    git checkout n8.1
 
 3. 配置裁剪（remux + 常见单文件转码，一份搞定）
 
@@ -105,7 +209,7 @@
 建议走 MSYS2 + mingw-w64（FFmpeg 社区最常用路径，踩坑最少）。
 
 1) 安装 MSYS2
-  从 https://www.msys2.org/ 安装。打开 "MSYS2 MinGW x64" 终端。
+    从 https://www.msys2.org/ 安装。打开 "MSYS2 MinGW x64" 终端。
 
 2) 安装编译工具链与依赖
 
@@ -133,17 +237,6 @@
 # 建议在一个固定工作目录，比如 /d/project
 cd /d/project
 
-<<<<<<< HEAD
-5) 编译安装
-  ```
-  make -j"$(nproc)"
-  make install
-  ```
-
-  产物在：
-  - build-win/install/bin/ffmpeg.exe
-  - build-win/install/bin/ffprobe.exe
-=======
 rm -rf x264 x264-install
 git clone https://code.videolan.org/videolan/x264.git
 cd x264
@@ -244,7 +337,6 @@ ldd install/bin/ffmpeg.exe
 产物在：
 - `build-win/install/bin/ffmpeg.exe`
 - `build-win/install/bin/ffprobe.exe`
->>>>>>> 2371a5b (修改使用裁剪版的ffmpeg)
 
 ## 产物体积与 ffplay（Windows / macOS 常见疑问）
 
@@ -255,109 +347,6 @@ ldd install/bin/ffmpeg.exe
 - **符号表**：若 Windows 侧未 **strip**，会再大一截。安装目录可试：`strip install/bin/ffmpeg.exe install/bin/ffprobe.exe`（MinGW 自带 `strip`）。
 
 **ffplay**：教程只应产出 **ffmpeg** 与 **ffprobe**。若仍出现 **`ffplay.exe`**，多半是旧目录残留、或曾用未带 `--disable-everything` 的配置编过；**configure 里已写 `--disable-ffplay`** 后 **clean 再编**（删掉 `build-win` 重来），`install/bin` 里不应再生成 ffplay。**不要**把 ffplay 打进 Flutter assets。
-
-## Android：用 NDK 交叉编译（产出无后缀的 ffmpeg / ffprobe）
-
-Flutter 里使用方式与桌面类似：把可执行文件打进 `assets`，首次运行解压到应用私有目录并 `chmod +x` 再 `Process.start`。
-
-**ABI**：本文档只维护 **`arm64-v8a`**（64 位 ARM）。不再编 **`armeabi-v7a`**：32 位机已过时，新机型均为 arm64。
-
-以下在 **macOS 或 Linux 主机** 上操作；**Windows主机** 可装 WSL2 或在 Linux CI 上编。
-
-### 1. 准备 NDK
-
-- 安装 [Android NDK](https://developer.android.com/ndk/downloads)（文档编写时常用 r26+）。
-- 设环境变量，例如：`export ANDROID_NDK_HOME=/path/to/ndk`
-
-NDK 里 LLVM 工具链路径形如：
-
-- macOS Apple Silicon：`$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-arm64/bin`
-- macOS Intel：`$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-x86_64/bin`
-- Linux：`$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin`
-
-下文记为 `$LLVM_BIN`。
-
-### 2. API Level 与目标 ABI
-
-- `API`：建议与工程 **`minSdkVersion` 一致或略高**（例如 24）。
-- **仅 arm64-v8a**：编译器 `$LLVM_BIN/aarch64-linux-android${API}-clang`，configure 使用 `--arch=aarch64`（见下节）。
-
-### 3. 配置与编译示例（arm64-v8a + API 24）
-
-**libx264**：须 **先为 Android 交叉编译 x264 静态库**，再在下列 `../configure` 中增加 `--enable-libx264 --enable-gpl` 以及指向该库的 `CFLAGS`/`LDFLAGS`（与桌面同一套 FFmpeg enable 列表）。仅 remux、不要转码时可去掉 x264 相关项并删掉 GPL，但与你方「统一一份、开关在应用」策略不一致，故一般仍建议编全量。
-
-在 FFmpeg 源码目录外建 `build-android-arm64`，进入后执行（按你本机修改 `LLVM_BIN`、`API`；x264 路径自行替换）：
-
-```
-API=24
-LLVM_BIN="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/darwin-arm64/bin"
-export CC="$LLVM_BIN/aarch64-linux-android${API}-clang"
-export CXX="$LLVM_BIN/aarch64-linux-android${API}-clang++"
-export AR="$LLVM_BIN/llvm-ar"
-export RANLIB="$LLVM_BIN/llvm-ranlib"
-
-mkdir -p build-android-arm64 && cd build-android-arm64
-
-../configure \
-  --prefix="$PWD/install" \
-  --enable-cross-compile \
-  --target-os=android \
-  --arch=aarch64 \
-  --sysroot="$LLVM_BIN/../sysroot" \
-  --cc="$CC" \
-  --cxx="$CXX" \
-  --ar="$AR" \
-  --ranlib="$RANLIB" \
-  --disable-everything \
-  --disable-doc \
-  --disable-debug \
-  --disable-ffplay \
-  --enable-ffmpeg \
-  --enable-ffprobe \
-  --enable-avformat \
-  --enable-avcodec \
-  --enable-avutil \
-  --enable-protocol=file \
-  --enable-protocol=pipe \
-  --enable-demuxer=mov \
-  --enable-demuxer=matroska \
-  --enable-demuxer=avi \
-  --enable-demuxer=asf \
-  --enable-demuxer=mpegps \
-  --enable-demuxer=mpegvideo \
-  --enable-muxer=mp4 \
-  --enable-parser=h264 \
-  --enable-parser=hevc \
-  --enable-parser=aac \
-  --enable-decoder=h264,hevc,vp8,vp9,mpeg4,mpeg2video \
-  --enable-decoder=aac,mp3,ac3,eac3,flac,vorbis,opus \
-  --enable-encoder=aac \
-  --enable-encoder=libx264 \
-  --enable-libx264 \
-  --enable-gpl \
-  --enable-swscale \
-  --enable-filter=scale \
-  --enable-bsf=aac_adtstoasc
-
-make -j"$(sysctl -n hw.ncpu 2>/dev/null || nproc)"
-make install
-```
-
-（若尚未链接 x264，先去掉 `--enable-libx264` 与 `--enable-gpl` 仅能编 remux；待 x264 就绪后再打开。）
-
-产物在 `build-android-arm64/install/bin/ffmpeg`、`ffprobe`。复制到 Flutter 工程例如：
-
-- `fast_send_flutter/assets/ffmpeg/android/arm64-v8a/ffmpeg`
-- `fast_send_flutter/assets/ffmpeg/android/arm64-v8a/ffprobe`
-
-并在 `pubspec.yaml` 中声明对应 asset（仅 arm64 包体可只打 `android/arm64-v8a/ffmpeg` 等，无需 v7 目录）；**应用代码**需扩展 `ffmpeg_bundle.dart` 等平台判断（当前仓库若仅桌面，需自行接入）。
-
-### 4. 真机注意点
-
-- 仅在应用 **私有目录** 解压后再执行；避免把可执行文件放在共享存储。
-- 在多种品牌、Android 版本上实测 `Process.start`；若遇策略限制，再考虑改为 **JNI + libavcodec** 等方案（超出本文档范围）。
-
----
 
 ## 运行命令参考（与应用开关对应）
 
