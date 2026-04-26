@@ -18,7 +18,7 @@
   "serverLineGlobal": "Global",
   "serverLineGlobalDesc": "api.etedrop.com — recommended outside mainland.",
   "serverLineMainland": "Mainland",
-  "serverLineMainlandDesc": "api-cn.etedrop.com — better routing for mainland China.",
+  "serverLineMainlandDesc": "api.etedrop.cn — better routing for mainland China.",
   "about": "About",
   "checkForUpdates": "Check for updates",
   "checkForUpdatesDesc": "Download and install the latest version",

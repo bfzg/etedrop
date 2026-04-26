@@ -63,7 +63,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get serverLineMainland => '大陆';
 
   @override
-  String get serverLineMainlandDesc => 'api-cn.etedrop.com，大陆访问通常更快。';
+  String get serverLineMainlandDesc => 'api.etedrop.cn，大陆访问通常更快。';
 
   @override
   String get about => '关于';

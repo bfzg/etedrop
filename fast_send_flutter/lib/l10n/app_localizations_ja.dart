@@ -63,7 +63,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get serverLineMainland => '中国大陸';
 
   @override
-  String get serverLineMainlandDesc => 'api-cn.etedrop.com';
+  String get serverLineMainlandDesc => 'api.etedrop.cn';
 
   @override
   String get about => 'について';

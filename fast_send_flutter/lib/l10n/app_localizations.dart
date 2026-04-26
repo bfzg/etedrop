@@ -215,7 +215,7 @@ abstract class AppLocalizations {
   /// No description provided for @serverLineMainlandDesc.
   ///
   /// In en, this message translates to:
-  /// **'api-cn.etedrop.com — better routing for mainland China.'**
+  /// **'api.etedrop.cn — better routing for mainland China.'**
   String get serverLineMainlandDesc;
 
   /// No description provided for @about.

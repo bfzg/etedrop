@@ -110,10 +110,19 @@ const config: Config = {
       src: "/js/gtag-init.js",
       async: false,
     },
-    {
-      src: "https://hm.baidu.com/hm.js?b077fe346c836d558d307ca07fbd615a",
-      async: true,
-    },
+    ...(DOMESTIC_SITE
+      ? [
+          {
+            src: "https://hm.baidu.com/hm.js?2de07b0b8062c52b2a668723cc5637f2",
+            async: true,
+          },
+        ]
+      : [
+          {
+            src: "https://hm.baidu.com/hm.js?b077fe346c836d558d307ca07fbd615a",
+            async: true,
+          },
+        ]),
   ],
 
   clientModules: [

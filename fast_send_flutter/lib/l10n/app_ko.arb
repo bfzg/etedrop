@@ -18,7 +18,7 @@
   "serverLineGlobal": "글로벌",
   "serverLineGlobalDesc": "api.etedrop.com",
   "serverLineMainland": "중국 본토",
-  "serverLineMainlandDesc": "api-cn.etedrop.com",
+  "serverLineMainlandDesc": "api.etedrop.cn",
   "about": "정보",
   "checkForUpdates": "업데이트 확인",
   "checkForUpdatesDesc": "최신 버전을 다운로드하여 설치",

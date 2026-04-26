@@ -18,7 +18,7 @@
   "serverLineGlobal": "全球",
   "serverLineGlobalDesc": "api.etedrop.com，海外或默认推荐。",
   "serverLineMainland": "大陆",
-  "serverLineMainlandDesc": "api-cn.etedrop.com，大陆访问通常更快。",
+  "serverLineMainlandDesc": "api.etedrop.cn，大陆访问通常更快。",
   "about": "关于",
   "checkForUpdates": "检查更新",
   "checkForUpdatesDesc": "下载并安装最新版本",

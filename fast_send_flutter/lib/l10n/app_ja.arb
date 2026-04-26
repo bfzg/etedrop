@@ -18,7 +18,7 @@
   "serverLineGlobal": "グローバル",
   "serverLineGlobalDesc": "api.etedrop.com",
   "serverLineMainland": "中国大陸",
-  "serverLineMainlandDesc": "api-cn.etedrop.com",
+  "serverLineMainlandDesc": "api.etedrop.cn",
   "about": "について",
   "checkForUpdates": "アップデートを確認",
   "checkForUpdatesDesc": "最新バージョンをダウンロードしてインストール",

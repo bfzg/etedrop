@@ -2,13 +2,13 @@ import 'dart:ui';
 
 /// 用户选择的线路（持久化）
 enum ServerLinePreference {
-  /// 按语言/地区自动：简体/大陆倾向走 api-cn，其余走全球
+  /// 按语言/地区自动：简体/大陆倾向走 api.etedrop.cn，其余走全球
   auto,
 
   /// 全球节点（如 api.etedrop.com）
   global,
 
-  /// 大陆优化节点（如 api-cn.etedrop.com）
+  /// 大陆节点（如 api.etedrop.cn）
   mainland,
 }
 
@@ -60,7 +60,7 @@ class ServerEndpoints {
   /// 大陆节点（HTTPS）
   static String get _mainlandApiBase => const String.fromEnvironment(
     'API_BASE_MAINLAND',
-    defaultValue: 'https://api-cn.etedrop.com',
+    defaultValue: 'https://api.etedrop.cn',
   );
 
   /// 根据偏好与界面语言解析最终线路
