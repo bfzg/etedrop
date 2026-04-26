@@ -18,8 +18,10 @@ class TransferReceiveSection extends ConsumerWidget {
     final autoReceive = ref.watch(autoReceiveLanTransferProvider);
     final transcodeEnabled = ref.watch(videoTranscodeEnabledProvider);
 
-    // 视频转码仅在桌面端（有 ffmpeg bundle）才有意义
-    final showTranscode = Platform.isWindows || Platform.isMacOS;
+    // 桌面与 Android 均可能内置 ffmpeg；移动端常见为仅 remux（无 libx264），
+    // 开关仍影响「是否允许尝试转码路径」（不兼容编码时的提示与行为）。
+    final showTranscode =
+        Platform.isWindows || Platform.isMacOS || Platform.isAndroid;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

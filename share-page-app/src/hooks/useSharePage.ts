@@ -20,6 +20,8 @@ export function useSharePage(deviceId: string, shareCode: string) {
   const [showDownloadBtn, setShowDownloadBtn] = useState(false);
   /** 流式播放中途 DC 断开时仅自动整网重连一次，避免循环 */
   const streamAutoReconnectPendingRef = useRef(false);
+  /** 持有 setTimeout 句柄，方便在新连接建好或被卸载时取消等待中的重连。 */
+  const streamAutoReconnectTimerRef = useRef<number | null>(null);
 
   const signaling = useSignaling(deviceId, shareCode);
 
@@ -54,11 +56,23 @@ export function useSharePage(deviceId: string, shareCode: string) {
             !streamAutoReconnectPendingRef.current
           ) {
             streamAutoReconnectPendingRef.current = true;
-            window.setTimeout(() => {
+            if (streamAutoReconnectTimerRef.current != null) {
+              window.clearTimeout(streamAutoReconnectTimerRef.current);
+            }
+            streamAutoReconnectTimerRef.current = window.setTimeout(() => {
+              streamAutoReconnectTimerRef.current = null;
               streamAutoReconnectPendingRef.current = false;
-              if (!download.downloadCompletedRef.current) {
-                signaling.reconnect();
+              if (download.downloadCompletedRef.current) return;
+              // 在 900ms 等待期间如果新的 DC 已经成功打开，就别再触发整网 reconnect，
+              // 否则会把刚刚建好的链接再拆掉，进入 dc.close → dispatch __dc_close__
+              // → schedule reconnect 的死循环。
+              if (
+                signaling.dc.current &&
+                signaling.dc.current.readyState === "open"
+              ) {
+                return;
               }
+              signaling.reconnect();
             }, 900);
           }
         }
@@ -141,6 +155,16 @@ export function useSharePage(deviceId: string, shareCode: string) {
     });
   }, [deviceId, shareCode, signaling, download, stream, t]);
 
+  useEffect(() => {
+    return () => {
+      if (streamAutoReconnectTimerRef.current != null) {
+        window.clearTimeout(streamAutoReconnectTimerRef.current);
+        streamAutoReconnectTimerRef.current = null;
+      }
+      streamAutoReconnectPendingRef.current = false;
+    };
+  }, []);
+
   const sendVerify = useCallback(async (password: string) => {
     try {
       await signaling.ensureP2PReady();
@@ -170,6 +194,10 @@ export function useSharePage(deviceId: string, shareCode: string) {
 
     if (opts?.stream) {
       streamAutoReconnectPendingRef.current = false;
+      if (streamAutoReconnectTimerRef.current != null) {
+        window.clearTimeout(streamAutoReconnectTimerRef.current);
+        streamAutoReconnectTimerRef.current = null;
+      }
       // Allow playing multiple stream sessions in one page lifecycle.
       // After the first stream ends, MediaSource/SourceBuffer may remain in an ended state.
       // Reset first so a new MediaSource is created.

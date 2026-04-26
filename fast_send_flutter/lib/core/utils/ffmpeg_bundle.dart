@@ -1,18 +1,23 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart'
+    show MethodChannel, PlatformException, rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 class FfmpegBundle {
   static const _assetBase = 'assets/ffmpeg';
+  static const _androidExecPathsChannel =
+      MethodChannel('com.etedrop.app/ffmpeg_exec_paths');
 
-  static bool get isSupportedPlatform => Platform.isWindows || Platform.isMacOS;
+  static bool get isSupportedPlatform =>
+      Platform.isWindows || Platform.isMacOS || Platform.isAndroid;
 
   static String _platformSegment() {
     if (Platform.isWindows) return 'windows';
     if (Platform.isMacOS) return 'macos';
+    if (Platform.isAndroid) return 'android';
     throw UnsupportedError('Unsupported platform for ffmpeg bundle');
   }
 
@@ -82,6 +87,10 @@ class FfmpegBundle {
       throw UnsupportedError('FFmpeg bundle is not available on this platform');
     }
 
+    if (Platform.isAndroid) {
+      return _androidExecutablePathsFromJniLibs();
+    }
+
     final dir = await _ensureInstallDir();
     final seg = _platformSegment();
 
@@ -103,5 +112,28 @@ class FfmpegBundle {
     );
 
     return (ffmpegPath: ffmpeg.path, ffprobePath: ffprobe.path);
+  }
+
+  /// 与「Flutter assets 解压到 files」不同：新系统禁止从该路径 exec；二进制随 APK 以 jniLibs 安装。
+  static Future<({String ffmpegPath, String ffprobePath})>
+      _androidExecutablePathsFromJniLibs() async {
+    try {
+      final raw = await _androidExecPathsChannel
+          .invokeMethod<Object?>('getExecutablePaths');
+      if (raw is! Map) {
+        throw StateError('ffmpeg_exec_paths: expected map from native');
+      }
+      final map = Map<Object?, Object?>.from(raw);
+      final ffmpegPath = map['ffmpegPath'] as String?;
+      final ffprobePath = map['ffprobePath'] as String?;
+      if (ffmpegPath == null || ffprobePath == null) {
+        throw StateError('ffmpeg_exec_paths: missing keys');
+      }
+      return (ffmpegPath: ffmpegPath, ffprobePath: ffprobePath);
+    } on PlatformException catch (e) {
+      throw UnsupportedError(
+        'Android ffmpeg paths: ${e.message ?? e.code}',
+      );
+    }
   }
 }

@@ -7,18 +7,16 @@ export type StreamBinaryMode = "raw-mp4" | "init-segment-v1";
 
 const EVICT_KEEP_BEHIND_S = 10;
 const EVICT_ROUTINE_AHEAD_S = 20;
-const MAX_BUFFER_AHEAD_S = 60;
-/** 播放头未越过此秒数时，不按「缓冲超前于 currentTime」做限流，避免 t=0 时把整段已缓冲算成超前而 pause 且永远无法 resume */
-const BUFFER_AHEAD_GATE_PLAYHEAD_S = 0.5;
-const FLOW_PAUSE_QUEUE_BYTES = 8 * 1024 * 1024;
-const FLOW_RESUME_QUEUE_BYTES = 2 * 1024 * 1024;
+const MAX_BUFFER_AHEAD_S = 120;
+const FLOW_PAUSE_QUEUE_BYTES = 24 * 1024 * 1024;
+const FLOW_RESUME_QUEUE_BYTES = 8 * 1024 * 1024;
 const MSE_QUEUE_MAX_BYTES = 64 * 1024 * 1024;
 const STREAM_SEEK_DEBOUNCE_MS = 120;
 const HIGH_RES_4K_WIDTH = 3840;
 const HIGH_RES_4K_HEIGHT = 2160;
 const HIGH_RES_MAX_BUFFER_AHEAD_S = 20;
-const HIGH_RES_FLOW_PAUSE_QUEUE_BYTES = 4 * 1024 * 1024;
-const HIGH_RES_FLOW_RESUME_QUEUE_BYTES = 1 * 1024 * 1024;
+const HIGH_RES_FLOW_PAUSE_QUEUE_BYTES = 12 * 1024 * 1024;
+const HIGH_RES_FLOW_RESUME_QUEUE_BYTES = 4 * 1024 * 1024;
 
 export interface StreamPlayerApi {
   mseUrl: string;
@@ -97,9 +95,9 @@ export function useStreamPlayer(
       const b = sb.buffered;
       if (b.length > 0) {
         const ahead = b.end(b.length - 1) - t;
-        bufferAheadFull =
-          t >= BUFFER_AHEAD_GATE_PLAYHEAD_S &&
-          ahead > maxBufferAheadSecRef.current;
+        // 含 t≈0：仍按「已缓冲时长 − currentTime」限流，否则开播会把整文件尽快 append，
+        // Quota / 内存 / SCTP 背压导致只播一截或 P2P 断链（与 Flutter 是否全速推流叠加）。
+        bufferAheadFull = ahead > maxBufferAheadSecRef.current;
       }
     }
 
@@ -168,10 +166,7 @@ export function useStreamPlayer(
     if (b.length > 0) {
       const bufferedEnd = b.end(b.length - 1);
       const ahead = bufferedEnd - t;
-      if (
-        t >= BUFFER_AHEAD_GATE_PLAYHEAD_S &&
-        ahead > maxBufferAheadSecRef.current
-      ) {
+      if (ahead > maxBufferAheadSecRef.current) {
         updateFlowControl();
         return;
       }
@@ -200,7 +195,7 @@ export function useStreamPlayer(
       }
       return;
     }
-    const maxBatch = 1024 * 1024;
+    const maxBatch = 4 * 1024 * 1024;
     let totalSize = 0;
     let count = 0;
     while (count < q.length && totalSize < maxBatch) {

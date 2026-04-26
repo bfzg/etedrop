@@ -14,7 +14,9 @@ class FfmpegRunner {
     String? outputFileName,
   }) async {
     if (!FfmpegBundle.isSupportedPlatform) {
-      throw UnsupportedError('FFmpeg runner only supports desktop platforms');
+      throw UnsupportedError(
+        'FFmpeg runner is not available on this platform',
+      );
     }
 
     final bins = await FfmpegBundle.ensureExtracted();

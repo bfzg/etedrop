@@ -197,6 +197,7 @@ create-dmg \
 - **最有效的手段通常不是 Flutter 参数**：macOS 桌面端会自带 Flutter Engine/ICU 等运行时，基础体积就不小。
 - **检查是否把不需要的平台二进制作为 assets 一起打包**：例如仅 macOS 运行却把 `assets/ffmpeg/windows/*.exe` 也打进包，会直接增大包体。
   - 建议做法：将 FFmpeg 资源按平台拆分为“按需下载/首次运行下载”，或在构建前脚本仅拷贝当前平台需要的资源到 `assets/ffmpeg/<platform>/` 再构建。
+- **Android ffmpeg**：不要放进 Flutter `pubspec` assets 再解压执行（常见 `Permission denied`）。仓库中仍放在 `assets/ffmpeg/android/`，构建时复制到 **`android/app/src/main/jniLibs/arm64-v8a/`**（`libffmpeg_etedrop.so` / `libffprobe_etedrop.so`，目录已 gitignore）；`AndroidManifest.xml` 使用 **`android:extractNativeLibs="true"`** 以便安装后磁盘上存在可执行文件。Dart 经 `MethodChannel` 取 `nativeLibraryDir` 路径。
 - **避免 Universal（arm64+x86_64）构建**：如果你只分发给 Apple Silicon，可在 Xcode 里将架构限制为 arm64（Universal 会更大）。
 
 ---

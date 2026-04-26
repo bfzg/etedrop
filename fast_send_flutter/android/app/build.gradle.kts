@@ -14,6 +14,31 @@ if (keystorePropertiesFile.exists()) {
     FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
 }
 
+// Android 无法从 filesDir 可靠 exec 自解压的 ffmpeg；随 jniLibs 安装到 nativeLibraryDir。
+// 源文件在仓库 assets/ffmpeg/android/。必须落在 app/src/main/jniLibs/<abi>/（默认 sourceSet），
+// 仅指向 build/generated 时部分 Flutter/AGP 合并链路可能打不进 APK，运行时 nativeLibraryDir 缺文件。
+val ffmpegAndroidSrc = rootProject.file("../assets/ffmpeg/android")
+val ffmpegJniArm64Out = layout.projectDirectory.dir("src/main/jniLibs/arm64-v8a")
+val copyFfmpegAndroidJniLibs = tasks.register<Copy>("copyFfmpegAndroidJniLibs") {
+    onlyIf { ffmpegAndroidSrc.exists() }
+    from(ffmpegAndroidSrc) {
+        include("ffmpeg")
+        rename { "libffmpeg_etedrop.so" }
+    }
+    from(ffmpegAndroidSrc) {
+        include("ffprobe")
+        rename { "libffprobe_etedrop.so" }
+    }
+    into(ffmpegJniArm64Out)
+}
+
+tasks.configureEach {
+    val n = name
+    if (n.startsWith("merge") && n.endsWith("JniLibFolders")) {
+        dependsOn(copyFfmpegAndroidJniLibs)
+    }
+}
+
 android {
     // TODO 这里修改成自己的
     namespace = "com.etedrop.app"

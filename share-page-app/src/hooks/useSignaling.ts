@@ -37,6 +37,13 @@ export function useSignaling(deviceId: string, shareCode: string) {
     reject: (e: Error) => void;
   } | null>(null);
   const p2pStatsTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  /**
+   * 我们「主动」关闭 DC/PC 时（cleanup、reconnect、startRTC 中的 closePcDcOnly），
+   * 浏览器仍会触发 dc.onclose。这里用一个标记跳过对外 `__dc_close__` 通知，
+   * 否则 useSharePage 会把这种「主动关闭」当成对端断线，再去触发一轮整网重连，
+   * 形成「断开 -> 重连 -> 断开」死循环。
+   */
+  const suppressNextDcCloseRef = useRef(false);
 
   const setStatusState = useCallback((kind: StatusKind, text: string) => {
     statusKindRef.current = kind;
@@ -93,6 +100,11 @@ export function useSignaling(deviceId: string, shareCode: string) {
       p2pStatsTimerRef.current = null;
     }
     stopBrowserHeartbeat();
+    if (dcRef.current || pcRef.current) {
+      // 「主动关闭」模式：本次 dc.onclose 不要再向上通知 useSharePage，
+      // 否则会触发它的「流式播放断线 → 900ms 后整网 reconnect」逻辑。
+      suppressNextDcCloseRef.current = true;
+    }
     if (dcRef.current) {
       try {
         dcRef.current.close();
@@ -174,6 +186,9 @@ export function useSignaling(deviceId: string, shareCode: string) {
       dcRef.current = dc;
 
       dc.onopen = () => {
+        // 新连接已建好：之前留下的「主动关闭抑制位」已无意义，清掉，
+        // 之后任何意外的 dc.onclose 都应正常上报。
+        suppressNextDcCloseRef.current = false;
         setStatusState("online", t("status.p2pConnected"));
         setShowReconnect(false);
         p2pLog("DataChannel open", {
@@ -217,19 +232,26 @@ export function useSignaling(deviceId: string, shareCode: string) {
       };
 
       dc.onclose = () => {
+        const suppressed = suppressNextDcCloseRef.current;
+        suppressNextDcCloseRef.current = false;
         console.warn("[fastsend] DataChannel close", {
+          suppressed,
           readyState: dc.readyState,
           bufferedAmount: dc.bufferedAmount,
           pcConnectionState: pc.connectionState,
           iceConnectionState: pc.iceConnectionState,
         });
         p2pLog("DataChannel close", {
+          suppressed,
           readyState: dc.readyState,
           bufferedAmount: dc.bufferedAmount,
           pcConnectionState: pc.connectionState,
           iceConnectionState: pc.iceConnectionState,
         });
         void logWebRtcTransportSnapshot(pc, "dc-close");
+        // 主动关闭（cleanup / 重新 startRTC）不再向上通知，避免 useSharePage
+        // 把这种内部状态切换误判成「对端掉线 → 整网重连」。
+        if (suppressed) return;
         dcMessageHandlerRef.current?.(
           new MessageEvent("close", { data: "__dc_close__" }),
         );
@@ -331,6 +353,10 @@ export function useSignaling(deviceId: string, shareCode: string) {
       p2pStatsTimerRef.current = null;
     }
     stopBrowserHeartbeat();
+    if (dcRef.current || pcRef.current) {
+      // 见 closePcDcOnly 注释：主动关闭场景。
+      suppressNextDcCloseRef.current = true;
+    }
     if (dcRef.current) {
       try {
         dcRef.current.close();

@@ -7,6 +7,9 @@ gradle-wrapper.jar
 GeneratedPluginRegistrant.java
 .cxx/
 
+# Gradle 从 ../assets/ffmpeg/android 生成的 ffmpeg jniLibs（勿提交二进制）
+app/src/main/jniLibs/
+
 # Remember to never publicly share your keystore.
 # See https://flutter.dev/to/reference-keystore
 key.properties
