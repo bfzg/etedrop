@@ -19,15 +19,22 @@ function toStringArray(raw: unknown): string[] {
     .filter(Boolean);
 }
 
+function trimVersion(raw: unknown): string {
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
 function mergeManifest(raw: unknown): ReleaseManifest {
   if (!raw || typeof raw !== "object") {
     return FALLBACK_RELEASE;
   }
   const o = raw as Record<string, unknown>;
   const latestVersion =
-    typeof o.latestVersion === "string"
-      ? o.latestVersion
-      : FALLBACK_RELEASE.latestVersion;
+    trimVersion(o.latestVersion) || FALLBACK_RELEASE.latestVersion;
+  const windowsVersion = trimVersion(o.windowsVersion) || latestVersion;
+  const macVersion = trimVersion(o.macVersion) || latestVersion;
+  const linuxVersion = trimVersion(o.linuxVersion) || latestVersion;
+  const iosVersion = trimVersion(o.iosVersion) || latestVersion;
+  const androidVersion = trimVersion(o.androidVersion) || latestVersion;
   const windowsDownloadUrl =
     typeof o.windowsDownloadUrl === "string"
       ? o.windowsDownloadUrl
@@ -69,6 +76,11 @@ function mergeManifest(raw: unknown): ReleaseManifest {
 
   return {
     latestVersion,
+    windowsVersion,
+    macVersion,
+    linuxVersion,
+    iosVersion,
+    androidVersion,
     windowsDownloadUrl,
     macDownloadUrl,
     linuxDownloadUrl,

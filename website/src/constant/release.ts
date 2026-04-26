@@ -1,9 +1,18 @@
 /**
  * 发布信息：线上以 `static/public/version.json` 为准（可只改 JSON 部署）；
  * 缺省或 fetch 失败时使用 FALLBACK_RELEASE。
+ *
+ * 分平台版本（可选）：`windowsVersion` / `macVersion` / `linuxVersion` / `iosVersion` /
+ * `androidVersion`；省略时回退到 `latestVersion`。下载链接仍用各 `*DownloadUrl`。
  */
 export type ReleaseManifest = {
+  /** 兼容旧清单：未写分平台版本时，各平台回退到此字段 */
   latestVersion: string;
+  windowsVersion: string;
+  macVersion: string;
+  linuxVersion: string;
+  iosVersion: string;
+  androidVersion: string;
   windowsDownloadUrl: string;
   macDownloadUrl: string;
   linuxDownloadUrl: string;
@@ -17,6 +26,11 @@ export type ReleaseManifest = {
 /** 与 `static/public/version.json` 结构一致，便于一处对照填写 */
 export const FALLBACK_RELEASE: ReleaseManifest = {
   latestVersion: "0.0.0",
+  windowsVersion: "0.0.0",
+  macVersion: "0.0.0",
+  linuxVersion: "0.0.0",
+  iosVersion: "0.0.0",
+  androidVersion: "0.0.0",
   windowsDownloadUrl: "/downloads/EteDrop-Windows-x64.exe",
   macDownloadUrl: "/downloads/EteDrop-macOS.dmg",
   linuxDownloadUrl: "",

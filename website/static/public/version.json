@@ -1,5 +1,10 @@
 {
   "latestVersion": "1.0.1",
+  "windowsVersion": "1.0.1",
+  "macVersion": "1.0.1",
+  "linuxVersion": "1.0.1",
+  "iosVersion": "1.0.1",
+  "androidVersion": "1.0.0",
   "windowsDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-Setup-1.0.1-win-x64.exe",
   "macDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-macos.dmg",
   "linuxDownloadUrl": "",

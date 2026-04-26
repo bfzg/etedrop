@@ -83,15 +83,46 @@ class UpdateService {
     }
   }
 
+  String _coalesceVersion(String? platformVer, String latest) {
+    final t = platformVer?.trim() ?? '';
+    if (t.isNotEmpty) return t;
+    return latest;
+  }
+
+  String _versionForPlatform(UpdateManifest m) {
+    final latest = m.latestVersion;
+    if (Platform.isWindows) return _coalesceVersion(m.windowsVersion, latest);
+    if (Platform.isMacOS) return _coalesceVersion(m.macVersion, latest);
+    if (Platform.isLinux) return _coalesceVersion(m.linuxVersion, latest);
+    if (Platform.isAndroid) return _coalesceVersion(m.androidVersion, latest);
+    if (Platform.isIOS) return _coalesceVersion(m.iosVersion, latest);
+    return latest;
+  }
+
   String? _downloadUrlForPlatform(UpdateManifest m) {
-    if (Platform.isWindows) return m.windowsDownloadUrl ?? m.releasePageUrl;
+    if (Platform.isWindows) {
+      return m.windowsDownloadUrl ?? m.releasePageUrl;
+    }
     if (Platform.isMacOS) return m.macDownloadUrl ?? m.releasePageUrl;
+    if (Platform.isLinux) {
+      final u = m.linuxDownloadUrl?.trim() ?? '';
+      if (u.isNotEmpty) return u;
+      return m.releasePageUrl;
+    }
     if (Platform.isAndroid) {
+      final apk = m.androidDownloadUrl?.trim() ?? '';
+      if (apk.isNotEmpty) return apk;
       final store = AppConstants.androidStoreUrl.trim();
       if (store.isNotEmpty) return store;
       return AppConstants.androidUpdateDownloadPageUrl;
     }
-    if (Platform.isIOS) return AppConstants.iosStoreUrl;
+    if (Platform.isIOS) {
+      final store = AppConstants.iosStoreUrl.trim();
+      if (store.isNotEmpty) return store;
+      final direct = m.iosDownloadUrl?.trim() ?? '';
+      if (direct.isNotEmpty) return direct;
+      return m.releasePageUrl;
+    }
     return m.releasePageUrl;
   }
 
@@ -110,7 +141,9 @@ class UpdateService {
     required String currentVersion,
     required UpdateManifest manifest,
   }) async {
-    return VersionUtils.isLess(currentVersion, manifest.latestVersion);
+    final remote = _versionForPlatform(manifest);
+    if (remote.isEmpty) return false;
+    return VersionUtils.isLess(currentVersion, remote);
   }
 
   Future<void> checkSilentlyAndUpdateBadge(WidgetRef ref) async {
@@ -118,7 +151,7 @@ class UpdateService {
       final pkg = await PackageInfo.fromPlatform();
       final current = pkg.version;
       final manifest = await fetchManifest();
-      if (manifest == null || manifest.latestVersion.isEmpty) {
+      if (manifest == null || _versionForPlatform(manifest).isEmpty) {
         ref
             .read(updateStateProvider.notifier)
             .setResult(manifest: null, hasUpdate: false);
@@ -144,7 +177,7 @@ class UpdateService {
     final current = pkg.version;
 
     final manifest = await fetchManifest();
-    if (manifest == null || manifest.latestVersion.isEmpty) {
+    if (manifest == null || _versionForPlatform(manifest).isEmpty) {
       ref
           ?.read(updateStateProvider.notifier)
           .setResult(manifest: null, hasUpdate: false);
@@ -156,7 +189,7 @@ class UpdateService {
       return;
     }
 
-    final latest = manifest.latestVersion;
+    final latest = _versionForPlatform(manifest);
     final hasUpdate = VersionUtils.isLess(current, latest);
     ref
         ?.read(updateStateProvider.notifier)

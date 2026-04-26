@@ -231,6 +231,13 @@ export default function DownPage(): ReactNode {
     ios: useResolvedDownloadHref(manifest.iosDownloadUrl),
     android: useResolvedDownloadHref(manifest.androidDownloadUrl),
   } as const;
+  const versionByKey = {
+    windows: manifest.windowsVersion,
+    macos: manifest.macVersion,
+    linux: manifest.linuxVersion,
+    ios: manifest.iosVersion,
+    android: manifest.androidVersion,
+  } as const;
 
   return (
     <Layout
@@ -262,7 +269,7 @@ export default function DownPage(): ReactNode {
                 key={row.id}
                 row={row}
                 downloadHref={hrefByKey[row.fileKey]}
-                version={manifest.latestVersion}
+                version={versionByKey[row.fileKey]}
               />
             ))}
           </div>
