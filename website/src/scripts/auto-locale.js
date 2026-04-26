@@ -1,9 +1,10 @@
 import ExecutionEnvironment from "@docusaurus/ExecutionEnvironment";
+import i18n from "@generated/i18n";
 
-const DEFAULT_LOCALE = "zh-Hans";
+const DEFAULT_LOCALE = i18n.defaultLocale;
 
-/** 与 fix-double-locale.js、docusaurus.config 的 i18n.locales 保持一致 */
-const LOCALES = new Set(["zh-Hans", "en", "ja", "es", "ko"]);
+/** 与 docusaurus.config 的 i18n.locales 一致（随国际/国内构建变化） */
+const LOCALES = new Set(i18n.locales);
 
 const SKIP_AUTO_KEY = "etedrop.i18n.skipAuto";
 /** 用户手动选择或曾停留过的语言；存在时优先于浏览器语言 */
@@ -109,7 +110,7 @@ function buildLocalizedPath(pathname, locale) {
   return `/${locale}${pathname}`;
 }
 
-/** 去掉显式的默认语言前缀（若存在），避免出现 /en/zh-Hans/... */
+/** 去掉显式的默认语言前缀（若存在），避免出现 /en/zh-Hans/... 等重复前缀 */
 function pathForLocaleSwitch(pathname) {
   const parts = pathname.split("/").filter(Boolean);
   if (parts[0] === DEFAULT_LOCALE) {
@@ -179,7 +180,7 @@ function bindLocaleLinkPreferenceCapture() {
 }
 
 /**
- * SPA 内从 /en/... 等切到无前缀路径，视为用户选择了简体中文版。
+ * SPA 内从带语言前缀路径切到无前缀路径，视为用户选择了默认语言（英语）。
  */
 export function onRouteUpdate({ previousLocation, location } = {}) {
   if (!ExecutionEnvironment.canUseDOM) {
@@ -199,7 +200,7 @@ function tryRedirect() {
   if (!ExecutionEnvironment.canUseDOM) {
     return;
   }
-  /** 开发模式一次只编一种语言，跳转到 /en/ 等易导致 404 */
+  /** 开发模式一次只编一种语言，自动跳转到其它语言前缀易导致 404 */
   if (process.env.NODE_ENV === "development") {
     return;
   }
@@ -241,7 +242,7 @@ function tryRedirect() {
     return;
   }
 
-  // 从 /en/... 等切回无前缀（中文）时，即使是整页跳转也应保留“用户选择中文”。
+  // 从其它语言前缀页经站内导航回到无前缀（默认英语）时，保留“用户选择默认语言”。
   const refLocale = sameOriginReferrerLocale();
   if (refLocale && refLocale !== DEFAULT_LOCALE) {
     setUserLocalePref(DEFAULT_LOCALE, "user");
@@ -257,7 +258,7 @@ function tryRedirect() {
 
   /** 用户曾选过非默认语言：回到无前缀 URL 时仍应进对应语言前缀 */
   if (saved && saved !== DEFAULT_LOCALE) {
-    // 若该偏好来源于自动识别，而浏览器当前明确偏好中文，则不要强制跳回英文等。
+    // 若该偏好来源于自动识别，而浏览器当前明确偏好默认语言，则不要强制跳到其它 locale。
     const navPreferred = preferredLocaleFromNavigator();
     if (savedSource === "auto" && navPreferred === DEFAULT_LOCALE) {
       setUserLocalePref(DEFAULT_LOCALE, "auto");
@@ -271,8 +272,8 @@ function tryRedirect() {
   }
 
   /**
-   * 以下：当前为默认（无前缀）路径，且保存的偏好为 null 或 zh-Hans。
-   * saved === zh-Hans：明确要中文版，不要用浏览器覆盖。
+   * 以下：当前为默认（无前缀）路径，且保存的偏好为 null 或默认语言。
+   * saved === DEFAULT_LOCALE：明确要默认语言站，不要用浏览器覆盖。
    */
   if (saved === DEFAULT_LOCALE) {
     return;

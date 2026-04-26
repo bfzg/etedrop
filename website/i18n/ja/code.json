@@ -1,6 +1,11 @@
 {
   "footer.tagline": { "message": "高速で安全なファイル転送と共有" },
   "footer.builtWith": { "message": "継続的にアップデート中" },
+  "footer.wechatOfficial": { "message": "WeChat 公式アカウント" },
+  "footer.nav.docs": { "message": "ドキュメント" },
+  "footer.nav.download": { "message": "ダウンロード" },
+  "footer.nav.faq": { "message": "よくある質問" },
+  "footer.nav.contact": { "message": "お問い合わせ" },
   "download.badge.testing": { "message": "テスト中" },
   "download.meta.title": { "message": "ダウンロード" },
   "download.meta.description": { "message": "EteDrop デスクトップ版をダウンロード。" },
@@ -10,6 +15,15 @@
   },
   "homepage.meta.description": {
     "message": "EteDrop 公式サイト：機能、ガイド、技術ドキュメント。"
+  },
+  "homepage.seo.title": {
+    "message": "EteDrop – 高速で安全なファイル転送・共有"
+  },
+  "homepage.seo.description": {
+    "message": "EteDrop は高速で安全なファイル転送・共有ツール。公網・LAN・社内ネットワーク向けにプライバシーを重視した転送をサポートします。"
+  },
+  "homepage.seo.keywords": {
+    "message": "EteDrop, ファイル転送, ファイル共有, P2P, LAN, 大容量, プライバシー, デスクトップ"
   },
   "homepage.publicE2e.diagram.caption": {
     "message": "WebRTC エンドツーエンド図：クラウドはシグナリング、データは端末間で直接やり取り。"

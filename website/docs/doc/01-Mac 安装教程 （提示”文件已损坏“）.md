@@ -2,51 +2,51 @@
 slug: mac-install-damaged
 ---
 
-# Mac 安装教程（提示「文件已损坏」）
+# Mac Installation Guide (Showing "App Is Damaged")
 
-因应用未使用 Apple **Developer ID** 签名与公证，从浏览器下载后首次打开时，系统可能提示应用已损坏。可按下面步骤处理。
+If the app is not signed and notarized with an Apple **Developer ID**, macOS may show a damaged-app warning the first time you open it after downloading from a browser. Follow the steps below.
 
-## 1. 出现的提示
+## 1. What warning you may see
 
-双击应用时若看到类似提示（并说明由 Chrome / Safari 等下载）：
+When you double-click the app, you may see a warning like this (often mentioning it was downloaded via Chrome / Safari):
 
-![应用已损坏提示](/img/mac-install-damaged-dialog.png)
+![App damaged warning dialog](/img/mac-install-damaged-dialog.png)
 
-## 2. 在终端移除隔离属性
+## 2. Remove the quarantine attribute in Terminal
 
-在「终端」中执行（将路径换成你机器上 **EteDrop.app** 的实际位置；默认安装在「应用程序」时如下）：
+Run this command in **Terminal** (replace the path with the actual location of **EteDrop.app** on your Mac; default location in Applications shown below):
 
 ```bash
 xattr -cr "/Applications/EteDrop.app"
 ```
 
-若不方便输入路径，可先输入 `xattr -cr `（注意末尾保留一个空格），再把 **Finder 里的应用图标** 拖进终端窗口，系统会自动填入路径，然后回车执行：
+If typing the path is inconvenient, type `xattr -cr ` first (keep one trailing space), then drag the **app icon from Finder** into Terminal to auto-fill the path, and press Enter:
 
-![将应用拖入终端以补全路径](/img/mac-install-xattr-drag-to-terminal.png)
+![Drag app into Terminal to auto-complete path](/img/mac-install-xattr-drag-to-terminal.png)
 
-执行完成后，再回到 Finder 中双击打开应用。
+After the command finishes, go back to Finder and open the app again.
 
 ---
 
 :::tip
 
-若应用不在「应用程序」中，请对 **实际 .app 所在路径** 执行上述命令（例如从 DMG 拖到桌面的副本，路径可能是 `/Applications/EteDrop.app`）。
+If your app is not in **Applications**, run the same command against the **actual .app path**.
 
 :::
 
-## 3. 「附近」一直搜索不到设备 / 没有本地网络授权提示
+## 3. "Nearby" keeps searching forever / no Local Network permission prompt
 
-从 **macOS Sequoia（15）** 起，系统对「本地网络」访问更严格。若未使用 **Developer ID** 签名与公证，可能出现：
+Starting from **macOS Sequoia (15)**, Local Network permission is enforced more strictly. If the app is distributed without **Developer ID** signing and notarization, you may encounter:
 
-- 系统**不弹出**「允许访问本地网络」；
-- 或应用**未出现在**「系统设置 → 隐私与安全性 → **本地网络**」列表中，导致局域网发现（UDP 多播）被**静默拦截**，附近设备列表会一直为空。
+- No system prompt asking to allow Local Network access;
+- Or the app does not appear under **System Settings → Privacy & Security → Local Network**, so LAN discovery (UDP multicast) may be silently blocked and the Nearby list stays empty.
 
-**请手动检查：**
+**Please check manually:**
 
-1. 打开 **系统设置 → 隐私与安全性 → 本地网络**。
-2. 在列表中找到 **EteDrop**（或当前应用名），**打开**开关。
-3. 若列表中没有该应用：请先完全退出应用再重新打开，等待数秒后再看是否出现；仍无则与未签名分发限制有关，可考虑使用 **Apple 开发者账号** 做 Developer ID 签名与公证，以便系统正常登记权限。
+1. Open **System Settings → Privacy & Security → Local Network**.
+2. Find **EteDrop** (or your current app name) and turn it **on**.
+3. If the app is not in the list: fully quit and reopen the app, wait a few seconds, then check again. If it still does not appear, it may be due to unsigned distribution limits. Consider using an **Apple Developer account** for Developer ID signing and notarization so the permission can be registered normally.
 
-**说明：**「附近」列表**不会显示本机**，只会显示同一局域网中的**其他设备**；若要与本机互测，请使用两台设备或虚拟机。
+**Note:** The Nearby list does **not show this device itself**; it only shows **other devices on the same LAN**. For self-testing, use two devices or a VM.
 
-应用内「附近」页面在 macOS 上也会显示简要提示文案，可按指引操作。
+The macOS "Nearby" page in-app also shows a short hint message you can follow.

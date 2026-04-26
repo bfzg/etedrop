@@ -4,7 +4,8 @@ import path from "node:path";
 
 const root = process.cwd();
 const buildDir = path.join(root, "build");
-const localeDirs = ["en", "ja", "es", "ko"];
+/** 国际站根目录为 en → 语言子目录含 zh-Hans/ja/es/ko；国内站根目录为 zh-Hans → 含 en/ja/es/ko。逐个处理，不存在则跳过。 */
+const localeDirs = ["zh-Hans", "en", "ja", "es", "ko"];
 const assetDirs = ["downloads", "video", "public"];
 
 function removeIfExists(targetPath) {

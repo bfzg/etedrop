@@ -5,6 +5,21 @@
   "footer.builtWith": {
     "message": "Continuously updating"
   },
+  "footer.wechatOfficial": {
+    "message": "微信公众号"
+  },
+  "footer.nav.docs": {
+    "message": "文档"
+  },
+  "footer.nav.download": {
+    "message": "下载"
+  },
+  "footer.nav.faq": {
+    "message": "常见问题"
+  },
+  "footer.nav.contact": {
+    "message": "联系我们"
+  },
   "download.badge.testing": {
     "message": "测试中"
   },
@@ -22,6 +37,15 @@
   },
   "homepage.meta.description": {
     "message": "Fast Send 官网：产品能力、使用指南与技术文档。"
+  },
+  "homepage.seo.title": {
+    "message": "EteDrop-快速、安全的文件传输与分享"
+  },
+  "homepage.seo.description": {
+    "message": "EteDrop-快速、安全的文件传输与分享。隐私文件传输工具，支持公网、局域网、内网传输。"
+  },
+  "homepage.seo.keywords": {
+    "message": "EteDrop,文件传输,电脑互传文件,局域网互传文件,公网传输文件,文件传输与分享,大文件传输,文件传输工具,文件传输软件,文件传输服务,文件传输解决方案,隐私文件传输,隐私文件传输工具,隐私文件传输软件"
   },
   "homepage.publicE2e.diagram.caption": {
     "message": "WebRTC 端到端传输示意图：云端负责信令，两端直接进行数据传输"

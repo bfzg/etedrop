@@ -1,6 +1,11 @@
 {
   "footer.tagline": { "message": "Fast, secure file transfer and sharing" },
   "footer.builtWith": { "message": "Continuously updating" },
+  "footer.wechatOfficial": { "message": "WeChat Official Account" },
+  "footer.nav.docs": { "message": "Documentation" },
+  "footer.nav.download": { "message": "Download" },
+  "footer.nav.faq": { "message": "FAQ" },
+  "footer.nav.contact": { "message": "Contact us" },
   "download.badge.testing": { "message": "In testing" },
   "download.meta.title": { "message": "Download" },
   "download.meta.description": { "message": "Download the EteDrop desktop client." },
@@ -10,6 +15,15 @@
   },
   "homepage.meta.description": {
     "message": "EteDrop official site: product capabilities, guides, and technical docs."
+  },
+  "homepage.seo.title": {
+    "message": "EteDrop – Fast, secure file transfer and sharing"
+  },
+  "homepage.seo.description": {
+    "message": "EteDrop: fast, secure file transfer and sharing. Privacy-focused transfers over the public internet, LAN, and internal networks."
+  },
+  "homepage.seo.keywords": {
+    "message": "EteDrop, file transfer, file sharing, P2P transfer, LAN transfer, large file transfer, secure transfer, privacy, desktop app, end-to-end"
   },
   "homepage.publicE2e.diagram.caption": {
     "message": "WebRTC end-to-end diagram: the cloud handles signaling; peers exchange data directly."

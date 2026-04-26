@@ -1,17 +1,25 @@
 import type { ReactNode } from "react";
+import Link from "@docusaurus/Link";
 import useBaseUrl from "@docusaurus/useBaseUrl";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Heading from "@theme/Heading";
 import Translate from "@docusaurus/Translate";
 
+const navLinkClass =
+  "inline-block py-1 text-sm text-slate-700 underline-offset-2 hover:text-brand hover:underline dark:text-slate-200/90 dark:hover:text-blue-300";
+
 export default function Footer(): ReactNode {
   const { siteConfig } = useDocusaurusContext();
   const wechatQrSrc = useBaseUrl("/img/wechat_qr.jpg");
+  const domesticSite = Boolean(
+    (siteConfig.customFields as { domesticSite?: boolean } | undefined)
+      ?.domesticSite,
+  );
 
   return (
     <footer className="py-12 lg:py-16 border-t border-slate-200 bg-white text-slate-900 dark:border-slate-700/40 dark:bg-slate-950/90 dark:text-slate-100">
-      <div className="mx-auto max-w-[1180px] px-4 pb-5 pt-9">
-        <div className="flex flex-col items-start justify-between gap-9 lg:flex-row">
+      <div className="mx-auto max-w-[1180px] px-4 pb-4 pt-9">
+        <div className="flex flex-col items-start justify-between gap-8 sm:flex-row sm:items-start">
           <div className="max-w-[32ch]">
             <Heading
               as="h3"
@@ -26,59 +34,48 @@ export default function Footer(): ReactNode {
             </p>
           </div>
 
-          <div className="grid w-full grid-cols-1 gap-8 sm:grid-cols-2 lg:w-auto lg:grid-cols-3">
-            <div>
-              {/* <div className="mb-2 text-sm font-semibold text-slate-900/90 dark:text-slate-100/90">
-                <Translate id="footer.col.product">产品</Translate>
-              </div>
-              <Link className="block py-1.5 text-sm text-slate-700 hover:text-brand dark:text-slate-200/90 dark:hover:text-blue-300" to="/">
-                <Translate id="footer.link.home">首页</Translate>
-              </Link>
-              <Link
-                className="block py-1.5 text-sm text-slate-700 hover:text-brand dark:text-slate-200/90 dark:hover:text-blue-300"
-                to="/docs/how-to-use">
-                <Translate id="footer.link.howToUse">使用指南</Translate>
-              </Link> */}
-            </div>
-
-            <div>
-              {/* <div className="mb-2 text-sm font-semibold text-slate-900/90 dark:text-slate-100/90">
-                <Translate id="footer.col.docs">文档</Translate>
-              </div>
-              <Link className="block py-1.5 text-sm text-slate-700 hover:text-brand dark:text-slate-200/90 dark:hover:text-blue-300" to="/docs">
-                <Translate id="footer.link.docs">文档首页</Translate>
-              </Link>
-              <Link
-                className="block py-1.5 text-sm text-slate-700 hover:text-brand dark:text-slate-200/90 dark:hover:text-blue-300"
-                to="/docs/服务端架构总览">
-                <Translate id="footer.link.serverArch">服务端架构</Translate>
-              </Link>
-              <Link
-                className="block py-1.5 text-sm text-slate-700 hover:text-brand dark:text-slate-200/90 dark:hover:text-blue-300"
-                to="/docs/信令协议说明">
-                <Translate id="footer.link.signaling">信令协议</Translate>
-              </Link> */}
-            </div>
-
-            <div>
-              {/* <div className="mb-2 text-sm font-semibold text-slate-900/90 dark:text-slate-100/90">
-                <Translate id="footer.col.more">更多</Translate>
-              </div>
-              <Link className="block py-1.5 text-sm text-slate-700 hover:text-brand dark:text-slate-200/90 dark:hover:text-blue-300" to="/blog">
-                <Translate id="footer.link.blog">文章</Translate>
-              </Link>
-              <a
-                className="block py-1.5 text-sm text-slate-700 hover:text-brand dark:text-slate-200/90 dark:hover:text-blue-300"
-                href="https://github.com/"
-                target="_blank"
-                rel="noreferrer">
-                <Translate id="footer.link.github">GitHub</Translate>
-              </a> */}
+          <div className="flex shrink-0 flex-col items-center sm:items-end">
+            <img
+              src={wechatQrSrc}
+              alt=""
+              width={112}
+              height={112}
+              className="h-28 w-28 rounded-lg border border-slate-200 bg-white object-cover dark:border-slate-600"
+              loading="lazy"
+              decoding="async"
+            />
+            <div className="mt-2 text-sm text-slate-500 w-full text-center">
+              <Translate id="footer.wechatOfficial">微信公众号</Translate>
             </div>
           </div>
         </div>
 
-        <div className="mt-3 flex flex-col items-center gap-6 border-t border-slate-200 pt-6 text-sm text-slate-600 dark:border-slate-700/40 dark:text-slate-300/80 sm:flex-row sm:items-end sm:justify-between sm:pt-4">
+        <nav className="border-t border-slate-200 pt-6 dark:border-slate-700/40">
+          <ul className="m-0 flex list-none flex-wrap items-center gap-x-5 gap-y-2 p-0 sm:gap-x-8">
+            <li>
+              <Link to="/docs/doc/mac-install-damaged" className={navLinkClass}>
+                <Translate id="footer.nav.docs">文档</Translate>
+              </Link>
+            </li>
+            <li>
+              <Link to="/down" className={navLinkClass}>
+                <Translate id="footer.nav.download">下载</Translate>
+              </Link>
+            </li>
+            <li>
+              <Link to="/docs/doc/faq" className={navLinkClass}>
+                <Translate id="footer.nav.faq">常见问题</Translate>
+              </Link>
+            </li>
+            <li>
+              <Link to="/docs/doc/contact-us" className={navLinkClass}>
+                <Translate id="footer.nav.contact">联系我们</Translate>
+              </Link>
+            </li>
+          </ul>
+        </nav>
+
+        <div className="mt-6 border-t border-slate-200 pt-6 text-sm text-slate-600 dark:border-slate-700/40 dark:text-slate-300/80">
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 sm:justify-start">
             <span>
               © {new Date().getFullYear()} {siteConfig.title}
@@ -89,21 +86,20 @@ export default function Footer(): ReactNode {
             <span className="opacity-90">
               <Translate id="footer.builtWith">Continuously updating</Translate>
             </span>
-          </div>
-
-          <div>
-            <img
-              src={wechatQrSrc}
-              alt=""
-              width={112}
-              height={112}
-              className="h-28 w-28 rounded-lg border border-slate-200 bg-white object-cover dark:border-slate-600"
-              loading="lazy"
-              decoding="async"
-            />
-            <div className="text-center text-sm text-slate-500 dark:text-slate-400">
-              <Translate id="footer.wechatOfficial">微信公众号</Translate>
-            </div>
+            {domesticSite ? (
+              <>
+                <span aria-hidden="true" className="opacity-60">
+                  ·
+                </span>
+                <a
+                  href="https://beian.miit.gov.cn/"
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="opacity-90 underline-offset-2 hover:text-slate-900 hover:underline dark:hover:text-slate-100">
+                  皖ICP备2024066445号-4
+                </a>
+              </>
+            ) : null}
           </div>
         </div>
       </div>

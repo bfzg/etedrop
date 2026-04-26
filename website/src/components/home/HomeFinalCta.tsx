@@ -20,10 +20,10 @@ export default function HomeFinalCta(): ReactNode {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link className="button button--primary button--lg" to="/docs/how-to-use">
+            <Link className="button button--primary button--lg" to="/docs/doc/mac-install-damaged">
               <Translate id="homepage.finalCta.primary">阅读使用指南</Translate>
             </Link>
-            <Link className="button button--secondary button--lg" to="/docs">
+            <Link className="button button--secondary button--lg" to="/docs/doc/mac-install-damaged">
               <Translate id="homepage.finalCta.secondary">浏览全部文档</Translate>
             </Link>
           </div>

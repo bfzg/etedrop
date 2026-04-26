@@ -4,14 +4,49 @@
   "macDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-macos.dmg",
   "linuxDownloadUrl": "",
   "iosDownloadUrl": "",
-  "androidDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-android.apk",
+  "androidDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.0-android.apk",
   "forceUpdate": false,
   "releaseNotes": {
-    "zh": [],
-    "en": [],
-    "ja": [],
-    "ko": [],
-    "es": []
+      "zh": [
+          "[新增] PDF、图片、音频、文本 在线预览",
+          "[新增] 支持 mp4、mkv、mov等格式在线预览",
+          "[新增] 支持 4k 视频在线预览（视频会压缩）",
+          "[优化] 连接速度，传输稳定性",
+          "[优化] 消息页面样式",
+          "[其他] 各种优化若干"
+      ],
+      "en": [
+          "[New] Preview PDF, images, audio, and text files online",
+          "[New] Support online preview for MP4, MKV, MOV and more formats",
+          "[New] Support 4K video preview (videos will be compressed)",
+          "[Improved] Connection speed and transfer stability",
+          "[Improved] Message page UI",
+          "[Other] Various optimizations and improvements"
+      ],
+      "ja": [
+          "[新機能] PDF・画像・音声・テキストのオンラインプレビューに対応",
+          "[新機能] MP4・MKV・MOVなどの形式のオンラインプレビューに対応",
+          "[新機能] 4K動画のオンラインプレビューに対応（動画は圧縮されます）",
+          "[改善] 接続速度と転送の安定性を向上",
+          "[改善] メッセージ画面のUIを改善",
+          "[その他] 各種最適化"
+      ],
+      "ko": [
+          "[신규] PDF, 이미지, 오디오, 텍스트 파일 온라인 미리보기 지원",
+          "[신규] MP4, MKV, MOV 등 다양한 형식의 온라인 미리보기 지원",
+          "[신규] 4K 영상 온라인 미리보기 지원 (영상은 압축됨)",
+          "[개선] 연결 속도 및 전송 안정성 향상",
+          "[개선] 메시지 화면 UI 개선",
+          "[기타] 기타 다양한 최적화"
+      ],
+      "es": [
+          "[Nuevo] Vista previa en línea de PDF, imágenes, audio y texto",
+          "[Nuevo] Soporte para vista previa de formatos como MP4, MKV, MOV y más",
+          "[Nuevo] Vista previa de video en 4K (los videos se comprimen)",
+          "[Mejora] Velocidad de conexión y estabilidad de transferencia",
+          "[Mejora] Interfaz de la página de mensajes",
+          "[Otros] Varias optimizaciones"
+      ]
   },
   "releasePageUrl": ""
 }

@@ -1,6 +1,11 @@
 {
   "footer.tagline": { "message": "빠르고 안전한 파일 전송·공유" },
   "footer.builtWith": { "message": "계속 업데이트 중" },
+  "footer.wechatOfficial": { "message": "위챗 공식 계정" },
+  "footer.nav.docs": { "message": "문서" },
+  "footer.nav.download": { "message": "다운로드" },
+  "footer.nav.faq": { "message": "자주 묻는 질문" },
+  "footer.nav.contact": { "message": "문의하기" },
   "download.badge.testing": { "message": "테스트 중" },
   "download.meta.title": { "message": "다운로드" },
   "download.meta.description": { "message": "EteDrop 데스크톱 클라이언트를 받으세요." },
@@ -10,6 +15,15 @@
   },
   "homepage.meta.description": {
     "message": "EteDrop 공식 사이트: 기능, 사용 가이드, 기술 문서."
+  },
+  "homepage.seo.title": {
+    "message": "EteDrop – 빠르고 안전한 파일 전송·공유"
+  },
+  "homepage.seo.description": {
+    "message": "EteDrop: 빠르고 안전한 파일 전송·공유. 공용 인터넷, LAN, 내부망을 위한 프라이버시 중심 전송 도구."
+  },
+  "homepage.seo.keywords": {
+    "message": "EteDrop, 파일 전송, 파일 공유, P2P, LAN, 대용량, 프라이버시, 데스크톱"
   },
   "homepage.publicE2e.diagram.caption": {
     "message": "WebRTC 엔드투엔드: 클라우드는 시그널링, 데이터는 단말 간 직접 전송."

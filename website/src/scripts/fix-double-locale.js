@@ -1,6 +1,7 @@
 import ExecutionEnvironment from "@docusaurus/ExecutionEnvironment";
+import i18n from "@generated/i18n";
 
-const LOCALES = new Set(["zh-Hans", "en", "ja", "es", "ko"]);
+const LOCALES = new Set(i18n.locales);
 
 /**
  * Normalize broken i18n paths:
@@ -10,7 +11,7 @@ const LOCALES = new Set(["zh-Hans", "en", "ja", "es", "ko"]);
  *    only strips one `/` when baseUrl is `/`, etc.). Keep the last locale segment in the run
  *    and append the real path after it.
  *
- * Valid paths like /en/docs/foo have only one leading locale segment and are unchanged.
+ * Valid paths like /zh-Hans/docs/foo have only one leading locale segment and are unchanged.
  */
 function normalizeLocalePath(pathname) {
   const hadTrailingSlash = pathname.endsWith("/") && pathname !== "/";

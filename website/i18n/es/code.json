@@ -1,6 +1,11 @@
 {
   "footer.tagline": { "message": "Transferencia y uso compartido de archivos rápido y seguro" },
   "footer.builtWith": { "message": "Actualización continua" },
+  "footer.wechatOfficial": { "message": "Cuenta oficial de WeChat" },
+  "footer.nav.docs": { "message": "Documentación" },
+  "footer.nav.download": { "message": "Descargar" },
+  "footer.nav.faq": { "message": "Preguntas frecuentes" },
+  "footer.nav.contact": { "message": "Contáctanos" },
   "download.badge.testing": { "message": "En pruebas" },
   "download.meta.title": { "message": "Descargar" },
   "download.meta.description": { "message": "Descarga el cliente de escritorio EteDrop." },
@@ -10,6 +15,15 @@
   },
   "homepage.meta.description": {
     "message": "Sitio oficial de EteDrop: capacidades, guías y documentación técnica."
+  },
+  "homepage.seo.title": {
+    "message": "EteDrop – Transferencia y uso compartido de archivos rápido y seguro"
+  },
+  "homepage.seo.description": {
+    "message": "EteDrop: transferencia y uso compartido de archivos rápido y seguro. Herramienta centrada en la privacidad para internet público, LAN y redes internas."
+  },
+  "homepage.seo.keywords": {
+    "message": "EteDrop, transferencia de archivos, compartir archivos, P2P, LAN, archivos grandes, privacidad, escritorio"
   },
   "homepage.publicE2e.diagram.caption": {
     "message": "Diagrama WebRTC extremo a extremo: la nube señaliza; los datos van directo entre pares."
