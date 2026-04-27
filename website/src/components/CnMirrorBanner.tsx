@@ -57,16 +57,8 @@ function CnMirrorBannerInner(): ReactNode {
   }, [debug, dismissed, mirrorHost]);
 
   const mirrorHref = useMemo(() => {
-    if (typeof window === "undefined") {
-      return mirrorOrigin;
-    }
-    const path = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-    try {
-      return new URL(path, `${mirrorOrigin}/`).href;
-    } catch {
-      return mirrorOrigin;
-    }
-  }, [mirrorOrigin]);
+    return "https://etedrop.cn";
+  }, []);
 
   const onDismiss = useCallback(() => {
     try {
@@ -87,8 +79,8 @@ function CnMirrorBannerInner(): ReactNode {
       role="region"
       aria-label="China mirror notice"
     >
-      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:text-[0.9375rem]">
-        <p className="min-w-0 leading-snug">
+      <div className="mx-auto flex max-w-6xl flex-col gap-2 px-4 py-2 text-sm sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:text-[0.9375rem]">
+        <div className="min-w-0 leading-snug">
           <span className="font-medium text-amber-950">
             <Translate id="cnMirror.banner.title">
               检测到您可能位于中国大陆
@@ -100,7 +92,7 @@ function CnMirrorBannerInner(): ReactNode {
               访问国内节点页面加载通常更快（独立域名与证书，需在 DNS 将 cn 指向中国服务器）。
             </Translate>
           </span>
-        </p>
+        </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
           <a
             href={mirrorHref}
@@ -111,7 +103,7 @@ function CnMirrorBannerInner(): ReactNode {
           <button
             type="button"
             onClick={onDismiss}
-            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+            className="rounded-lg border-none bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
           >
             <Translate id="cnMirror.banner.dismiss">不再提示</Translate>
           </button>

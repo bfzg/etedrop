@@ -1,57 +1,159 @@
 {
-  "latestVersion": "1.0.1",
-  "windowsVersion": "1.0.1",
-  "macVersion": "1.0.1",
-  "linuxVersion": "1.0.1",
-  "iosVersion": "1.0.1",
-  "androidVersion": "1.0.0",
-  "windowsDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-Setup-1.0.1-win-x64.exe",
-  "macDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.1-macos.dmg",
-  "linuxDownloadUrl": "",
-  "iosDownloadUrl": "",
-  "androidDownloadUrl": "https://www.etedrop.com/downloads/EteDrop-1.0.0-android.apk",
-  "forceUpdate": false,
-  "releaseNotes": {
-      "zh": [
-          "[新增] PDF、图片、音频、文本 在线预览",
-          "[新增] 支持 mp4、mkv、mov等格式在线预览",
-          "[新增] 支持 4k 视频在线预览（视频会压缩）",
-          "[优化] 连接速度，传输稳定性",
-          "[优化] 消息页面样式",
-          "[其他] 各种优化若干"
-      ],
-      "en": [
-          "[New] Preview PDF, images, audio, and text files online",
-          "[New] Support online preview for MP4, MKV, MOV and more formats",
-          "[New] Support 4K video preview (videos will be compressed)",
-          "[Improved] Connection speed and transfer stability",
-          "[Improved] Message page UI",
-          "[Other] Various optimizations and improvements"
-      ],
-      "ja": [
-          "[新機能] PDF・画像・音声・テキストのオンラインプレビューに対応",
-          "[新機能] MP4・MKV・MOVなどの形式のオンラインプレビューに対応",
-          "[新機能] 4K動画のオンラインプレビューに対応（動画は圧縮されます）",
-          "[改善] 接続速度と転送の安定性を向上",
-          "[改善] メッセージ画面のUIを改善",
-          "[その他] 各種最適化"
-      ],
-      "ko": [
-          "[신규] PDF, 이미지, 오디오, 텍스트 파일 온라인 미리보기 지원",
-          "[신규] MP4, MKV, MOV 등 다양한 형식의 온라인 미리보기 지원",
-          "[신규] 4K 영상 온라인 미리보기 지원 (영상은 압축됨)",
-          "[개선] 연결 속도 및 전송 안정성 향상",
-          "[개선] 메시지 화면 UI 개선",
-          "[기타] 기타 다양한 최적화"
-      ],
-      "es": [
-          "[Nuevo] Vista previa en línea de PDF, imágenes, audio y texto",
-          "[Nuevo] Soporte para vista previa de formatos como MP4, MKV, MOV y más",
-          "[Nuevo] Vista previa de video en 4K (los videos se comprimen)",
-          "[Mejora] Velocidad de conexión y estabilidad de transferencia",
-          "[Mejora] Interfaz de la página de mensajes",
-          "[Otros] Varias optimizaciones"
-      ]
-  },
-  "releasePageUrl": ""
+    "latestVersion": "1.0.2",
+    "windowsVersion": "1.0.2",
+    "macVersion": "1.0.2",
+    "linuxVersion": "1.0.2",
+    "iosVersion": "1.0.2",
+    "androidVersion": "1.0.2",
+    "windowsDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-Setup-1.0.2-win-x64.exe",
+    "macDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.2-macos.dmg",
+    "linuxDownloadUrl": "",
+    "iosDownloadUrl": "",
+    "androidDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.2-android.apk",
+    "forceUpdate": false,
+    "releaseNotes": {
+        "zh": [
+            "[新增] Android 版本支持视频在线预览",
+            "[修复] p2p分享视频时，链接总是中断",
+            "[修复] 4k分辨率卡顿",
+            "[修复] 附近设备离线仍被选中",
+            "[优化] 页面样式",
+            "[其他] 各种优化若干"
+        ],
+        "en": [
+            "[New] Android: online video preview",
+            "[Fixed] P2P video sharing links dropping repeatedly",
+            "[Fixed] 4K playback stuttering",
+            "[Fixed] Offline nearby devices could stay selected",
+            "[Improved] Page styling",
+            "[Other] Miscellaneous improvements"
+        ],
+        "ja": [
+            "[新機能] Android版で動画のオンラインプレビューに対応",
+            "[修正] P2P動画共有時にリンクが頻繁に切断される問題",
+            "[修正] 4K解像度でのカクつき",
+            "[修正] オフラインの近くのデバイスが選択されたままになる問題",
+            "[改善] 画面のスタイル",
+            "[その他] 各種最適化"
+        ],
+        "ko": [
+            "[신규] Android 버전 동영상 온라인 미리보기 지원",
+            "[수정] P2P 동영상 공유 시 링크가 자주 끊기던 문제",
+            "[수정] 4K 해상도에서 끊김 현상",
+            "[수정] 오프라인 주변 기기가 선택 상태로 남던 문제",
+            "[개선] 화면 스타일",
+            "[기타] 기타 최적화"
+        ],
+        "es": [
+            "[Nuevo] Vista previa de vídeo en línea en Android",
+            "[Corrección] Enlaces inestables al compartir vídeo por P2P",
+            "[Corrección] Tartamudeo en resolución 4K",
+            "[Corrección] Los dispositivos cercanos sin conexión podían seguir seleccionados",
+            "[Mejora] Estilo de la interfaz",
+            "[Otros] Varias mejoras"
+        ]
+    },
+    "changelog": [
+        {
+            "version": "1.0.2",
+            "notes": {
+                "zh": [
+                    "[新增] Android 版本支持视频在线预览",
+                    "[修复] p2p分享视频时，链接总是中断",
+                    "[修复] 4k分辨率卡顿",
+                    "[修复] 附近设备离线仍被选中",
+                    "[优化] 页面样式",
+                    "[其他] 各种优化若干"
+                ],
+                "en": [
+                    "[New] Android: online video preview",
+                    "[Fixed] P2P video sharing links dropping repeatedly",
+                    "[Fixed] 4K playback stuttering",
+                    "[Fixed] Offline nearby devices could stay selected",
+                    "[Improved] Page styling",
+                    "[Other] Miscellaneous improvements"
+                ],
+                "ja": [
+                    "[新機能] Android版で動画のオンラインプレビューに対応",
+                    "[修正] P2P動画共有時にリンクが頻繁に切断される問題",
+                    "[修正] 4K解像度でのカクつき",
+                    "[修正] オフラインの近くのデバイスが選択されたままになる問題",
+                    "[改善] 画面のスタイル",
+                    "[その他] 各種最適化"
+                ],
+                "ko": [
+                    "[신규] Android 버전 동영상 온라인 미리보기 지원",
+                    "[수정] P2P 동영상 공유 시 링크가 자주 끊기던 문제",
+                    "[수정] 4K 해상도에서 끊김 현상",
+                    "[수정] 오프라인 주변 기기가 선택 상태로 남던 문제",
+                    "[개선] 화면 스타일",
+                    "[기타] 기타 최적화"
+                ],
+                "es": [
+                    "[Nuevo] Vista previa de vídeo en línea en Android",
+                    "[Corrección] Enlaces inestables al compartir vídeo por P2P",
+                    "[Corrección] Tartamudeo en resolución 4K",
+                    "[Corrección] Los dispositivos cercanos sin conexión podían seguir seleccionados",
+                    "[Mejora] Estilo de la interfaz",
+                    "[Otros] Varias mejoras"
+                ]
+            }
+        },
+        {
+            "version": "1.0.1",
+            "notes": {
+                "zh": [
+                    "[新增] PDF、图片、音频、文本 在线预览",
+                    "[新增] 支持 mp4、mkv、mov等格式在线预览",
+                    "[新增] 支持 4k 视频在线预览（视频会压缩）",
+                    "[优化] 连接速度，传输稳定性",
+                    "[优化] 消息页面样式",
+                    "[其他] 各种优化若干"
+                ],
+                "en": [
+                    "[New] Preview PDF, images, audio, and text files online",
+                    "[New] Support online preview for MP4, MKV, MOV and more formats",
+                    "[New] Support 4K video preview (videos will be compressed)",
+                    "[Improved] Connection speed and transfer stability",
+                    "[Improved] Message page UI",
+                    "[Other] Various optimizations and improvements"
+                ],
+                "ja": [
+                    "[新機能] PDF・画像・音声・テキストのオンラインプレビューに対応",
+                    "[新機能] MP4・MKV・MOVなどの形式のオンラインプレビューに対応",
+                    "[新機能] 4K動画のオンラインプレビューに対応（動画は圧縮されます）",
+                    "[改善] 接続速度と転送の安定性を向上",
+                    "[改善] メッセージ画面のUIを改善",
+                    "[その他] 各種最適化"
+                ],
+                "ko": [
+                    "[신규] PDF, 이미지, 오디오, 텍스트 파일 온라인 미리보기 지원",
+                    "[신규] MP4, MKV, MOV 등 다양한 형식의 온라인 미리보기 지원",
+                    "[신규] 4K 영상 온라인 미리보기 지원 (영상은 압축됨)",
+                    "[개선] 연결 속도 및 전송 안정성 향상",
+                    "[개선] 메시지 화면 UI 개선",
+                    "[기타] 기타 다양한 최적화"
+                ],
+                "es": [
+                    "[Nuevo] Vista previa en línea de PDF, imágenes, audio y texto",
+                    "[Nuevo] Soporte para vista previa de formatos como MP4, MKV, MOV y más",
+                    "[Nuevo] Vista previa de video en 4K (los videos se comprimen)",
+                    "[Mejora] Velocidad de conexión y estabilidad de transferencia",
+                    "[Mejora] Interfaz de la página de mensajes",
+                    "[Otros] Varias optimizaciones"
+                ]
+            }
+        },
+        {
+            "version": "1.0.0",
+            "notes": {
+                "zh": ["[首个] 公开发布"],
+                "en": ["[First] Public release"],
+                "ja": ["[初版] 公開リリース"],
+                "ko": ["[첫] 공개 릴리스"],
+                "es": ["[Primera] Versión pública"]
+            }
+        }
+    ],
+    "releasePageUrl": ""
 }

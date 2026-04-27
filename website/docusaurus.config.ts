@@ -64,7 +64,7 @@ const config: Config = {
   /** 国内镜像站（DNS 指向中国机）；主站 etedrop.com 上展示顶部引导条 */
   customFields: {
     chinaMirrorOrigin:
-      process.env.CHINA_MIRROR_ORIGIN ?? "https://cn.etedrop.com",
+      process.env.CHINA_MIRROR_ORIGIN ?? "https://etedrop.cn",
     /** 本地调试：设为 true 时在非主站域名也显示引导条（需 rebuild） */
     cnMirrorBannerDebug: process.env.CN_MIRROR_BANNER_DEBUG === "1",
     /**

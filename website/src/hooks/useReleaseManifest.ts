@@ -6,6 +6,7 @@ import {
 } from "@site/src/constant/release";
 import {
   FALLBACK_RELEASE,
+  type ReleaseChangelogEntry,
   type ReleaseManifest,
   VERSION_JSON_PUBLIC_PATH,
 } from "@site/src/constant/release";
@@ -21,6 +22,54 @@ function toStringArray(raw: unknown): string[] {
 
 function trimVersion(raw: unknown): string {
   return typeof raw === "string" ? raw.trim() : "";
+}
+
+function mergeNotesObject(raw: unknown): Record<string, string[]> {
+  if (!raw || typeof raw !== "object") {
+    return {
+      zh: [],
+      en: [],
+      ja: [],
+      ko: [],
+      es: [],
+    };
+  }
+  const n = raw as Record<string, unknown>;
+  return {
+    zh: toStringArray(n.zh),
+    en: toStringArray(n.en),
+    ja: toStringArray(n.ja),
+    ko: toStringArray(n.ko),
+    es: toStringArray(n.es),
+  };
+}
+
+function mergeChangelog(
+  raw: unknown,
+  latestVersion: string,
+  fallbackNotes: Record<string, string[]>,
+): ReleaseChangelogEntry[] {
+  const fromJson: ReleaseChangelogEntry[] = [];
+  if (Array.isArray(raw)) {
+    for (const item of raw) {
+      if (!item || typeof item !== "object") continue;
+      const o = item as Record<string, unknown>;
+      const version = trimVersion(o.version);
+      if (!version) continue;
+      fromJson.push({
+        version,
+        notes: mergeNotesObject(o.notes),
+      });
+    }
+  }
+  if (fromJson.length > 0) {
+    return fromJson;
+  }
+  const hasAnyNote = Object.values(fallbackNotes).some((a) => a.length > 0);
+  if (!hasAnyNote || !trimVersion(latestVersion)) {
+    return [];
+  }
+  return [{ version: latestVersion, notes: { ...fallbackNotes } }];
 }
 
 function mergeManifest(raw: unknown): ReleaseManifest {
@@ -65,14 +114,10 @@ function mergeManifest(raw: unknown): ReleaseManifest {
   const notesRaw = o.releaseNotes;
   const releaseNotes: Record<string, string[]> =
     notesRaw && typeof notesRaw === "object"
-      ? {
-          zh: toStringArray((notesRaw as Record<string, unknown>).zh),
-          en: toStringArray((notesRaw as Record<string, unknown>).en),
-          ja: toStringArray((notesRaw as Record<string, unknown>).ja),
-          ko: toStringArray((notesRaw as Record<string, unknown>).ko),
-          es: toStringArray((notesRaw as Record<string, unknown>).es),
-        }
+      ? mergeNotesObject(notesRaw)
       : FALLBACK_RELEASE.releaseNotes;
+
+  const changelog = mergeChangelog(o.changelog, latestVersion, releaseNotes);
 
   return {
     latestVersion,
@@ -89,6 +134,7 @@ function mergeManifest(raw: unknown): ReleaseManifest {
     forceUpdate,
     releasePageUrl,
     releaseNotes,
+    changelog,
   };
 }
 

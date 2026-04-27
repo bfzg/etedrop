@@ -4,7 +4,17 @@
  *
  * 分平台版本（可选）：`windowsVersion` / `macVersion` / `linuxVersion` / `iosVersion` /
  * `androidVersion`；省略时回退到 `latestVersion`。下载链接仍用各 `*DownloadUrl`。
+ *
+ * - `releaseNotes`：客户端内「当前版本」更新摘要（Flutter 等仍依赖此字段）。
+ * - `changelog`：网站下载页多版本历史；每项 `{ version, notes: { zh, en, ja, ko, es } }`，新在前。
+ *   若省略 `changelog` 或为空，网站端会用 `latestVersion` + `releaseNotes` 合成一条展示。
  */
+/** 下载页「更新日志」一条版本记录；`notes` 与 `releaseNotes` 相同的多语言结构 */
+export type ReleaseChangelogEntry = {
+  version: string;
+  notes: Record<string, string[]>;
+};
+
 export type ReleaseManifest = {
   /** 兼容旧清单：未写分平台版本时，各平台回退到此字段 */
   latestVersion: string;
@@ -21,6 +31,8 @@ export type ReleaseManifest = {
   forceUpdate: boolean;
   releasePageUrl: string;
   releaseNotes: Record<string, string[]>;
+  /** 多版本更新历史（新在前）；缺省时由 merge 用 latestVersion + releaseNotes 合成一条 */
+  changelog: ReleaseChangelogEntry[];
 };
 
 /** 与 `static/public/version.json` 结构一致，便于一处对照填写 */
@@ -45,6 +57,7 @@ export const FALLBACK_RELEASE: ReleaseManifest = {
     ko: [],
     es: [],
   },
+  changelog: [],
 };
 
 export const VERSION_JSON_PUBLIC_PATH = "/public/version.json";

@@ -13,6 +13,13 @@
   "download.page.subtitle": {
     "message": "Choose your system for the desktop app. Mobile and Linux versions are in active testing."
   },
+  "download.changelog.title": { "message": "What's new" },
+  "download.changelog.empty": { "message": "No changelog entries yet." },
+  "download.changelog.kicker": { "message": "CHANGELOG" },
+  "download.changelog.latestPill": { "message": "Latest" },
+  "download.changelog.showOlder": { "message": "Show earlier versions" },
+  "download.changelog.hideOlder": { "message": "Collapse earlier versions" },
+  "download.changelog.viewLink": { "message": "View changelog" },
   "homepage.meta.description": {
     "message": "EteDrop official site: product capabilities, guides, and technical docs."
   },

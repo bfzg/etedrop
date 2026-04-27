@@ -35,6 +35,27 @@
   "download.page.subtitle": {
     "message": "选择您的系统获取桌面客户端。移动端与 Linux 版本正在加紧测试中。"
   },
+  "download.changelog.title": {
+    "message": "更新日志"
+  },
+  "download.changelog.empty": {
+    "message": "暂无记录。"
+  },
+  "download.changelog.kicker": {
+    "message": "CHANGELOG"
+  },
+  "download.changelog.latestPill": {
+    "message": "最新"
+  },
+  "download.changelog.showOlder": {
+    "message": "显示更早的版本"
+  },
+  "download.changelog.hideOlder": {
+    "message": "收起更早的版本"
+  },
+  "download.changelog.viewLink": {
+    "message": "查看更新日志"
+  },
   "homepage.meta.description": {
     "message": "Fast Send 官网：产品能力、使用指南与技术文档。"
   },

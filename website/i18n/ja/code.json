@@ -13,6 +13,13 @@
   "download.page.subtitle": {
     "message": "お使いのOS向けデスクトップ版を入手。モバイル・Linux版は準備中です。"
   },
+  "download.changelog.title": { "message": "更新履歴" },
+  "download.changelog.empty": { "message": "記録はまだありません。" },
+  "download.changelog.kicker": { "message": "CHANGELOG" },
+  "download.changelog.latestPill": { "message": "最新" },
+  "download.changelog.showOlder": { "message": "以前のバージョンを表示" },
+  "download.changelog.hideOlder": { "message": "以前のバージョンを隠す" },
+  "download.changelog.viewLink": { "message": "更新履歴を見る" },
   "homepage.meta.description": {
     "message": "EteDrop 公式サイト：機能、ガイド、技術ドキュメント。"
   },
