@@ -753,7 +753,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get videoTranscodeSubtitle =>
-      'When on, videos in unsupported formats (non H.264+AAC) are automatically transcoded for online playback, enabling any format to stream. This uses extra CPU. When off, only compatible formats stream directly — saves resources but some formats won\'t play online.';
+      'When on, unsupported video formats are transcoded automatically for online playback (uses more CPU).';
 
   @override
   String get transferAutoReceivingHint =>

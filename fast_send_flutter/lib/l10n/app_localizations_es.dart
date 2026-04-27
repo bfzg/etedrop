@@ -753,7 +753,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get videoTranscodeSubtitle =>
-      'Si está activado, los vídeos en formatos no compatibles (distintos de H.264+AAC) se recodifican automáticamente para la reproducción en línea, lo que permite transmitir cualquier formato a costa de mayor uso de CPU. Si está desactivado, solo los formatos compatibles se transmiten directamente, ahorrando recursos, aunque algunos formatos no podrán reproducirse en línea.';
+      'Si está activado, los formatos de vídeo no compatibles se transcodifican automáticamente para reproducción en línea (usa más CPU).';
 
   @override
   String get transferAutoReceivingHint =>

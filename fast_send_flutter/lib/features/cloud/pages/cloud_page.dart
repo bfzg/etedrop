@@ -14,6 +14,8 @@ import '../widgets/file_list_view.dart';
 import '../widgets/new_folder_dialog.dart';
 import '../../share/widgets/share_dialog.dart';
 import '../../../core/utils/access_utils.dart';
+import '../../../widgets/ui/e_button.dart';
+import '../../../widgets/ui/e_dialog.dart';
 import '../widgets/file_table_view.dart';
 
 /// 网盘文件管理页面
@@ -178,7 +180,7 @@ class CloudPage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => EDialog.alert(
         title: Text(l10n.confirmDelete),
         content: Text(
           l10n.deleteEntryConfirm(
@@ -187,16 +189,15 @@ class CloudPage extends ConsumerWidget {
           ),
         ),
         actions: [
-          TextButton(
+          EButton(
+            text: l10n.cancel,
+            variant: EButtonVariant.secondary,
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancel),
           ),
-          FilledButton(
+          EButton(
+            text: l10n.deleteAction,
+            variant: EButtonVariant.danger,
             onPressed: () => Navigator.of(ctx).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-            child: Text(l10n.deleteAction),
           ),
         ],
       ),

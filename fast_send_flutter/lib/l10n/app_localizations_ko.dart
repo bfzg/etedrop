@@ -734,7 +734,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get videoTranscodeSubtitle =>
-      '켜면 H.264+AAC 이외의 형식 동영상을 자동으로 트랜스코딩하여 스트리밍합니다. 모든 형식을 온라인으로 재생할 수 있지만 CPU 사용률이 높아집니다. 끄면 호환 형식만 직접 스트리밍하여 CPU를 절약하지만 일부 형식은 온라인 재생이 불가합니다.';
+      '켜면 온라인 재생을 지원하지 않는 동영상 형식을 자동으로 트랜스코딩합니다(더 많은 CPU 사용).';
 
   @override
   String get transferAutoReceivingHint =>

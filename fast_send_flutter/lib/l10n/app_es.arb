@@ -442,7 +442,7 @@
   "transferAutoReceiveTitle": "Aceptar compartidos automáticamente",
   "transferAutoReceiveSubtitle": "Si está activado, los recursos LAN empiezan sin pulsar Recibir en Mensajes. Por defecto desactivado.",
   "videoTranscodeTitle": "Transcodificación de vídeo",
-  "videoTranscodeSubtitle": "Si está activado, los vídeos en formatos no compatibles (distintos de H.264+AAC) se recodifican automáticamente para la reproducción en línea, lo que permite transmitir cualquier formato a costa de mayor uso de CPU. Si está desactivado, solo los formatos compatibles se transmiten directamente, ahorrando recursos, aunque algunos formatos no podrán reproducirse en línea.",
+  "videoTranscodeSubtitle": "Si está activado, los formatos de vídeo no compatibles se transcodifican automáticamente para reproducción en línea (usa más CPU).",
   "transferAutoReceivingHint": "Aceptación automática activada: conectando y recibiendo en segundo plano.",
   "webrtcBackgroundKeepaliveSection": "Background",
   "webrtcBackgroundKeepaliveTitle": "Keep transfer alive in background",

@@ -735,7 +735,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get videoTranscodeSubtitle =>
-      'オンにすると、H.264+AAC 以外の形式の動画を自動でトランスコードしてストリーミングします。あらゆる形式を再生できますが、CPU 使用率が上がります。オフにすると互換形式のみ直接ストリーミングし、CPU を節約しますが一部の形式はオンライン再生できません。';
+      'オンにすると、オンライン再生非対応の動画形式を自動でトランスコードします（CPU 使用率が上がります）。';
 
   @override
   String get transferAutoReceivingHint => '自動受信がオンです。接続してバックグラウンドで受信中です。';

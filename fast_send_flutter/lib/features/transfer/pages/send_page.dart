@@ -128,7 +128,7 @@ class _SendPageState extends ConsumerState<SendPage> {
     final devices = ref.watch(lanManagerProvider);
 
     _selectedDeviceIds.removeWhere(
-      (id) => !devices.any((d) => d.deviceId == id),
+      (id) => !devices.any((d) => d.deviceId == id && d.isOnline),
     );
 
     return Scaffold(

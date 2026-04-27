@@ -442,7 +442,7 @@
   "transferAutoReceiveTitle": "Auto receive",
   "transferAutoReceiveSubtitle": "When on, LAN share offers begin without tapping Receive in Messages. Default is off.",
   "videoTranscodeTitle": "Video transcoding",
-  "videoTranscodeSubtitle": "When on, videos in unsupported formats (non H.264+AAC) are automatically transcoded for online playback, enabling any format to stream. This uses extra CPU. When off, only compatible formats stream directly — saves resources but some formats won't play online.",
+  "videoTranscodeSubtitle": "When on, unsupported video formats are transcoded automatically for online playback (uses more CPU).",
   "transferAutoReceivingHint": "Auto-accept is on — connecting and receiving in the background.",
   "webrtcBackgroundKeepaliveSection": "Background",
   "webrtcBackgroundKeepaliveTitle": "Keep transfer alive in background",
