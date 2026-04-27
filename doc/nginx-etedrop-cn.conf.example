@@ -1,21 +1,25 @@
 # =============================================================================
+# EteDrop — 国内节点 Nginx 示例（etedrop.cn + api.etedrop.cn）
 #
-# 域名约定：
-#   - api.etedrop.cn              → 反代后端 127.0.0.1:40321
-#   - etedrop.cn / www.etedrop.cn / *.etedrop.cn（泛解析）→ 官网静态
+# 部署位置：大陆访问入口服务器（与全球机 **物理分离** 时常用此文件）。
 #
-# 官网根目录（服务器本地路径，与域名后缀无关，可按实际改）：
-# API：127.0.0.1:40321
+# 与客户端的关系：
+#   Flutter 大陆线路默认 `https://api.etedrop.cn`（见
+#   `fast_send_flutter/lib/core/config/server_endpoints.dart`）。
+#   全球线路使用 `https://api.etedrop.com`，由海外机
+#   `doc/nginx-etedrop.conf.example` 提供。
 #
-# 证书示例（路径以 certbot 实际签发为准）：
-#   sudo certbot certonly --webroot -w /var/www/html -d api.etedrop.cn
-#   sudo certbot certonly --webroot -w /var/www/html -d etedrop.cn -d www.etedrop.cn
-#   # 泛域名 *.etedrop.cn 通常需 DNS-01，例如：
-#   # sudo certbot certonly --manual --preferred-challenges dns -d "*.etedrop.cn" -d etedrop.cn
+# 本机需具备：
+#   - 网站静态根：默认 /home/app/www.etedrop.cn/（一般为 `npm run build:domestic` 产物）
+#   - 后端反代：127.0.0.1:40321（fast_send_server）
 #
 # 若 /etc/nginx/nginx.conf 的 http{} 里已有同名 map，请删除本文件中的 map 段。
+# 证书未签发、nginx -t 报 fullchain 不存在时：先注释掉对应 listen 443 的整段 server。
 #
-# 证书尚未签发、nginx -t 报 fullchain 不存在时：注释掉对应 listen 443 的整段 server。
+# 证书示例（路径以 certbot 为准）：
+#   sudo certbot certonly --webroot -w /var/www/html -d api.etedrop.cn
+#   sudo certbot certonly --webroot -w /var/www/html -d etedrop.cn -d www.etedrop.cn
+# 通配符 *.etedrop.cn 多为 DNS-01，且需单独一张证书，见文件末尾「可选通配符」段。
 # =============================================================================
 
 map $http_upgrade $connection_upgrade {
@@ -28,11 +32,14 @@ upstream fast_send_backend {
     keepalive 32;
 }
 
-# ---------- HTTP：acme + 跳 HTTPS ----------
+# -----------------------------------------------------------------------------
+# HTTP：ACME + 跳 HTTPS（不含泛域名：泛域名证书通常走 DNS-01，不依赖 HTTP-01）
+# -----------------------------------------------------------------------------
+
 server {
     listen 80;
     listen [::]:80;
-    server_name api.etedrop.cn etedrop.cn www.etedrop.cn *.etedrop.cn;
+    server_name api.etedrop.cn etedrop.cn www.etedrop.cn;
 
     location /.well-known/acme-challenge/ {
         root /var/www/html;
@@ -43,7 +50,10 @@ server {
     }
 }
 
-# ---------- HTTPS：API ----------
+# -----------------------------------------------------------------------------
+# HTTPS：API
+# -----------------------------------------------------------------------------
+
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
@@ -74,12 +84,31 @@ server {
     }
 }
 
-# ---------- HTTPS：官网（etedrop.cn 主域 + www + 泛域名）----------
-# 证书需覆盖 etedrop.cn、www.etedrop.cn、*.etedrop.cn（泛域名多为单独一张证书，路径以 certbot 为准）
+# -----------------------------------------------------------------------------
+# HTTPS：www → 根域（与全球站 etedrop.com 行为一致）
+# -----------------------------------------------------------------------------
+
 server {
     listen 443 ssl http2;
     listen [::]:443 ssl http2;
-    server_name etedrop.cn www.etedrop.cn *.etedrop.cn;
+    server_name www.etedrop.cn;
+
+    ssl_certificate     /etc/letsencrypt/live/etedrop.cn/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/etedrop.cn/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    return 301 https://etedrop.cn$request_uri;
+}
+
+# -----------------------------------------------------------------------------
+# HTTPS：官网主域
+# -----------------------------------------------------------------------------
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name etedrop.cn;
 
     ssl_certificate     /etc/letsencrypt/live/etedrop.cn/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/etedrop.cn/privkey.pem;
@@ -102,3 +131,33 @@ server {
     access_log /var/log/nginx/etedrop-cn-access.log;
     error_log  /var/log/nginx/etedrop-cn-error.log;
 }
+
+# =============================================================================
+# 可选：通配子域 *.etedrop.cn（需已签发含该通配符的证书，例如 DNS-01）
+# 若证书路径不是 /etc/letsencrypt/live/etedrop.cn/，请单独改 ssl_certificate 路径。
+# =============================================================================
+#
+# server {
+#     listen 443 ssl http2;
+#     listen [::]:443 ssl http2;
+#     server_name *.etedrop.cn;
+#     ssl_certificate     /etc/letsencrypt/live/etedrop.wildcard/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/etedrop.wildcard/privkey.pem;
+#     include /etc/letsencrypt/options-ssl-nginx.conf;
+#     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+#     root /home/app/www.etedrop.cn;
+#     index index.html;
+#     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot|webp|map)$ {
+#         expires 1y;
+#         add_header Cache-Control "public, immutable";
+#         try_files $uri =404;
+#     }
+#     location / { try_files $uri $uri/ =404; }
+# }
+# server {
+#     listen 80;
+#     listen [::]:80;
+#     server_name *.etedrop.cn;
+#     location /.well-known/acme-challenge/ { root /var/www/html; }
+#     location / { return 301 https://$host$request_uri; }
+# }

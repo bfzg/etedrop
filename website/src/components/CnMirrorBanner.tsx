@@ -89,7 +89,7 @@ function CnMirrorBannerInner(): ReactNode {
           <span className="text-slate-700">
             {" "}
             <Translate id="cnMirror.banner.body">
-              访问国内节点页面加载通常更快（独立域名与证书，需在 DNS 将 cn 指向中国服务器）。
+              访问国内节点页面加载通常更快。
             </Translate>
           </span>
         </div>

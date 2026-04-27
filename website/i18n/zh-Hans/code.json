@@ -312,7 +312,7 @@
     "message": "检测到您可能位于中国大陆"
   },
   "cnMirror.banner.body": {
-    "message": "访问国内节点页面加载通常更快（独立域名与证书，需在 DNS 将 cn 指向中国服务器）。"
+    "message": "访问国内节点页面加载通常更快。"
   },
   "cnMirror.banner.cta": {
     "message": "前往国内站点"

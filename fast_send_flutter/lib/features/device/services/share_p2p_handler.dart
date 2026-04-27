@@ -463,6 +463,26 @@ class ShareP2PHandler {
       }
     }
 
+    // 「断流续播」：网页端 DC 断开重连后，会再发 `stream-start` 并附带
+    // 上一次播放到的 currentTime，sender 用 `-ss` 让 ffmpeg 从该时间点重启，
+    // 并在 stream-meta 上标记 resume:true，让网页端复用既有的 SourceBuffer
+    // （不重建 MediaSource）。transcode 路径输出 PTS 从 0 起，需把
+    // resumeFrom 作为 actualTime 回传，让 SB.timestampOffset 对齐到该时间；
+    // remux 路径 `-c copy` 默认保留原始 PTS，无需额外偏移。
+    double? resumeFrom;
+    final rf = msg['resumeFrom'];
+    if (rf is num) {
+      final v = rf.toDouble();
+      if (v.isFinite && v > 0) {
+        final dur = probe.duration;
+        if (dur != null && dur > 0 && v >= dur) {
+          resumeFrom = null;
+        } else {
+          resumeFrom = v;
+        }
+      }
+    }
+
     // Invalidate any previous pipeline and reset flow control.
     _streamGeneration++;
     _killActiveStream(reason: 'stream-start');
@@ -478,11 +498,24 @@ class ShareP2PHandler {
       if (probe.duration != null) 'duration': probe.duration,
       if (probe.width != null) 'width': probe.width,
       if (probe.height != null) 'height': probe.height,
+      if (resumeFrom != null) 'resume': true,
+      if (resumeFrom != null && plan.needsTranscode) 'actualTime': resumeFrom,
       'binaryMode': 'init-segment-v1',
     });
 
     _activeStreamPlan = plan;
-    await _runStreamPipeline(bins.ffmpegPath, filePath, plan: plan);
+    if (resumeFrom != null) {
+      print(
+        '[ShareP2P] stream-start with resumeFrom=$resumeFrom '
+        '(plan=${plan.describe()})',
+      );
+    }
+    await _runStreamPipeline(
+      bins.ffmpegPath,
+      filePath,
+      plan: plan,
+      seekTime: resumeFrom,
+    );
   }
 
   Process? _activeStreamProc;
@@ -597,7 +630,8 @@ class ShareP2PHandler {
     var totalBytesSent = 0;
     try {
       print(
-        '[ShareP2P] ffmpeg start (pipe=$usePipe): $ffmpegPath ${args.join(' ')}',
+        '[ShareP2P] ffmpeg start (pipe=$usePipe, realtimePacing=${plan.useRealtimeInputPacing}): '
+        '$ffmpegPath ${args.join(' ')}',
       );
       final proc = await Process.start(ffmpegPath, args);
       _activeStreamProc = proc;

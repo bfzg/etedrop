@@ -46,6 +46,9 @@ export interface StreamMeta {
   binaryMode?: 'raw-mp4' | 'init-segment-v1'
   /** seek 应答时携带，表明本次是从 seek 后的新位置开始 */
   seeked?: boolean
+  /** 「断流续播」应答：sender 收到带 resumeFrom 的 stream-start 后会标记此位，
+   *  网页侧需保留既有 SourceBuffer，仅清空 mp4 box 解析状态/SB.buffered。 */
+  resume?: boolean
   actualTime?: number
 }
 

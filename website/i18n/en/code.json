@@ -172,7 +172,7 @@
     "message": "You may be in mainland China"
   },
   "cnMirror.banner.body": {
-    "message": "The China mirror is often faster (separate domain and TLS; point cn in DNS to your China origin)."
+    "message": "The China mirror is often faster."
   },
   "cnMirror.banner.cta": { "message": "Open China mirror" },
   "cnMirror.banner.dismiss": { "message": "Don’t show again" }

@@ -172,7 +172,7 @@
     "message": "Puede que estés en China continental"
   },
   "cnMirror.banner.body": {
-    "message": "El espejo en China suele cargar más rápido (dominio y TLS aparte; apunta cn en DNS a tu servidor en China)."
+    "message": "El espejo en China suele cargar más rápido."
   },
   "cnMirror.banner.cta": { "message": "Abrir espejo China" },
   "cnMirror.banner.dismiss": { "message": "No volver a mostrar" }

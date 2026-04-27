@@ -172,7 +172,7 @@
     "message": "중국 본토에서 접속 중일 수 있습니다"
   },
   "cnMirror.banner.body": {
-    "message": "중국 미러가 더 빠른 경우가 많습니다(별도 도메인·인증서, DNS에서 cn을 중국 서버로 지정)."
+    "message": "중국 미러가 더 빠른 경우가 많습니다."
   },
   "cnMirror.banner.cta": { "message": "중국 미러 열기" },
   "cnMirror.banner.dismiss": { "message": "다시 표시 안 함" }

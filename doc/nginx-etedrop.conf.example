@@ -1,55 +1,47 @@
 # =============================================================================
-# EteDrop — 统一 Nginx 配置（官网静态站 + fast_send_server 反代）
+# EteDrop — 全球节点 Nginx 示例（etedrop.com + api.etedrop.com）
 #
-# 用途：整份复制到服务器后按需改证书路径与网站根目录。
-# 海外机：可保留 api + etedrop 主域；国内机勿整份照搬（会引用不存在的 api 等证书），
-# 请改用 **`doc/nginx-etedrop-cn.conf.example`**，或在本文件中注释掉本机不签证书的 server{}。
+# 部署位置：海外 / 国际访问入口服务器。
 #
-# 官网根目录（Docusaurus build 产物）：
-#   /home/app/www.etedrop.com/
-#   rsync -av --delete ./website/build/ user@server:/home/app/www.etedrop.com/
-#   确保 www-data 能遍历 /home、/home/app（如 chmod o+x /home /home/app）并能读站点文件。
+# 与客户端的关系：
+#   Flutter 默认全球 API 为 `https://api.etedrop.com`（见
+#   `fast_send_flutter/lib/core/config/server_endpoints.dart`）。
+#   大陆用户选「国内线路」时改连 `https://api.etedrop.cn`，由**国内机**上
+#   `doc/nginx-etedrop-cn.conf.example` 提供，**不必**在本机再挂 api-cn 域名。
 #
-# API：本机 Node fast_send_server 监听 127.0.0.1:40321（与仓库默认一致）。
+# 本机需具备：
+#   - 网站静态根：默认 /home/app/www.etedrop.com/（Docusaurus build 产物）
+#   - 后端反代：127.0.0.1:40321（fast_send_server）
 #
-# 证书（Let's Encrypt 一次申请多域名示例）：
-#   sudo certbot --nginx -d etedrop.com -d www.etedrop.com -d api.etedrop.com -d api-cn.etedrop.com
-#   测试用镜像域名（阿里云解析，与 Cloudflare 解析的 etedrop.com 对照加载速度）：
-#   sudo certbot certonly --webroot -w /var/www/html -d www.a4life.xyz
-#   若证书路径与下文不一致，请统一改成 certbot certificates 中的实际路径。
-#
-# 启用：
-#   sudo cp nginx-etedrop.conf.example /etc/nginx/sites-available/api
-#   sudo ln -sf /etc/nginx/sites-available/api /etc/nginx/sites-enabled/api
-#   # 编辑配置请改 sites-available 下文件；勿直接 vim 写 sites-enabled 里的软链，否则 Vim 可能报 E166。
-#   # 删掉与上述 server_name 冲突的旧 conf 后：
+# 启用方式（与仓库其他 doc 一致）：
+#   sudo cp nginx-etedrop.conf.example /etc/nginx/sites-available/etedrop
+#   sudo ln -sf /etc/nginx/sites-available/etedrop /etc/nginx/sites-enabled/etedrop
+#   # 若 http{} 里已有同名的 map，删本文件中的 map 段
 #   sudo nginx -t && sudo systemctl reload nginx
 #
-# 注意：若 /etc/nginx/nginx.conf 的 http{} 里已有同名 map，请删除本文件中的 map 段，避免重复。
-#
-# WebSocket：wss://.../api/share、/api/connect 依赖 Upgrade 头，已写在 API 的 location / 中。
+# 证书（示例，按 certbot 实际输出改路径）：
+#   sudo certbot certonly --webroot -w /var/www/html -d etedrop.com -d www.etedrop.com
+#   sudo certbot certonly --webroot -w /var/www/html -d api.etedrop.com
 # =============================================================================
 
-# ---------- WebSocket 升级（HTTP/1.1）----------
 map $http_upgrade $connection_upgrade {
     default upgrade;
     ''      close;
 }
 
-# ---------- 后端上游：本机 fast_send_server ----------
 upstream fast_send_backend {
     server 127.0.0.1:40321;
     keepalive 32;
 }
 
-# =============================================================================
-# HTTP：证书续期 + 跳转 HTTPS
-# =============================================================================
+# -----------------------------------------------------------------------------
+# HTTP：ACME + 跳 HTTPS
+# -----------------------------------------------------------------------------
 
 server {
     listen 80;
     listen [::]:80;
-    server_name api.etedrop.com api-cn.etedrop.com;
+    server_name api.etedrop.com;
 
     location /.well-known/acme-challenge/ {
         root /var/www/html;
@@ -74,24 +66,9 @@ server {
     }
 }
 
-# HTTP：测试域名 www.a4life.xyz（与 etedrop 官网同机同根目录；不重定向到 etedrop，便于对比 DNS）
-server {
-    listen 80;
-    listen [::]:80;
-    server_name www.a4life.xyz;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/html;
-    }
-
-    location / {
-        return 301 https://www.a4life.xyz$request_uri;
-    }
-}
-
-# =============================================================================
-# HTTPS：API — 全球线 api.etedrop.com
-# =============================================================================
+# -----------------------------------------------------------------------------
+# HTTPS：API（全球线）
+# -----------------------------------------------------------------------------
 
 server {
     listen 443 ssl http2;
@@ -123,46 +100,9 @@ server {
     }
 }
 
-# =============================================================================
-# HTTPS：API — 大陆线 api-cn.etedrop.com（同一 upstream；大陆 DNS 可指向更近的 VPS）
-# =============================================================================
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name api-cn.etedrop.com;
-
-    ssl_certificate     /etc/letsencrypt/live/api-cn.etedrop.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api-cn.etedrop.com/privkey.pem;
-    # 若使用一张 SAN 证书同时包含 api + api-cn，改为与 api 相同的 fullchain.pem / privkey.pem，
-    # 或合并为单个 server_name api.etedrop.com api-cn.etedrop.com 的 server{}（见文件末尾注释）。
-
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    client_max_body_size 500m;
-
-    location / {
-        proxy_pass http://fast_send_backend;
-        proxy_http_version 1.1;
-
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection $connection_upgrade;
-
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-
-        proxy_read_timeout 86400s;
-        proxy_send_timeout 86400s;
-        proxy_buffering off;
-    }
-}
-
-# =============================================================================
-# HTTPS：官网 — www 重定向到 apex
-# =============================================================================
+# -----------------------------------------------------------------------------
+# HTTPS：官网 — www → 根域
+# -----------------------------------------------------------------------------
 
 server {
     listen 443 ssl http2;
@@ -177,9 +117,9 @@ server {
     return 301 https://etedrop.com$request_uri;
 }
 
-# =============================================================================
+# -----------------------------------------------------------------------------
 # HTTPS：官网 — etedrop.com 静态站
-# =============================================================================
+# -----------------------------------------------------------------------------
 
 server {
     listen 443 ssl http2;
@@ -209,49 +149,31 @@ server {
 }
 
 # =============================================================================
-# HTTPS：官网镜像 — www.a4life.xyz（与 etedrop.com 相同静态根；独立证书）
-# 阿里云解析指向本机公网 IP 后，用浏览器 / curl 对比与 Cloudflare 解析域名的首包与静态资源耗时。
+# 可选：对比测试用独立域名（与主站同根目录、单独证书时启用）
 # =============================================================================
-
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
-    server_name www.a4life.xyz;
-
-    ssl_certificate     /etc/letsencrypt/live/www.a4life.xyz/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/www.a4life.xyz/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    root /home/app/www.etedrop.com;
-    index index.html;
-
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot|webp|map)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        try_files $uri =404;
-    }
-
-    location / {
-        try_files $uri $uri/ =404;
-    }
-
-    access_log /var/log/nginx/etedrop-a4life-access.log;
-    error_log  /var/log/nginx/etedrop-a4life-error.log;
-}
-
-# =============================================================================
-# 可选：一张 SAN 证书合并两个 API 域名时，可删上面对 api-cn 的独立 server{}，改为：
 #
-#   server {
-#       listen 443 ssl http2;
-#       listen [::]:443 ssl http2;
-#       server_name api.etedrop.com api-cn.etedrop.com;
-#       ssl_certificate     /etc/letsencrypt/live/api.etedrop.com/fullchain.pem;
-#       ssl_certificate_key /etc/letsencrypt/live/api.etedrop.com/privkey.pem;
-#       ...
-#       location / { ... proxy_pass http://fast_send_backend; ... }
-#   }
+# server {
+#     listen 80;
+#     listen [::]:80;
+#     server_name www.example-mirror.com;
+#     location /.well-known/acme-challenge/ { root /var/www/html; }
+#     location / { return 301 https://www.example-mirror.com$request_uri; }
+# }
+# server {
+#     listen 443 ssl http2;
+#     listen [::]:443 ssl http2;
+#     server_name www.example-mirror.com;
+#     ssl_certificate     /etc/letsencrypt/live/www.example-mirror.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/www.example-mirror.com/privkey.pem;
+#     include /etc/letsencrypt/options-ssl-nginx.conf;
+#     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+#     root /home/app/www.etedrop.com;
+#     index index.html;
+#     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff2?|ttf|eot|webp|map)$ {
+#         expires 1y;
+#         add_header Cache-Control "public, immutable";
+#         try_files $uri =404;
+#     }
+#     location / { try_files $uri $uri/ =404; }
+# }
 #
-# 申请：sudo certbot --nginx -d api.etedrop.com -d api-cn.etedrop.com
-# =============================================================================

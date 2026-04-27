@@ -172,7 +172,7 @@
     "message": "中国本土からのアクセスの可能性があります"
   },
   "cnMirror.banner.body": {
-    "message": "中国向けミラーの方が読み込みが速いことが多いです（別ドメイン・別証明書。cn を中国サーバーへ向けてください）。"
+    "message": "中国向けミラーの方が読み込みが速いことが多いです。"
   },
   "cnMirror.banner.cta": { "message": "中国ミラーを開く" },
   "cnMirror.banner.dismiss": { "message": "次回から表示しない" }

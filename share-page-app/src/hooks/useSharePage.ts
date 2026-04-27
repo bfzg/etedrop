@@ -22,6 +22,13 @@ export function useSharePage(deviceId: string, shareCode: string) {
   const streamAutoReconnectPendingRef = useRef(false);
   /** 持有 setTimeout 句柄，方便在新连接建好或被卸载时取消等待中的重连。 */
   const streamAutoReconnectTimerRef = useRef<number | null>(null);
+  /** 「断流续播」：DC 重连后下一次收到 share-info 时自动重发 stream-start
+   *  并附带 resumeFrom，让 sender 端从断点继续推流。 */
+  const streamResumePendingRef = useRef(false);
+  /** 续播起点（秒），DC 关闭瞬间从 useStreamPlayer.getResumeTime() 抓取。 */
+  const streamResumeFromRef = useRef(0);
+  /** 上次 stream-start 是否要求 remuxFmp4，重连后续播保持一致。 */
+  const streamLastRemuxRef = useRef(false);
 
   const signaling = useSignaling(deviceId, shareCode);
 
@@ -55,6 +62,16 @@ export function useSharePage(deviceId: string, shareCode: string) {
             wasStreaming &&
             !streamAutoReconnectPendingRef.current
           ) {
+            // 抓取断开瞬间的 currentTime 作为续播起点；新连接 share-info 回来后
+            // 由下方分支自动 sendJson({ type: "stream-start", resumeFrom })。
+            const resumeFrom = stream.getResumeTime();
+            streamResumeFromRef.current = resumeFrom;
+            streamResumePendingRef.current = true;
+            console.log("[fastsend] stream auto-resume armed", {
+              resumeFrom,
+              remuxFmp4: streamLastRemuxRef.current,
+            });
+
             streamAutoReconnectPendingRef.current = true;
             if (streamAutoReconnectTimerRef.current != null) {
               window.clearTimeout(streamAutoReconnectTimerRef.current);
@@ -102,6 +119,30 @@ export function useSharePage(deviceId: string, shareCode: string) {
               } else {
                 setShowPassword(false);
                 setShowDownloadBtn(true);
+              }
+              // 「断流续播」：重连后第一次收到 share-info 说明 sender 已就绪。
+              // 直接重发 stream-start with resumeFrom，sender 用 -ss 从断点重启，
+              // 网页端会在 stream-meta(resume:true) 分支里复用既有 SourceBuffer。
+              // 有密码场景这里不自动续播——sender 重新初始化后 _passwordVerified
+              // 已经回到 false，直接发 stream-start 会被回 AUTH_REQUIRED。
+              if (
+                streamResumePendingRef.current &&
+                !m.hasPassword &&
+                stream.streamingActiveRef.current
+              ) {
+                streamResumePendingRef.current = false;
+                const resumeFrom = streamResumeFromRef.current;
+                streamResumeFromRef.current = 0;
+                console.log("[fastsend] stream auto-resume → stream-start", {
+                  resumeFrom,
+                  remuxFmp4: streamLastRemuxRef.current,
+                });
+                signaling.setShowReconnect(false);
+                signaling.sendJson({
+                  type: "stream-start",
+                  remuxFmp4: streamLastRemuxRef.current,
+                  resumeFrom,
+                });
               }
               break;
             case "error":
@@ -162,6 +203,8 @@ export function useSharePage(deviceId: string, shareCode: string) {
         streamAutoReconnectTimerRef.current = null;
       }
       streamAutoReconnectPendingRef.current = false;
+      streamResumePendingRef.current = false;
+      streamResumeFromRef.current = 0;
     };
   }, []);
 
@@ -194,10 +237,14 @@ export function useSharePage(deviceId: string, shareCode: string) {
 
     if (opts?.stream) {
       streamAutoReconnectPendingRef.current = false;
+      streamResumePendingRef.current = false;
+      streamResumeFromRef.current = 0;
       if (streamAutoReconnectTimerRef.current != null) {
         window.clearTimeout(streamAutoReconnectTimerRef.current);
         streamAutoReconnectTimerRef.current = null;
       }
+      // 记下本次 remuxFmp4，自动续播时沿用同一参数，避免对端切到不同的 plan。
+      streamLastRemuxRef.current = !!opts?.remuxFmp4;
       // Allow playing multiple stream sessions in one page lifecycle.
       // After the first stream ends, MediaSource/SourceBuffer may remain in an ended state.
       // Reset first so a new MediaSource is created.

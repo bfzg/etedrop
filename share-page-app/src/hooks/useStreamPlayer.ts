@@ -32,6 +32,7 @@ export interface StreamPlayerApi {
     height?: number;
     binaryMode?: string;
     seeked?: boolean;
+    resume?: boolean;
     actualTime?: number;
   }) => void;
   handleStreamBinary: (buf: ArrayBuffer) => void;
@@ -39,6 +40,9 @@ export interface StreamPlayerApi {
   handleStreamSeeked: (actualTime?: number) => void;
   sendSeek: (targetTime: number) => void;
   resetStream: () => void;
+  /** 当前播放进度（秒）；DC 断开 → 自动续播时用作 sender 端 -ss 起点。
+   *  返回 0 表示还没开始播或不可用，由调用方自行决定是否走整重置流程。 */
+  getResumeTime: () => number;
   streamModeRef: React.RefObject<StreamMode>;
   streamingActiveRef: React.RefObject<boolean>;
   pumpMse: () => void;
@@ -420,6 +424,8 @@ export function useStreamPlayer(
       height?: number;
       binaryMode?: string;
       seeked?: boolean;
+      resume?: boolean;
+      actualTime?: number;
     }) => {
       console.log("[fastsend] stream-meta received:", m);
       if (m.duration && typeof m.duration === "number") {
@@ -457,6 +463,36 @@ export function useStreamPlayer(
         msePendingMoofRef.current = new Uint8Array(0);
         mseSawMoovRef.current = false;
         streamEndedRef.current = false;
+      }
+      // 「断流续播」分支：DC 断开重连后 sender 收到带 resumeFrom 的 stream-start，
+      // 回的 stream-meta 会带 resume:true。此时 SourceBuffer/MediaSource 是同一份，
+      // 只需清掉旧的 mp4 box 解析状态 + SB.buffered，让新的 init+segment 重新装入。
+      // transcode 路径 sender 会把 resumeFrom 作为 actualTime 回传 → 用它当
+      // SB.timestampOffset，新数据会落在该时间点；remux 路径默认保留原始 PTS，
+      // 不动 timestampOffset 即可自然接续。
+      if (m.resume) {
+        seekingRef.current = false;
+        streamPausedRef.current = false;
+        mseQueueRef.current = [];
+        mseQueueBytesRef.current = 0;
+        mseBufRef.current = new Uint8Array(0);
+        mseInitDoneRef.current = false;
+        mseInitAccRef.current = new Uint8Array(0);
+        msePendingMoofRef.current = new Uint8Array(0);
+        mseSawMoovRef.current = false;
+        streamEndedRef.current = false;
+        pendingSeekTimeRef.current =
+          typeof m.actualTime === "number" && Number.isFinite(m.actualTime)
+            ? m.actualTime
+            : null;
+        const sb = sourceBufferRef.current;
+        if (sb) {
+          try {
+            if (sb.updating) sb.abort();
+            sb.abort();
+            sb.remove(0, Infinity);
+          } catch { /* ignore */ }
+        }
       }
       if (m.mime && typeof m.mime === "string") {
         desiredMimeRef.current = m.mime;
@@ -571,6 +607,30 @@ export function useStreamPlayer(
     // Intentional no-op: progress is managed by the orchestrator
   }, []);
 
+  /** 取当前续播起点：优先 video.currentTime，再退化到 SourceBuffer.buffered 末端。
+   *  减一点 epsilon，避免 sender 端 ffmpeg `-ss` 落在帧边界后没有可输出关键帧。
+   *  视频 duration 已知时按 (duration - 1) 截顶，避免 sender 误判为「越界」直接重头开始。 */
+  const getResumeTime = useCallback((): number => {
+    let t = playbackTimeRef.current;
+    if (!Number.isFinite(t) || t < 0) t = 0;
+    if (t === 0) {
+      const sb = sourceBufferRef.current;
+      if (sb) {
+        try {
+          const b = sb.buffered;
+          if (b.length > 0) {
+            const end = b.end(b.length - 1);
+            if (Number.isFinite(end) && end > 0) t = end;
+          }
+        } catch { /* ignore */ }
+      }
+    }
+    if (t <= 0) return 0;
+    const dur = streamDurationRef.current;
+    if (dur > 1 && t >= dur - 0.5) t = dur - 1;
+    return Math.max(0, t - 0.3);
+  }, []);
+
   const resetStream = useCallback(() => {
     setStreaming(false);
     if (mseUrlRef.current) {
@@ -620,5 +680,6 @@ export function useStreamPlayer(
     resetStream,
     pumpMse,
     setStreamProgress,
+    getResumeTime,
   };
 }

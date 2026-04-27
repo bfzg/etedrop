@@ -15,7 +15,8 @@ const DEFAULT_RECENT_EVENTS_LIMIT = 200;
 @Injectable()
 export class UsageAnalyticsService implements OnModuleInit {
   private readonly logger = new Logger(UsageAnalyticsService.name);
-  private readonly runtimeDir = join(process.cwd(), 'runtime');
+  // 与项目根目录下 runtime/ 一致，不依赖 process.cwd()（见 share-page.controller）
+  private readonly runtimeDir = join(__dirname, '..', '..', 'runtime');
   private readonly registryFilePath = join(
     this.runtimeDir,
     'device-registry.json',

@@ -107,7 +107,9 @@ class RemuxVideoStreamPlan extends VideoStreamPlan {
   }) {
     return <String>[
       '-hide_banner', '-loglevel', 'error',
-      if (useRealtimeInputPacing) '-re',
+      // 进度条 seek 时不能叠 `-re`：与 `-i` 后的 `-ss` 组合在部分 ffmpeg/文件上会
+      // 极慢或表现异常，且 MSE 已经清空，需要尽快产出新 init+分片。起播/连续播放仍用 -re。
+      if (useRealtimeInputPacing && seekTime == null) '-re',
       '-i', inputPath,
       '-map', '0',
       '-c', 'copy',
@@ -215,8 +217,9 @@ class VideoStreamPlanner {
       probe: probe,
       mime: 'video/mp4; codecs="${parts.join(', ')}"',
       codecParts: parts,
-      // 高分辨率 copy 仍按实时锁速，避免开播一瞬间把整个 mp4 灌入网络打爆 SCTP / DC。
-      useRealtimeInputPacing: probe.isHighRes4k,
+      // 所有 remux 一律 `-re`：非 4K 的短视频也会全速读盘，几秒内灌满 DC/SCTP，
+      // 表现为刚发完 init 就 Closing/断流。与「小文件下载 fast path」无关（只影响 file 下载）。
+      useRealtimeInputPacing: true,
     );
   }
 }
