@@ -43,7 +43,7 @@ export interface StreamMeta {
   duration?: number
   width?: number
   height?: number
-  binaryMode?: 'raw-mp4' | 'init-segment-v1'
+  binaryMode?: 'raw-mp4' | 'init-segment-v1' | 'init-segment-v2'
   /** seek 应答时携带，表明本次是从 seek 后的新位置开始 */
   seeked?: boolean
   /** 「断流续播」应答：sender 收到带 resumeFrom 的 stream-start 后会标记此位，
@@ -69,6 +69,14 @@ export interface StreamSeeked {
   actualTime: number
 }
 
+/** Web -> Desktop: 流媒体数据接收确认（应用层窗口） */
+export interface StreamDataAck {
+  type: 'stream-data-ack'
+  bytes?: number
+  /** 已处理到的最大 wire seq（init-segment-v2 / 带 v2 帧的 v1），与 sender 侧 await 对齐 */
+  upToSeq?: number
+}
+
 export type DataChannelMessage =
   | ShareInfo
   | VerifyResult
@@ -77,4 +85,5 @@ export type DataChannelMessage =
   | StreamMeta
   | StreamDone
   | StreamSeeked
+  | StreamDataAck
   | DcError

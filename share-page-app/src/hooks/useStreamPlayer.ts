@@ -3,7 +3,22 @@ import type { StatusKind } from "./useSignaling";
 import { concatU8, splitMp4Boxes } from "../utils/mp4Utils";
 
 export type StreamMode = "none" | "mse-fmp4";
-export type StreamBinaryMode = "raw-mp4" | "init-segment-v1";
+export type StreamBinaryMode = "raw-mp4" | "init-segment-v1" | "init-segment-v2";
+
+/** 与 Flutter `_kStreamBinVersionV2` / `_kStreamBinHeaderV2Bytes` 一致 */
+const STREAM_BIN_VER_V2 = 2;
+const STREAM_BIN_HDR_V2 = 6;
+
+function parseInitSegV2Frame(u8: Uint8Array): {
+  kind: number;
+  seq: number;
+  payload: Uint8Array;
+} | null {
+  if (u8.byteLength < STREAM_BIN_HDR_V2 || u8[0] !== STREAM_BIN_VER_V2) return null;
+  const kind = u8[1];
+  const seq = new DataView(u8.buffer, u8.byteOffset + 2, 4).getUint32(0, false);
+  return { kind, seq, payload: u8.subarray(STREAM_BIN_HDR_V2) };
+}
 
 const EVICT_KEEP_BEHIND_S = 10;
 const EVICT_ROUTINE_AHEAD_S = 20;
@@ -17,6 +32,7 @@ const HIGH_RES_4K_HEIGHT = 2160;
 const HIGH_RES_MAX_BUFFER_AHEAD_S = 20;
 const HIGH_RES_FLOW_PAUSE_QUEUE_BYTES = 12 * 1024 * 1024;
 const HIGH_RES_FLOW_RESUME_QUEUE_BYTES = 4 * 1024 * 1024;
+const STREAM_DATA_ACK_WINDOW_BYTES = 2 * 1024 * 1024;
 
 export interface StreamPlayerApi {
   mseUrl: string;
@@ -86,6 +102,9 @@ export function useStreamPlayer(
   const maxBufferAheadSecRef = useRef(MAX_BUFFER_AHEAD_S);
   const flowPauseQueueBytesRef = useRef(FLOW_PAUSE_QUEUE_BYTES);
   const flowResumeQueueBytesRef = useRef(FLOW_RESUME_QUEUE_BYTES);
+  const streamAckPendingBytesRef = useRef(0);
+  /** 最近收到的二进制帧 wire seq（v2）；用于 stream-data-ack.upToSeq */
+  const streamWireSeqRef = useRef(0);
   streamingActiveRef.current = streaming;
 
   /** Send stream-pause or stream-resume to the Flutter sender based on queue depth
@@ -98,10 +117,16 @@ export function useStreamPlayer(
     if (sb && Number.isFinite(t) && t >= 0) {
       const b = sb.buffered;
       if (b.length > 0) {
-        const ahead = b.end(b.length - 1) - t;
+        const bufferedStart = b.start(0);
+        const bufferedEnd = b.end(b.length - 1);
+        const ahead = bufferedEnd - t;
+        // seek 后 remux 分片的时间轴可能从较大时间点开始（例如 396s），
+        // 而 video.currentTime 还短暂停在 0~几秒。此时不能按 ahead 判满，
+        // 否则会误发 stream-pause，sender 永久停在 gate，表现为“拖动后不播”。
+        const timeAligned = t + 2 >= bufferedStart;
         // 含 t≈0：仍按「已缓冲时长 − currentTime」限流，否则开播会把整文件尽快 append，
         // Quota / 内存 / SCTP 背压导致只播一截或 P2P 断链（与 Flutter 是否全速推流叠加）。
-        bufferAheadFull = ahead > maxBufferAheadSecRef.current;
+        bufferAheadFull = timeAligned && ahead > maxBufferAheadSecRef.current;
       }
     }
 
@@ -454,16 +479,6 @@ export function useStreamPlayer(
         pauseQueueBytes: flowPauseQueueBytesRef.current,
         resumeQueueBytes: flowResumeQueueBytesRef.current,
       });
-      if (m.seeked) {
-        seekingRef.current = false;
-        mseQueueRef.current = [];
-        mseBufRef.current = new Uint8Array(0);
-        mseInitDoneRef.current = false;
-        mseInitAccRef.current = new Uint8Array(0);
-        msePendingMoofRef.current = new Uint8Array(0);
-        mseSawMoovRef.current = false;
-        streamEndedRef.current = false;
-      }
       // 「断流续播」分支：DC 断开重连后 sender 收到带 resumeFrom 的 stream-start，
       // 回的 stream-meta 会带 resume:true。此时 SourceBuffer/MediaSource 是同一份，
       // 只需清掉旧的 mp4 box 解析状态 + SB.buffered，让新的 init+segment 重新装入。
@@ -481,6 +496,8 @@ export function useStreamPlayer(
         msePendingMoofRef.current = new Uint8Array(0);
         mseSawMoovRef.current = false;
         streamEndedRef.current = false;
+        streamAckPendingBytesRef.current = 0;
+        streamWireSeqRef.current = 0;
         pendingSeekTimeRef.current =
           typeof m.actualTime === "number" && Number.isFinite(m.actualTime)
             ? m.actualTime
@@ -497,8 +514,17 @@ export function useStreamPlayer(
       if (m.mime && typeof m.mime === "string") {
         desiredMimeRef.current = m.mime;
       }
-      streamBinaryModeRef.current =
-        m.binaryMode === "init-segment-v1" ? "init-segment-v1" : "raw-mp4";
+      if (m.binaryMode === "init-segment-v2") {
+        streamBinaryModeRef.current = "init-segment-v2";
+      } else if (m.binaryMode === "init-segment-v1") {
+        streamBinaryModeRef.current = "init-segment-v1";
+      } else {
+        streamBinaryModeRef.current = "raw-mp4";
+      }
+      if (!m.resume) {
+        streamAckPendingBytesRef.current = 0;
+        streamWireSeqRef.current = 0;
+      }
       const ms = mediaSourceRef.current;
       if (ms && ms.readyState === "open") {
         try {
@@ -529,27 +555,88 @@ export function useStreamPlayer(
   const handleStreamBinary = useCallback(
     (buf: ArrayBuffer) => {
       const u8 = new Uint8Array(buf);
-      if (streamBinaryModeRef.current === "init-segment-v1") {
-        if (u8.byteLength >= 2) {
+      const mode = streamBinaryModeRef.current;
+      let ackWindowBytes = 0;
+
+      const applyInitSegPayload = (kind: number, payload: Uint8Array): boolean => {
+        if (kind === 0) {
+          mseInitDoneRef.current = true;
+          mseQueueRef.current.push(payload);
+          mseQueueBytesRef.current += payload.byteLength;
+          return true;
+        }
+        if (kind === 1) {
+          if (!mseInitDoneRef.current) return false;
+          mseQueueRef.current.push(payload);
+          mseQueueBytesRef.current += payload.byteLength;
+          ackWindowBytes = payload.byteLength;
+          return true;
+        }
+        return false;
+      };
+
+      if (mode === "init-segment-v2") {
+        const parsed = parseInitSegV2Frame(u8);
+        if (!parsed) {
+          console.warn("[fastsend] drop binary: expected init-segment-v2 frame");
+          updateFlowControl();
+          pumpMse();
+          return;
+        }
+        streamWireSeqRef.current = parsed.seq >>> 0;
+        if (!applyInitSegPayload(parsed.kind, parsed.payload)) {
+          updateFlowControl();
+          pumpMse();
+          return;
+        }
+      } else if (mode === "init-segment-v1") {
+        const parsed = parseInitSegV2Frame(u8);
+        if (parsed) {
+          streamWireSeqRef.current = parsed.seq >>> 0;
+          if (!applyInitSegPayload(parsed.kind, parsed.payload)) {
+            updateFlowControl();
+            pumpMse();
+            return;
+          }
+        } else if (u8.byteLength >= 2 && (u8[0] === 0 || u8[0] === 1)) {
+          streamWireSeqRef.current = 0;
           const kind = u8[0];
           const payload = u8.subarray(1);
-          if (kind === 0) {
-            mseInitDoneRef.current = true;
-            mseQueueRef.current.push(payload);
-            mseQueueBytesRef.current += payload.byteLength;
-          } else if (kind === 1) {
-            if (!mseInitDoneRef.current) return; // drop stale data from old pipeline
-            mseQueueRef.current.push(payload);
-            mseQueueBytesRef.current += payload.byteLength;
+          if (!applyInitSegPayload(kind, payload)) {
+            updateFlowControl();
+            pumpMse();
+            return;
           }
         }
       } else {
         ingestMp4StreamBytes(u8);
+        ackWindowBytes = u8.byteLength;
+      }
+
+      if (ackWindowBytes > 0) {
+        streamAckPendingBytesRef.current += ackWindowBytes;
+        while (streamAckPendingBytesRef.current >= STREAM_DATA_ACK_WINDOW_BYTES) {
+          const ackMsg: {
+            type: "stream-data-ack";
+            bytes: number;
+            upToSeq?: number;
+          } = {
+            type: "stream-data-ack",
+            bytes: STREAM_DATA_ACK_WINDOW_BYTES,
+          };
+          if (mode === "init-segment-v2") {
+            ackMsg.upToSeq = streamWireSeqRef.current;
+          } else if (mode === "init-segment-v1" && streamWireSeqRef.current > 0) {
+            ackMsg.upToSeq = streamWireSeqRef.current;
+          }
+          sendJson(ackMsg);
+          streamAckPendingBytesRef.current -= STREAM_DATA_ACK_WINDOW_BYTES;
+        }
       }
       updateFlowControl();
       pumpMse();
     },
-    [ingestMp4StreamBytes, updateFlowControl, pumpMse],
+    [ingestMp4StreamBytes, updateFlowControl, pumpMse, sendJson],
   );
 
   const handleStreamDone = useCallback(() => {
@@ -577,7 +664,16 @@ export function useStreamPlayer(
     msePendingMoofRef.current = new Uint8Array(0);
     mseSawMoovRef.current = false;
     streamEndedRef.current = false;
+    streamAckPendingBytesRef.current = 0;
+    streamWireSeqRef.current = 0;
+    if (typeof actualTime === "number" && Number.isFinite(actualTime) && actualTime >= 0) {
+      playbackTimeRef.current = actualTime;
+    }
     pendingSeekTimeRef.current = actualTime ?? null;
+    if (streamPausedRef.current) {
+      streamPausedRef.current = false;
+      sendJson({ type: "stream-resume" });
+    }
     const sb = sourceBufferRef.current;
     if (sb) {
       try {
@@ -586,11 +682,15 @@ export function useStreamPlayer(
         sb.remove(0, Infinity);
       } catch { /* ignore */ }
     }
-  }, []);
+  }, [sendJson]);
 
   const sendSeek = useCallback(
     (targetTime: number) => {
       streamEndedRef.current = false;
+      if (Number.isFinite(targetTime) && targetTime >= 0) {
+        // 提前把流控锚点移动到用户目标时间，避免 seek 期间按旧时间轴误判“ahead 过大”。
+        playbackTimeRef.current = targetTime;
+      }
       // Keep a short debounce to coalesce rapid drag events while still interrupting
       // the old stream quickly and restarting from the target position.
       if (seekTimerRef.current) clearTimeout(seekTimerRef.current);
@@ -662,6 +762,8 @@ export function useStreamPlayer(
     setStreamDuration(0);
     seekingRef.current = false;
     pendingSeekTimeRef.current = null;
+    streamAckPendingBytesRef.current = 0;
+    streamWireSeqRef.current = 0;
   }, []);
 
   return {

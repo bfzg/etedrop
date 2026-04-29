@@ -4,7 +4,7 @@
 /// 不依赖 flutter_webrtc / Process / Storage —— 方便单独测试与扩展。
 ///
 /// 调度（启动 ffmpeg、读取 stdout、按 fMP4 box 切片、走 DataChannel 背压）
-/// 仍由 `share_p2p_handler.dart` 负责。
+/// 仍由 `share_p2p/stream_pipeline.dart` + `share_p2p_handler.dart` 负责。
 library;
 
 const int kHighRes4kWidth = 3840;
@@ -107,17 +107,13 @@ class RemuxVideoStreamPlan extends VideoStreamPlan {
   }) {
     return <String>[
       '-hide_banner', '-loglevel', 'error',
-      // 进度条 seek 时不能叠 `-re`：与 `-i` 后的 `-ss` 组合在部分 ffmpeg/文件上会
-      // 极慢或表现异常，且 MSE 已经清空，需要尽快产出新 init+分片。起播/连续播放仍用 -re。
+      // 进度条 seek 时不能叠 `-re`：MSE 已清空，需要尽快产出新 init+分片。
       if (useRealtimeInputPacing && seekTime == null) '-re',
+      // copy 模式 seek 放在输入前：走关键帧级快速跳转，避免长视频按时长线性变慢。
+      if (seekTime != null) ...['-ss', seekTime.toStringAsFixed(3)],
       '-i', inputPath,
       '-map', '0',
       '-c', 'copy',
-      if (seekTime != null) ...[
-        // copy 模式下把 -ss 放在输入后，避免把时间锚点固定到上一个关键帧，
-        // 减少 seek 后浏览器时间轴错位导致「卡住不播」。
-        '-ss', seekTime.toStringAsFixed(3),
-      ],
       '-movflags', '+frag_keyframe+empty_moov+default_base_moof',
       '-f', 'mp4',
       if (usePipe) 'pipe:1' else ...['-y', tempOutputPath!],
@@ -217,9 +213,9 @@ class VideoStreamPlanner {
       probe: probe,
       mime: 'video/mp4; codecs="${parts.join(', ')}"',
       codecParts: parts,
-      // 所有 remux 一律 `-re`：非 4K 的短视频也会全速读盘，几秒内灌满 DC/SCTP，
-      // 表现为刚发完 init 就 Closing/断流。与「小文件下载 fast path」无关（只影响 file 下载）。
-      useRealtimeInputPacing: true,
+      // 首播慢的主因之一是 remux 路径的 `-re`（尤其 720p/1080p 长视频）。
+      // 仅对 4K remux 启用限速，普通分辨率优先首帧/seek 响应速度。
+      useRealtimeInputPacing: probe.isHighRes4k,
     );
   }
 }
