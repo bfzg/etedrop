@@ -17,11 +17,10 @@ class LanDeviceList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final raw = ref.watch(lanManagerProvider);
-    final devices = [...raw]..sort((a, b) {
+    final devices = [...raw]
+      ..sort((a, b) {
         if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
-        if (a.isOnline &&
-            b.isOnline &&
-            a.isPresenceWeak != b.isPresenceWeak) {
+        if (a.isOnline && b.isOnline && a.isPresenceWeak != b.isPresenceWeak) {
           return a.isPresenceWeak ? 1 : -1;
         }
         return a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase());
@@ -92,7 +91,9 @@ class LanDeviceList extends ConsumerWidget {
                   device: device,
                   offlineLabel: l10n.offline,
                   weakSignalLabel: l10n.weakSignal,
-                  onTap: device.isOnline ? () => onDeviceSelected(device) : null,
+                  onTap: device.isOnline
+                      ? () => onDeviceSelected(device)
+                      : null,
                 );
               },
             ),
@@ -116,10 +117,26 @@ class _DeviceItem extends StatelessWidget {
   });
 
   static const ColorFilter _grayscale = ColorFilter.matrix(<double>[
-    0.2126, 0.7152, 0.0722, 0, 0,
-    0.2126, 0.7152, 0.0722, 0, 0,
-    0.2126, 0.7152, 0.0722, 0, 0,
-    0, 0, 0, 1, 0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0.2126,
+    0.7152,
+    0.0722,
+    0,
+    0,
+    0,
+    0,
+    0,
+    1,
+    0,
   ]);
 
   @override

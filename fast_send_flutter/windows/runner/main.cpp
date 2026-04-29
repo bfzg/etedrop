@@ -6,6 +6,29 @@
 #include "flutter_window.h"
 #include "utils.h"
 
+namespace {
+constexpr wchar_t kSingleInstanceMutexName[] = L"Local\\EteDrop.SingleInstance";
+constexpr wchar_t kRunnerWindowClassName[] = L"FLUTTER_RUNNER_WIN32_WINDOW";
+constexpr wchar_t kRunnerWindowTitle[] = L"EteDrop";
+
+void ActivateExistingInstanceWindow() {
+  HWND existing =
+      ::FindWindow(kRunnerWindowClassName, kRunnerWindowTitle);
+  if (existing == nullptr) {
+    existing = ::FindWindow(kRunnerWindowClassName, nullptr);
+  }
+  if (existing == nullptr) return;
+
+  if (::IsIconic(existing)) {
+    ::ShowWindow(existing, SW_RESTORE);
+  } else {
+    ::ShowWindow(existing, SW_SHOW);
+  }
+  ::SetForegroundWindow(existing);
+  ::BringWindowToTop(existing);
+}
+}  // namespace
+
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
   // Attach to console when present (e.g., 'flutter run') or create a
@@ -21,6 +44,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   // Set AUMID for Windows toast notifications (flutter_local_notifications).
   // Must match the appUserModelId used in NotificationService.
   ::SetCurrentProcessExplicitAppUserModelID(L"com.etedrop.app");
+
+  HANDLE single_instance_mutex =
+      ::CreateMutex(nullptr, TRUE, kSingleInstanceMutexName);
+  if (single_instance_mutex != nullptr &&
+      ::GetLastError() == ERROR_ALREADY_EXISTS) {
+    ActivateExistingInstanceWindow();
+    ::CloseHandle(single_instance_mutex);
+    ::CoUninitialize();
+    return EXIT_SUCCESS;
+  }
 
   flutter::DartProject project(L"data");
 
@@ -43,6 +76,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
     ::DispatchMessage(&msg);
   }
 
+  if (single_instance_mutex != nullptr) {
+    ::ReleaseMutex(single_instance_mutex);
+    ::CloseHandle(single_instance_mutex);
+  }
   ::CoUninitialize();
   return EXIT_SUCCESS;
 }

@@ -350,8 +350,8 @@ class LanManager extends _$LanManager {
     final summary = files.isEmpty
         ? '文字消息'
         : files.length == 1
-            ? (files.first['name'] as String? ?? '文件')
-            : '${files.length} 个文件';
+        ? (files.first['name'] as String? ?? '文件')
+        : '${files.length} 个文件';
     NotificationService.instance.showIncomingTransfer(
       senderName: offer.senderName,
       fileName: summary,
@@ -647,7 +647,9 @@ class LanManager extends _$LanManager {
       final ok = await transfer.ping(d.ip, d.port);
       if (!ok) continue;
       final hostForPeer =
-          await getOutboundLocalIPv4ForPeer(d.ip) ?? await getLanIPv4() ?? '127.0.0.1';
+          await getOutboundLocalIPv4ForPeer(d.ip) ??
+          await getLanIPv4() ??
+          '127.0.0.1';
       final payload = LanShareOfferPayload(
         shareId: shareId,
         senderDeviceId: senderDeviceId,

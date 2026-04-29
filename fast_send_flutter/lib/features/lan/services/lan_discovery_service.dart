@@ -21,17 +21,21 @@ class LanDiscoveryService {
 
   /// 周期性宣告间隔（略拉长以减少局域网广播总量；全网广播见 [_fullBroadcastEvery]）。
   static const Duration _heartbeatInterval = Duration(seconds: 8);
+
   /// 仅多播+子网定向广播；不含 255.255.255.255 的「全接口」洪泛。
   static const Duration _networkPollInterval = Duration(seconds: 20);
   static const int _byeBurstPerSocket = 5;
+
   /// 每 N 次周期心跳才附带一次 255.255.255.255，降低对交换机/无线的影响。
   static const int _fullBroadcastEveryNHeartbeats = 6;
+
   /// 上线 / 网卡重建后的短 burst 次数（带随机间隔，避免多机同步风暴）。
   static const int _presenceBurstCount = 3;
   static final Random _rng = Random();
 
-  static const MethodChannel _androidMulticastLockChannel =
-      MethodChannel('com.etedrop.app/lan_multicast_lock');
+  static const MethodChannel _androidMulticastLockChannel = MethodChannel(
+    'com.etedrop.app/lan_multicast_lock',
+  );
   static const bool _androidForceUnifiedBind = true;
 
   final String deviceId;
@@ -60,6 +64,7 @@ class LanDiscoveryService {
   String _lastUdpBindLogKey = '';
   int _lastIgnoredSocketErrorLogAtMs = 0;
   int _heartbeatTickCount = 0;
+
   /// 对端 `unicastProbe` 回显节流，防止双向互 ping。
   final Map<String, int> _lastEchoAtMsByPeerId = {};
   static const int _minEchoIntervalMs = 2000;
@@ -78,7 +83,9 @@ class LanDiscoveryService {
 
   void updateLocalInfo({String? deviceName, int? avatar}) {
     var changed = false;
-    if (deviceName != null && deviceName.isNotEmpty && deviceName != this.deviceName) {
+    if (deviceName != null &&
+        deviceName.isNotEmpty &&
+        deviceName != this.deviceName) {
       this.deviceName = deviceName;
       changed = true;
     }
@@ -87,10 +94,7 @@ class LanDiscoveryService {
       changed = true;
     }
     if (changed) {
-      _announceAll(
-        includeGlobalBroadcast: true,
-        includeSubnetBroadcast: true,
-      );
+      _announceAll(includeGlobalBroadcast: true, includeSubnetBroadcast: true);
     }
   }
 
@@ -123,10 +127,14 @@ class LanDiscoveryService {
         acquire ? 'acquire' : 'release',
       );
       if (kDebugMode) {
-        debugPrint('Android multicast lock ${acquire ? 'acquired' : 'released'}');
+        debugPrint(
+          'Android multicast lock ${acquire ? 'acquired' : 'released'}',
+        );
       }
     } catch (e) {
-      debugPrint('Android multicast lock ${acquire ? 'acquire' : 'release'}: $e');
+      debugPrint(
+        'Android multicast lock ${acquire ? 'acquire' : 'release'}: $e',
+      );
     }
   }
 
@@ -186,7 +194,9 @@ class LanDiscoveryService {
     // Windows：同样走单 socket。否则每块网卡（含 Hyper-V / WSL / VPN / 虚拟适配器）各开一个 UDP，
     // 易触发 ERROR_NO_SYSTEM_RESOURCES（errno 1450，中文「系统资源不足」），且每 10s 整组销毁再建会放大问题。
     var usedUnifiedBind = false;
-    if (Platform.isMacOS || Platform.isWindows || (Platform.isAndroid && _androidForceUnifiedBind)) {
+    if (Platform.isMacOS ||
+        Platform.isWindows ||
+        (Platform.isAndroid && _androidForceUnifiedBind)) {
       await _openFallbackBinding();
       usedUnifiedBind = _bindings.isNotEmpty;
       if (gen != _lifecycleEpoch) return;
@@ -210,8 +220,7 @@ class LanDiscoveryService {
       return;
     }
 
-    final logKey =
-        '$fp|${_bindings.length}|${_bindings.isNotEmpty}';
+    final logKey = '$fp|${_bindings.length}|${_bindings.isNotEmpty}';
     if (logKey != _lastUdpBindLogKey) {
       _lastUdpBindLogKey = logKey;
       if (_bindings.isNotEmpty) {
@@ -223,10 +232,7 @@ class LanDiscoveryService {
       }
     }
 
-    _announceAll(
-      includeGlobalBroadcast: false,
-      includeSubnetBroadcast: true,
-    );
+    _announceAll(includeGlobalBroadcast: false, includeSubnetBroadcast: true);
     if (force && _bindings.isNotEmpty) {
       _schedulePresenceBurst(reason: 'rebind');
     }
@@ -249,10 +255,7 @@ class LanDiscoveryService {
     void sendOne() {
       if (n >= _presenceBurstCount) return;
       n++;
-      _announceAll(
-        includeGlobalBroadcast: false,
-        includeSubnetBroadcast: true,
-      );
+      _announceAll(includeGlobalBroadcast: false, includeSubnetBroadcast: true);
       if (n < _presenceBurstCount) {
         final ms = 60 + _rng.nextInt(120);
         Future<void>.delayed(Duration(milliseconds: ms), sendOne);
@@ -268,9 +271,7 @@ class LanDiscoveryService {
   void sendUnicastProbe(InternetAddress ipv4) {
     if (ipv4.type != InternetAddressType.IPv4) return;
     if (_bindings.isEmpty) return;
-    final bytes = utf8.encode(
-      jsonEncode(_presenceMap(unicastProbe: true)),
-    );
+    final bytes = utf8.encode(jsonEncode(_presenceMap(unicastProbe: true)));
     try {
       _bindings.first.socket.send(bytes, ipv4, _udpPort);
     } catch (e) {
@@ -279,7 +280,9 @@ class LanDiscoveryService {
   }
 
   /// 避免 RawDatagramSocket 错误进 Zone 未捕获导致进程退出。
-  StreamSubscription<RawSocketEvent> _listenUdpSocket(RawDatagramSocket socket) {
+  StreamSubscription<RawSocketEvent> _listenUdpSocket(
+    RawDatagramSocket socket,
+  ) {
     return socket.listen(
       (RawSocketEvent event) {
         if (event != RawSocketEvent.read) return;
@@ -294,7 +297,9 @@ class LanDiscoveryService {
           final now = DateTime.now().millisecondsSinceEpoch;
           if (now - _lastIgnoredSocketErrorLogAtMs > 5000) {
             _lastIgnoredSocketErrorLogAtMs = now;
-            debugPrint('[LAN discovery] UDP socket transient error (ignored): $e');
+            debugPrint(
+              '[LAN discovery] UDP socket transient error (ignored): $e',
+            );
           }
           return;
         }
@@ -343,10 +348,7 @@ class LanDiscoveryService {
         );
         _setBroadcastEnabledBestEffort(socket);
         try {
-          socket.joinMulticast(
-            InternetAddress(_multicastGroupIpv4),
-            ni,
-          );
+          socket.joinMulticast(InternetAddress(_multicastGroupIpv4), ni);
         } catch (e) {
           debugPrint('LAN joinMulticast ${ni.name}: $e');
         }
@@ -379,10 +381,7 @@ class LanDiscoveryService {
       } catch (_) {}
       for (final ni in _lastEligibleIfaces) {
         try {
-          socket.joinMulticast(
-            InternetAddress(_multicastGroupIpv4),
-            ni,
-          );
+          socket.joinMulticast(InternetAddress(_multicastGroupIpv4), ni);
         } catch (e) {
           debugPrint('LAN fallback joinMulticast ${ni.name}: $e');
         }
@@ -450,7 +449,8 @@ class LanDiscoveryService {
     final socket = b.socket;
     void sendTo(InternetAddress addr) {
       try {
-        if (addr.type == InternetAddressType.IPv4 && addr.address == '0.0.0.0') {
+        if (addr.type == InternetAddressType.IPv4 &&
+            addr.address == '0.0.0.0') {
           return;
         }
         socket.send(bytes, addr, _udpPort);
@@ -513,7 +513,11 @@ class LanDiscoveryService {
 
     // 53317/多播上可能有其它程序的二进制流量；非 UTF-8 会触发 FormatException，与「本应用发现」无关，直接忽略。
     var i = 0;
-    while (i < data.length && (data[i] == 0x20 || data[i] == 0x09 || data[i] == 0x0a || data[i] == 0x0d)) {
+    while (i < data.length &&
+        (data[i] == 0x20 ||
+            data[i] == 0x09 ||
+            data[i] == 0x0a ||
+            data[i] == 0x0d)) {
       i++;
     }
     if (i >= data.length || data[i] != 0x7b) {
