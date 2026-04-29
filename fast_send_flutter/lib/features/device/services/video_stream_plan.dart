@@ -121,8 +121,7 @@ class RemuxVideoStreamPlan extends VideoStreamPlan {
   }
 
   @override
-  String describe() =>
-      'remux(c=copy${useRealtimeInputPacing ? ", -re" : ""})';
+  String describe() => 'remux(c=copy${useRealtimeInputPacing ? ", -re" : ""})';
 }
 
 /// libx264 + AAC 重编码；4K 源会自动 `scale=-2:1080` 降码率到 1080p。
@@ -163,9 +162,12 @@ class TranscodeVideoStreamPlan extends VideoStreamPlan {
       '-preset', 'veryfast',
       '-crf', '23',
       if (downscaleForHighRes4k) ...[
-        '-vf', 'scale=-2:1080',
-        '-maxrate', '4M',
-        '-bufsize', '8M',
+        '-vf',
+        'scale=-2:1080',
+        '-maxrate',
+        '4M',
+        '-bufsize',
+        '8M',
       ],
       '-c:a', 'aac',
       '-b:a', '128k',
@@ -187,9 +189,11 @@ class VideoStreamPlanner {
   static bool requiresTranscode(VideoStreamProbe probe) {
     final v = probe.videoCodec;
     final a = probe.audioCodec;
-    final vOk = v == 'h264' ||
+    final vOk =
+        v == 'h264' ||
         v == 'hevc' ||
-        (v == null && kNativeCompatExtensions.contains(probe.fileExtensionLower));
+        (v == null &&
+            kNativeCompatExtensions.contains(probe.fileExtensionLower));
     final aOk = a == null || a == 'aac';
     return !vOk || !aOk;
   }

@@ -188,15 +188,15 @@ Future<void> runShareP2pStreamPipeline(
           final ok = await waitForPcRecovery();
           if (!ok) return;
           if (!b.generationStillCurrent()) return;
-          if (b.dataChannel()?.state != RTCDataChannelState.RTCDataChannelOpen) {
+          if (b.dataChannel()?.state !=
+              RTCDataChannelState.RTCDataChannelOpen) {
             return;
           }
         }
         final gate = b.streamFlowGate();
         if (gate != null && !gate.isCompleted) {
           final inSeekGrace =
-              seekGraceUntil != null &&
-              DateTime.now().isBefore(seekGraceUntil);
+              seekGraceUntil != null && DateTime.now().isBefore(seekGraceUntil);
           if (!inSeekGrace) {
             // ignore: avoid_print
             print(
@@ -219,8 +219,9 @@ Future<void> runShareP2pStreamPipeline(
                 final ok = await waitForPcRecovery();
                 if (!ok) return;
               }
-              final pausedMs =
-                  DateTime.now().difference(pauseStart).inMilliseconds;
+              final pausedMs = DateTime.now()
+                  .difference(pauseStart)
+                  .inMilliseconds;
               final buffered = b.dataChannel()?.bufferedAmount ?? 0;
               if (pausedMs >= pauseWatchdogMs &&
                   buffered <= pauseWatchdogBufferedBytes) {
@@ -266,6 +267,15 @@ Future<void> runShareP2pStreamPipeline(
           sentSinceStreamAck += slice.length;
           if (sentSinceStreamAck >= shareP2pStreamDataAckWindowBytes) {
             try {
+              // ignore: avoid_print
+              print(
+                '[ShareP2P] sent ${sentSinceStreamAck}B seg payload '
+                '(window=$shareP2pStreamDataAckWindowBytes) '
+                'lastWireSeq=$lastWireSeqThisChunk → await stream-data-ack',
+              );
+              // 让出事件循环，避免在部分 embedder 上入站 JSON（stream-data-ack）积压到 await 之后。
+              await Future<void>.delayed(Duration.zero);
+              await Future<void>.delayed(Duration.zero);
               await b.awaitStreamDataAck(lastWireSeqThisChunk);
             } catch (_) {
               if (b.dataChannel()?.state !=
@@ -368,8 +378,7 @@ Future<void> runShareP2pStreamPipeline(
       b.setActiveStreamProcess(null);
       final stderr = stderrBuf.toString().trim();
       final brokenPipe =
-          stderr.contains('Broken pipe') ||
-          stderr.contains('error code: -32');
+          stderr.contains('Broken pipe') || stderr.contains('error code: -32');
       final interrupted =
           !b.generationStillCurrent() ||
           b.dataChannel()?.state != RTCDataChannelState.RTCDataChannelOpen;
@@ -407,8 +416,7 @@ Future<void> runShareP2pStreamPipeline(
       b.setActiveStreamProcess(null);
       final stderr = stderrBuf.toString().trim();
       final brokenPipe =
-          stderr.contains('Broken pipe') ||
-          stderr.contains('error code: -32');
+          stderr.contains('Broken pipe') || stderr.contains('error code: -32');
       final interrupted =
           !b.generationStillCurrent() ||
           b.dataChannel()?.state != RTCDataChannelState.RTCDataChannelOpen;

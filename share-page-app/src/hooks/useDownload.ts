@@ -171,6 +171,9 @@ export function useDownload(
   const handleShareInfo = useCallback(
     (m: { fileName: string; fileSize: number; hasPassword: boolean }) => {
       fileInfoRef.current = m;
+      if (m.fileSize > 0) {
+        totalBytesRef.current = m.fileSize;
+      }
       if (!shouldUseOpfsResumeFromPartial()) {
         setResumeHintBytes(0);
         return;

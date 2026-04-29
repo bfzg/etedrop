@@ -522,7 +522,23 @@ export function useSignaling(deviceId: string, shareCode: string) {
 
   const sendJson = useCallback((data: unknown) => {
     const dc = dcRef.current;
-    if (!dc || dc.readyState !== "open") return;
+    const isStreamDataAck =
+      typeof data === "object" &&
+      data !== null &&
+      (data as { type?: string }).type === "stream-data-ack";
+    if (!dc || dc.readyState !== "open") {
+      if (isStreamDataAck) {
+        console.warn("[fastsend] stream-data-ack not sent: dc missing or not open", {
+          dcExists: !!dc,
+          readyState: dc?.readyState,
+          payload: data,
+        });
+      }
+      return;
+    }
+    if (isStreamDataAck) {
+      console.log("[fastsend] dc.send stream-data-ack", data);
+    }
     dc.send(JSON.stringify(data));
   }, []);
 

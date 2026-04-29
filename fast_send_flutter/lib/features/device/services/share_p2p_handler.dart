@@ -74,27 +74,31 @@ class ShareP2PHandler {
     _streamAckWaitMinSeq = null;
   }
 
-  void _applyStreamPeerAck(dynamic upToSeqRaw) {
-    if (upToSeqRaw == null) {
+  void _applyStreamPeerAck(dynamic upToSeqRaw, [dynamic ackBytesRaw]) {
+    if (upToSeqRaw == null && ackBytesRaw == null) {
       _releaseStreamAckWait();
       return;
     }
-    final v = upToSeqRaw is int
-        ? upToSeqRaw
-        : (upToSeqRaw is num ? upToSeqRaw.toInt() : null);
-    if (v == null || v < 0) {
-      _releaseStreamAckWait();
-      return;
+    int? v;
+    if (upToSeqRaw != null) {
+      v = upToSeqRaw is int
+          ? upToSeqRaw
+          : (upToSeqRaw is num ? upToSeqRaw.toInt() : null);
+      if (v != null && v < 0) v = null;
     }
-    if (v > _streamPeerAckUpToSeq) {
+    if (v != null && v > _streamPeerAckUpToSeq) {
       _streamPeerAckUpToSeq = v;
     }
+    final ackBytes = ackBytesRaw is int
+        ? ackBytesRaw
+        : (ackBytesRaw is num ? ackBytesRaw.toInt() : 0);
     final wait = _streamAckWaitMinSeq;
     final c = _streamAckSeqCompleter;
-    if (wait != null &&
-        c != null &&
-        !c.isCompleted &&
-        _streamPeerAckUpToSeq >= wait) {
+    if (wait == null || c == null || c.isCompleted) return;
+    // upToSeq 常小于发送端 lastWireSeq；网页每条 ACK 都带 bytes（整窗信用），与本地窗口大小略有偏差时仍以 bytes 为准。
+    final seqOk = _streamPeerAckUpToSeq >= wait;
+    final bytesOk = ackBytes >= 64 * 1024;
+    if (seqOk || bytesOk) {
       c.complete();
       _streamAckSeqCompleter = null;
       _streamAckWaitMinSeq = null;
@@ -282,7 +286,20 @@ class ShareP2PHandler {
       shareP2pDownloadLog('dc state=$state');
     };
     _dc!.onMessage = (RTCDataChannelMessage msg) {
-      if (msg.isBinary) return;
+      if (msg.isBinary) {
+        // 部分原生 WebRTC 栈会把短 JSON 标成 binary；流媒体二进制帧远大于此且不以 `{` 开头。
+        final bin = msg.binary;
+        if (bin.isNotEmpty && bin.length <= 65536 && bin[0] == 0x7b) {
+          try {
+            final decoded = jsonDecode(utf8.decode(bin));
+            if (decoded is Map<String, dynamic>) {
+              _handleDcMessage(decoded);
+            }
+          } catch (_) {}
+        }
+        return;
+      }
+      if (msg.text.isEmpty) return;
       try {
         final data = jsonDecode(msg.text) as Map<String, dynamic>;
         _handleDcMessage(data);
@@ -352,7 +369,19 @@ class ShareP2PHandler {
         _downloadAckCompleter = null;
         break;
       case 'stream-data-ack':
-        _applyStreamPeerAck(msg['upToSeq']);
+        final upRaw = msg['upToSeq'];
+        final bytesRaw = msg['bytes'];
+        // ignore: avoid_print
+        print(
+          '[ShareP2P] rx stream-data-ack upToSeq=$upRaw bytes=$bytesRaw '
+          'peerAckWas=$_streamPeerAckUpToSeq '
+          'waitMin=$_streamAckWaitMinSeq',
+        );
+        _applyStreamPeerAck(upRaw, bytesRaw);
+        // ignore: avoid_print
+        print(
+          '[ShareP2P] rx stream-data-ack applied peerAck=$_streamPeerAckUpToSeq',
+        );
         break;
     }
   }
@@ -384,9 +413,14 @@ class ShareP2PHandler {
       _streamAckWaitMinSeq = null;
       return;
     }
+    // ignore: avoid_print
+    print(
+      '[ShareP2P] waiting stream-data-ack minWireSeq=$minWireSeq '
+      'peerAckUpTo=$_streamPeerAckUpToSeq (expect web dc.send JSON)',
+    );
     try {
       await c.future.timeout(
-        const Duration(seconds: 20),
+        const Duration(seconds: 45),
         onTimeout: () => throw TimeoutException('stream-data-ack'),
       );
     } finally {
@@ -465,8 +499,9 @@ class ShareP2PHandler {
         });
         return;
       }
-      final transcodeSupported =
-          await _ffmpegCaps.ensureLibx264Supported(bins.ffmpegPath);
+      final transcodeSupported = await _ffmpegCaps.ensureLibx264Supported(
+        bins.ffmpegPath,
+      );
       if (!transcodeSupported) {
         _sendJson({
           'type': 'error',
@@ -509,7 +544,7 @@ class ShareP2PHandler {
       if (probe.width != null) 'width': probe.width,
       if (probe.height != null) 'height': probe.height,
       if (resumeFrom != null) 'resume': true,
-      if (resumeFrom != null) 'actualTime': resumeFrom,
+      'actualTime': ?resumeFrom,
       'binaryMode': 'init-segment-v2',
     });
 
@@ -521,12 +556,24 @@ class ShareP2PHandler {
         '(plan=${plan.describe()})',
       );
     }
-    await _runStreamPipeline(
-      bins.ffmpegPath,
-      filePath,
-      plan: plan,
-      seekTime: resumeFrom,
-    );
+    try {
+      await _runStreamPipeline(
+        bins.ffmpegPath,
+        filePath,
+        plan: plan,
+        seekTime: resumeFrom,
+      );
+    } on TimeoutException catch (e, st) {
+      if (_disposeRequested) return;
+      // ignore: avoid_print
+      print('[ShareP2P] stream pipeline timeout: $e\n$st');
+      _killActiveStream(reason: 'stream-data-ack-timeout');
+      _sendJson({
+        'type': 'error',
+        'code': 'STREAM_ACK_TIMEOUT',
+        'message': '播放端未及时确认数据，请重试或改用下载播放',
+      });
+    }
   }
 
   Future<void> _runStreamPipeline(
@@ -784,7 +831,9 @@ class ShareP2PHandler {
     }
 
     if (_dc?.state == RTCDataChannelState.RTCDataChannelOpen) {
-      shareP2pDownloadLog('send loop finished → file-done (fileSize=$fileSize)');
+      shareP2pDownloadLog(
+        'send loop finished → file-done (fileSize=$fileSize)',
+      );
       _sendJson({'type': 'file-done'});
     } else {
       shareP2pDownloadLog(

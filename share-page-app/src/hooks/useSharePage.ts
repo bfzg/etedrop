@@ -35,16 +35,31 @@ export function useSharePage(deviceId: string, shareCode: string) {
   const download = useDownload(deviceId, shareCode, signaling.sendJson);
 
   const onStreamEnd = useCallback(() => {
+    const fi = download.fileInfoRef.current;
+    const total = download.totalBytesRef.current || fi?.fileSize || 0;
+    if (total > 0) {
+      download.setProgress({ received: total, total });
+    }
     download.setShowProgress(false);
     download.setShowDone(true);
     download.setDoneKind("stream");
   }, [download]);
+
+  const onStreamMediaAppended = useCallback(
+    (appendedTotal: number) => {
+      const fi = download.fileInfoRef.current;
+      const streamTotal = download.totalBytesRef.current || fi?.fileSize || 0;
+      download.setProgress({ received: appendedTotal, total: streamTotal });
+    },
+    [download],
+  );
 
   const stream = useStreamPlayer(
     signaling.sendJson,
     signaling.setStatusState,
     signaling.setShowReconnect,
     onStreamEnd,
+    onStreamMediaAppended,
   );
 
   // Register the DataChannel message router
@@ -184,10 +199,6 @@ export function useSharePage(deviceId: string, shareCode: string) {
 
         if (stream.streamModeRef.current === "mse-fmp4") {
           stream.handleStreamBinary(buf);
-          download.setProgress((p: { received: number; total: number }) => ({
-            received: p.received + buf.byteLength,
-            total: p.total || download.totalBytesRef.current || 1,
-          }));
           return;
         }
 
@@ -250,6 +261,11 @@ export function useSharePage(deviceId: string, shareCode: string) {
       // Reset first so a new MediaSource is created.
       stream.resetStream();
       stream.startMse();
+      const fi = download.fileInfoRef.current;
+      if (fi && fi.fileSize > 0) {
+        download.totalBytesRef.current = fi.fileSize;
+        download.setProgress({ received: 0, total: fi.fileSize });
+      }
       signaling.sendJson({
         type: "stream-start",
         remuxFmp4: !!opts?.remuxFmp4,
@@ -275,6 +291,18 @@ export function useSharePage(deviceId: string, shareCode: string) {
     });
   }, [deviceId, shareCode, signaling, download, stream]);
 
+  const sendSeek = useCallback(
+    (targetTime: number) => {
+      const fi = download.fileInfoRef.current;
+      const total = fi?.fileSize ?? download.totalBytesRef.current ?? 0;
+      if (total > 0) {
+        download.setProgress({ received: 0, total });
+      }
+      stream.sendSeek(targetTime);
+    },
+    [download, stream],
+  );
+
   return {
     status: signaling.status,
     showStatusBar: signaling.showStatusBar,
@@ -297,7 +325,7 @@ export function useSharePage(deviceId: string, shareCode: string) {
     streamDuration: stream.streamDuration,
     sendVerify,
     sendDownloadStart,
-    sendSeek: stream.sendSeek,
+    sendSeek,
     setPlaybackTime: stream.setPlaybackTime,
   };
 }
