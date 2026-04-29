@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../l10n/l10n_utils.dart';
+import 'desktop_service.dart';
 
 class NotificationService {
   NotificationService._();
@@ -42,7 +43,15 @@ class NotificationService {
       ),
     );
 
-    await _plugin.initialize(settings: settings);
+    await _plugin.initialize(
+      settings: settings,
+      onDidReceiveNotificationResponse: (_) async {
+        // On desktop, tapping notification should bring the existing window front.
+        if (DesktopService.instance.isDesktop) {
+          await DesktopService.instance.showWindow();
+        }
+      },
+    );
 
     await _plugin
         .resolvePlatformSpecificImplementation<

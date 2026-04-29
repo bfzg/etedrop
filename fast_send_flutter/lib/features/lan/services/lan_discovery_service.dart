@@ -53,6 +53,7 @@ class LanDiscoveryService {
   StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
   Timer? _heartbeatTimer;
   Timer? _networkPollTimer;
+  Timer? _startupForceRebindTimer;
 
   /// 避免轮询与 connectivity 同时触发时并发 `_disposeBindings` / bind。
   Future<void> _recreateChain = Future<void>.value();
@@ -101,6 +102,7 @@ class LanDiscoveryService {
   Future<void> start() async {
     try {
       await _setAndroidMulticastLock(true);
+      _startupForceRebindTimer?.cancel();
       await _recreateBindings(force: true);
       _watchConnectivity();
       _networkPollTimer?.cancel();
@@ -114,10 +116,30 @@ class LanDiscoveryService {
       _heartbeatTickCount = 0;
       _heartbeatTick();
       _schedulePresenceBurst(reason: 'start');
+      _scheduleStartupForceRebindIfNeeded();
     } catch (e) {
       await _setAndroidMulticastLock(false);
       debugPrint('LAN Discovery start failed: $e');
     }
+  }
+
+  /// macOS 首次启动常见场景：本地网络权限刚放行后，已绑定的 UDP socket 仍处于“旧状态”，
+  /// 发现会短时间无响应；周期性强制重绑几轮可避免“必须手动重启应用”。
+  void _scheduleStartupForceRebindIfNeeded() {
+    if (!Platform.isMacOS) return;
+    _startupForceRebindTimer?.cancel();
+    var rounds = 0;
+    _startupForceRebindTimer = Timer.periodic(
+      const Duration(seconds: 3),
+      (timer) {
+        rounds++;
+        unawaited(_recreateBindings(force: true));
+        if (rounds >= 6) {
+          timer.cancel();
+          _startupForceRebindTimer = null;
+        }
+      },
+    );
   }
 
   static Future<void> _setAndroidMulticastLock(bool acquire) async {
@@ -605,6 +627,8 @@ class LanDiscoveryService {
     _heartbeatTimer = null;
     _networkPollTimer?.cancel();
     _networkPollTimer = null;
+    _startupForceRebindTimer?.cancel();
+    _startupForceRebindTimer = null;
     _disposeBindings();
     _ifaceFingerprint = '';
     _lastEligibleIfaces = [];

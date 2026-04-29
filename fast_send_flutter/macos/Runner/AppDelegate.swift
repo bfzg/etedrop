@@ -25,6 +25,16 @@ class AppDelegate: FlutterAppDelegate {
     beginLocalNetworkAccessTrigger()
   }
 
+  override func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+    if !flag {
+      sender.windows.forEach { window in
+        window.makeKeyAndOrderFront(nil)
+      }
+    }
+    sender.activate(ignoringOtherApps: true)
+    return true
+  }
+
   private func beginLocalNetworkAccessTrigger() {
     localNetworkBrowser?.cancel()
     let descriptor = NWBrowser.Descriptor.bonjour(type: "_http._tcp", domain: nil)

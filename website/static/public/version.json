@@ -1,59 +1,64 @@
 {
-    "latestVersion": "1.0.2",
-    "windowsVersion": "1.0.2",
-    "macVersion": "1.0.2",
-    "linuxVersion": "1.0.2",
-    "iosVersion": "1.0.2",
-    "androidVersion": "1.0.2",
-    "windowsDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-Setup-1.0.2-win-x64.exe",
-    "macDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.2-macos.dmg",
+    "latestVersion": "1.0.3",
+    "windowsVersion": "1.0.3",
+    "macVersion": "1.0.3",
+    "linuxVersion": "1.0.3",
+    "iosVersion": "1.0.3",
+    "androidVersion": "1.0.3",
+    "windowsDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-Setup-1.0.3-win-x64.exe",
+    "macDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.3-macos.dmg",
     "linuxDownloadUrl": "",
     "iosDownloadUrl": "",
-    "androidDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.2-android.apk",
+    "androidDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.3-android.apk",
     "forceUpdate": false,
     "releaseNotes": {
         "zh": [
-            "[新增] Android 版本支持视频在线预览",
-            "[修复] p2p分享视频时，链接总是中断",
-            "[修复] 4k分辨率卡顿",
-            "[修复] 附近设备离线仍被选中",
-            "[优化] 页面样式",
-            "[其他] 各种优化若干"
+            "[修复] 公网传输不稳定问题",
+            "[修复] Windows 重复启动问题"
         ],
         "en": [
-            "[New] Android: online video preview",
-            "[Fixed] P2P video sharing links dropping repeatedly",
-            "[Fixed] 4K playback stuttering",
-            "[Fixed] Offline nearby devices could stay selected",
-            "[Improved] Page styling",
-            "[Other] Miscellaneous improvements"
+            "[Fixed] Unstable public network transfer issue",
+            "[Fixed] Duplicate startup issue on Windows"
         ],
         "ja": [
-            "[新機能] Android版で動画のオンラインプレビューに対応",
-            "[修正] P2P動画共有時にリンクが頻繁に切断される問題",
-            "[修正] 4K解像度でのカクつき",
-            "[修正] オフラインの近くのデバイスが選択されたままになる問題",
-            "[改善] 画面のスタイル",
-            "[その他] 各種最適化"
+            "[修正] 公網転送が不安定になる問題",
+            "[修正] Windows での重複起動問題"
         ],
         "ko": [
-            "[신규] Android 버전 동영상 온라인 미리보기 지원",
-            "[수정] P2P 동영상 공유 시 링크가 자주 끊기던 문제",
-            "[수정] 4K 해상도에서 끊김 현상",
-            "[수정] 오프라인 주변 기기가 선택 상태로 남던 문제",
-            "[개선] 화면 스타일",
-            "[기타] 기타 최적화"
+            "[수정] 공용 네트워크 전송 불안정 문제",
+            "[수정] Windows 중복 실행 문제"
         ],
         "es": [
-            "[Nuevo] Vista previa de vídeo en línea en Android",
-            "[Corrección] Enlaces inestables al compartir vídeo por P2P",
-            "[Corrección] Tartamudeo en resolución 4K",
-            "[Corrección] Los dispositivos cercanos sin conexión podían seguir seleccionados",
-            "[Mejora] Estilo de la interfaz",
-            "[Otros] Varias mejoras"
+            "[Corrección] Problema de inestabilidad en la transferencia por red pública",
+            "[Corrección] Problema de inicio duplicado en Windows"
         ]
     },
     "changelog": [
+        {
+            "version": "1.0.3",
+            "notes": {
+                "zh": [
+                    "[修复] 公网传输不稳定问题",
+                    "[修复] Windows 重复启动问题"
+                ],
+                "en": [
+                    "[Fixed] Unstable public network transfer issue",
+                    "[Fixed] Duplicate startup issue on Windows"
+                ],
+                "ja": [
+                    "[修正] 公網転送が不安定になる問題",
+                    "[修正] Windows での重複起動問題"
+                ],
+                "ko": [
+                    "[수정] 공용 네트워크 전송 불안정 문제",
+                    "[수정] Windows 중복 실행 문제"
+                ],
+                "es": [
+                    "[Corrección] Problema de inestabilidad en la transferencia por red pública",
+                    "[Corrección] Problema de inicio duplicado en Windows"
+                ]
+            }
+        },
         {
             "version": "1.0.2",
             "notes": {

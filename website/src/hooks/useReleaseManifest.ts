@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useState } from "react";
 import useBaseUrl from "@docusaurus/useBaseUrl";
+import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import {
   getClientDownloadPlatform,
   type ClientDesktopPlatform,
@@ -139,7 +140,11 @@ function mergeManifest(raw: unknown): ReleaseManifest {
 }
 
 export function useReleaseManifest(): ReleaseManifest {
-  const jsonUrl = useBaseUrl(VERSION_JSON_PUBLIC_PATH);
+  const { siteConfig } = useDocusaurusContext();
+  // Always read one shared manifest under site baseUrl (not locale-prefixed path).
+  // This avoids maintaining duplicated `/xx/public/version.json` files per locale.
+  const base = (siteConfig.baseUrl || "/").replace(/\/+$/, "");
+  const jsonUrl = `${base}${VERSION_JSON_PUBLIC_PATH}`;
   const [manifest, setManifest] = useState<ReleaseManifest>(FALLBACK_RELEASE);
 
   useEffect(() => {
