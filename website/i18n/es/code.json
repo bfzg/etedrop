@@ -6,6 +6,7 @@
   "footer.nav.download": { "message": "Descargar" },
   "footer.nav.faq": { "message": "Preguntas frecuentes" },
   "footer.nav.contact": { "message": "Contáctanos" },
+  "footer.nav.privacy": { "message": "Política de privacidad" },
   "download.badge.testing": { "message": "En pruebas" },
   "download.meta.title": { "message": "Descargar" },
   "download.meta.description": { "message": "Descarga el cliente de escritorio EteDrop." },

@@ -6,6 +6,7 @@
   "footer.nav.download": { "message": "ダウンロード" },
   "footer.nav.faq": { "message": "よくある質問" },
   "footer.nav.contact": { "message": "お問い合わせ" },
+  "footer.nav.privacy": { "message": "プライバシーポリシー" },
   "download.badge.testing": { "message": "テスト中" },
   "download.meta.title": { "message": "ダウンロード" },
   "download.meta.description": { "message": "EteDrop デスクトップ版をダウンロード。" },

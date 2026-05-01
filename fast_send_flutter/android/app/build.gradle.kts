@@ -1,4 +1,3 @@
-import com.android.build.api.dsl.NativeDebugSymbolLevel
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -86,12 +85,6 @@ android {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
-            }
-            // Flutter 3.32+ 打 AAB 时若未生成/保留合适 native 符号，可能误报：
-            // "Release app bundle failed to strip debug symbols from native libraries."
-            // SYMBOL_TABLE 兼顾 Play 控制台堆栈符号化与构建通过（勿用 FULL / NONE 碰此问题）。
-            ndk {
-                debugSymbolLevel = NativeDebugSymbolLevel.SYMBOL_TABLE
             }
         }
     }

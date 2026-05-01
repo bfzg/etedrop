@@ -6,6 +6,7 @@
   "footer.nav.download": { "message": "다운로드" },
   "footer.nav.faq": { "message": "자주 묻는 질문" },
   "footer.nav.contact": { "message": "문의하기" },
+  "footer.nav.privacy": { "message": "개인정보 처리방침" },
   "download.badge.testing": { "message": "테스트 중" },
   "download.meta.title": { "message": "다운로드" },
   "download.meta.description": { "message": "EteDrop 데스크톱 클라이언트를 받으세요." },

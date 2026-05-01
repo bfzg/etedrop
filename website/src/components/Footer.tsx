@@ -72,6 +72,11 @@ export default function Footer(): ReactNode {
                 <Translate id="footer.nav.contact">联系我们</Translate>
               </Link>
             </li>
+            <li>
+              <Link to="/privacy" className={navLinkClass}>
+                <Translate id="footer.nav.privacy">隐私政策</Translate>
+              </Link>
+            </li>
           </ul>
         </nav>
 
