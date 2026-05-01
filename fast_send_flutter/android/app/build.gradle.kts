@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.NativeDebugSymbolLevel
 import java.io.FileInputStream
 import java.util.Properties
 
@@ -41,7 +42,7 @@ tasks.configureEach {
 
 android {
     // TODO 这里修改成自己的
-    namespace = "com.etedrop.app"
+    namespace = "cn.etedrop.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -58,7 +59,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.etedrop.app"
+        applicationId = "cn.etedrop.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -85,6 +86,12 @@ android {
                 signingConfigs.getByName("release")
             } else {
                 signingConfigs.getByName("debug")
+            }
+            // Flutter 3.32+ 打 AAB 时若未生成/保留合适 native 符号，可能误报：
+            // "Release app bundle failed to strip debug symbols from native libraries."
+            // SYMBOL_TABLE 兼顾 Play 控制台堆栈符号化与构建通过（勿用 FULL / NONE 碰此问题）。
+            ndk {
+                debugSymbolLevel = NativeDebugSymbolLevel.SYMBOL_TABLE
             }
         }
     }

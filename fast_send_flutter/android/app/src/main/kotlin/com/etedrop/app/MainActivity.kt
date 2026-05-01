@@ -1,4 +1,4 @@
-package com.etedrop.app
+package cn.etedrop.app
 
 import android.content.Context
 import android.net.wifi.WifiManager
