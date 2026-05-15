@@ -1,15 +1,23 @@
 import 'dart:io';
 
+import 'package:open_filex/open_filex.dart';
 import 'package:path/path.dart' as p;
 
 /// 在系统文件管理器中显示 [absoluteFilePath]（尽量选中该文件）。
-/// 桌面端支持 macOS / Windows / Linux；移动端返回 false。
+///
+/// - 桌面：macOS / Windows / Linux 按「在文件夹中显示」语义处理。
+/// - Android / iOS：应用沙盒或 `Android/data` 下路径无法被系统「文件」应用当作文件夹打开，
+///   因此改为用系统已安装应用打开该文件（图片/视频/文档等），便于用户查看已接收内容。
 Future<bool> revealFileInExplorer(String absoluteFilePath) async {
   final normalized = p.normalize(absoluteFilePath);
   final file = File(normalized);
   if (!await file.exists()) return false;
 
   try {
+    if (Platform.isAndroid || Platform.isIOS) {
+      final r = await OpenFilex.open(file.absolute.path);
+      return r.type == ResultType.done;
+    }
     if (Platform.isMacOS) {
       final r = await Process.run('open', ['-R', file.absolute.path]);
       return r.exitCode == 0;

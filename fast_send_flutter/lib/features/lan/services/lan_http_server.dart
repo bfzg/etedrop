@@ -18,8 +18,11 @@ class LanHttpServer {
   /// 同一批次上传：首次写入时选定不冲突的落盘路径，续传与重试 offset=0 时复用，完成后移除。
   final Map<String, String> _receiveSavePathByKey = {};
 
-  static String _uploadSessionKey(String? shareId, int fileIndex, String fileName) =>
-      '${shareId ?? '_'}|$fileIndex|$fileName';
+  static String _uploadSessionKey(
+    String? shareId,
+    int fileIndex,
+    String fileName,
+  ) => '${shareId ?? '_'}|$fileIndex|$fileName';
 
   /// 收到分享邀约（仅元数据，不含文件）
   final Future<void> Function(LanShareOfferPayload offer)? onShareOffer;
@@ -41,7 +44,7 @@ class LanHttpServer {
   )?
   onProgress;
 
-  final void Function(LanUploadContext ctx)? onComplete;
+  final Future<void> Function(LanUploadContext ctx)? onComplete;
   final void Function(LanUploadContext ctx, String error)? onError;
 
   LanHttpServer({
@@ -267,7 +270,9 @@ class LanHttpServer {
     if (onReceiveUpload != null) {
       final accepted = await onReceiveUpload!(ctx);
       if (accepted != true) {
-        debugPrint('[LAN /upload][recv] rejected by user peer=$peer file=$fileName');
+        debugPrint(
+          '[LAN /upload][recv] rejected by user peer=$peer file=$fileName',
+        );
         request.response.statusCode = HttpStatus.forbidden;
         request.response.write('Rejected by user');
         await request.response.close();
@@ -281,7 +286,8 @@ class LanHttpServer {
       savePath =
           _receiveSavePathByKey[pathKey] ?? p.join(saveDirectory, fileName);
     } else {
-      savePath = _receiveSavePathByKey[pathKey] ??
+      savePath =
+          _receiveSavePathByKey[pathKey] ??
           await uniquePathInDirectory(saveDirectory, fileName);
       _receiveSavePathByKey[pathKey] = savePath;
     }
@@ -329,7 +335,8 @@ class LanHttpServer {
         if (onProgress != null) {
           sinceProgressBytes += chunk.length;
           final now = DateTime.now();
-          final due = sinceProgressBytes >= progressMinBytes ||
+          final due =
+              sinceProgressBytes >= progressMinBytes ||
               now.difference(lastProgressAt) >= progressMinInterval;
           if (due) {
             sinceProgressBytes = 0;
@@ -388,27 +395,31 @@ class LanHttpServer {
           request.response.statusCode = HttpStatus.internalServerError;
           await request.response.close();
         } catch (closeErr) {
-          debugPrint('[LAN /upload][recv] error closing 500 response: $closeErr');
+          debugPrint(
+            '[LAN /upload][recv] error closing 500 response: $closeErr',
+          );
         }
       }
       return;
     }
 
     try {
-      onComplete?.call(
-        LanUploadContext(
-          fileName: ctx.fileName,
-          fileSize: ctx.fileSize,
-          senderName: ctx.senderName,
-          senderAvatar: ctx.senderAvatar,
-          senderDeviceId: ctx.senderDeviceId,
-          shareId: ctx.shareId,
-          fileIndex: ctx.fileIndex,
-          fileCount: ctx.fileCount,
-          batchTotalBytes: ctx.batchTotalBytes,
-          savedAbsolutePath: file.absolute.path,
-        ),
-      );
+      if (onComplete != null) {
+        await onComplete!(
+          LanUploadContext(
+            fileName: ctx.fileName,
+            fileSize: ctx.fileSize,
+            senderName: ctx.senderName,
+            senderAvatar: ctx.senderAvatar,
+            senderDeviceId: ctx.senderDeviceId,
+            shareId: ctx.shareId,
+            fileIndex: ctx.fileIndex,
+            fileCount: ctx.fileCount,
+            batchTotalBytes: ctx.batchTotalBytes,
+            savedAbsolutePath: file.absolute.path,
+          ),
+        );
+      }
       _receiveSavePathByKey.remove(pathKey);
     } catch (e, st) {
       // 文件已落盘且 HTTP 200 已发出；此处失败不应再写 response，也不应把整次接收标为失败。

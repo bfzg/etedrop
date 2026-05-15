@@ -15,6 +15,7 @@ import '../../message/providers/incoming_transfer_toast_provider.dart';
 import '../../message/providers/message_provider.dart';
 import '../../settings/providers/transfer_receive_prefs_provider.dart';
 import '../../../core/http/cancel_token.dart';
+import '../../../core/utils/android_public_downloads.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
 import '../../../services/local_storage_service.dart';
 import '../../../services/notification_service.dart';
@@ -822,9 +823,29 @@ class LanManager extends _$LanManager {
     }
   }
 
-  void _onReceiveUploadComplete(LanUploadContext ctx) {
+  Future<void> _onReceiveUploadComplete(LanUploadContext ctx) async {
     final msgNotifier = ref.read(messageListProvider.notifier);
-    final savedPath = ctx.savedAbsolutePath;
+    var savedPath = ctx.savedAbsolutePath;
+
+    if (savedPath != null && Platform.isAndroid) {
+      try {
+        final publicPath = await copyFileToAndroidPublicDownloads(
+          savedPath,
+          fileName: ctx.fileName,
+        );
+        if (publicPath != null && publicPath.isNotEmpty) {
+          try {
+            final temp = File(savedPath);
+            if (await temp.exists()) {
+              await temp.delete();
+            }
+          } catch (_) {}
+          savedPath = publicPath;
+        }
+      } catch (e) {
+        debugPrint('Copy received file to Android public downloads failed: $e');
+      }
+    }
 
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
       if (savedPath != null) {

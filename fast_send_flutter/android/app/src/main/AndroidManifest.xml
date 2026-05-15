@@ -5,9 +5,9 @@
     <!-- Wi‑Fi 上接收 UDP 多播（局域网发现）；无此锁时系统常丢弃多播，表现为本机扫不到其他设备 -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- 不使用 MANAGE_EXTERNAL_STORAGE：避免 Play「所有文件访问」声明与拒审；文件通过 SAF/选择器与应用专属目录访问。 -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
@@ -59,6 +59,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- 让系统能解析可打开本机文件的 Activity（Android 11+ 包可见性），配合接收完成后「打开文件」 -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:mimeType="*/*"/>
         </intent>
     </queries>
 </manifest>
