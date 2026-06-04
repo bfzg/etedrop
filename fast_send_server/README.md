@@ -58,6 +58,45 @@ pm2 save && pm2 startup
 
 客户端 `shareServerUrl` / `signalingServerUrl` 须与上述域名一致。
 
+---
+
+## 服务端状态与用量查询（预留 HTTP 接口）
+
+业务统计由 `SignalingController` 挂在 **`/api/system`** 下，全部为 **GET**、返回 JSON（`/metrics` 除外）。单机部署时：**「安装数量」** 指服务端曾登记过的**不同 `deviceId` 数量**（持久化在部署目录下 `runtime/device-registry.json`）；**「在线数量」** 指当前信令 WebSocket 仍连接着的设备数。多机或多实例时，每台机器各自一份 registry，需自行汇总。
+
+| 路径 | 说明 |
+|------|------|
+| **`/api/system/health`** | 心跳 + 汇总：进程正常、`signaling` 运行时指标、`usage` 用量摘要、`timestamp`。 |
+| **`/api/system/usage/summary`** | 仅返回用量摘要（与 `health` 里的 `usage` 相同）。 |
+| **`/api/system/usage/devices?limit=200`** | 最近活跃的一批设备明细（上限 2000，默认 200）；含 `isOnline` 等字段。 |
+| **`/api/system/usage/events?limit=200`** | 最近用量事件（上线/离线/浏览器连接等，上限 1000，默认 200）。 |
+| **`/api/system/metrics`** | Prometheus 文本指标（`Content-Type: text/plain; version=0.0.4`），便于 Grafana / `prometheus` 抓取。 |
+
+**`health.signaling`（运行时，内存态）**
+
+- `onlineDevices`：当前在线设备（WebSocket 连接数）。
+- `waitingSessions` / `pairedSessions`：信令会话中等待配对 / 已配对数量。
+
+**`usage` / `usage/summary`（`UsageSummary`）**
+
+- `installedDevices`：累计出现过的唯一设备数（等价于安装侧「登记过的设备」规模）。
+- `onlineDevices`：当前在线设备数（与 `signaling.onlineDevices` 一致口径）。
+- `activeDevices24h`：最近 24 小时内有活动的唯一设备数（按 registry 里 `lastSeenAt`）。
+- `totalOnlineEvents` / `totalBrowserConnectEvents`：历史上线次数、浏览器连接次数累加。
+- `recordedAt`：本条摘要生成时间（毫秒时间戳）。
+
+**示例（本机，端口与上文一致）：**
+
+```bash
+curl -sS https://api.etedrop.cn/api/system/health | jq .
+curl -sS https://api.etedrop.cn/api/system/usage/summary | jq .
+curl -sS https://api.etedrop.cn/api/system/metrics
+```
+
+经公网 HTTPS 时把主机换成实际 API 域名即可，例如：``。
+
+> 接口当前**无鉴权**；若不想对外暴露用量，可在 Nginx 上对 `/api/system` 做 IP 白名单、Basic Auth 或内网-only。
+
 ### 怎么验证 `https://api.etedrop.cn` 能访问（国内线示例）
 
 域名以你实际解析为准；下面以 **`api.etedrop.cn`** 为例（勿与 `etedrop` 拼写混淆）。

@@ -391,16 +391,23 @@ class LanTransferService {
       } on Exception catch (e) {
         final msg = e.toString();
         final isForbidden = msg.contains('对方拒绝了接收文件');
-        final isConflict = msg.contains('断点不一致');
+        final isConflict = msg.contains('断点不一致') ||
+            msg.contains('No active receive session');
         if (isForbidden) rethrow;
         if (attempt >= maxAttempts - 1) {
           rethrow;
         }
-        if (isConflict) rethrow;
-        _lanUploadLog(
-          '[LAN /upload][send] will retry after '
-          '${200 + attempt * 100}ms (attempt ${attempt + 1}) err=$e',
-        );
+        if (isConflict) {
+          _lanUploadLog(
+            '[LAN /upload][send] resume conflict, will restart from 0 '
+            'file=$fileName (attempt ${attempt + 1})',
+          );
+        } else {
+          _lanUploadLog(
+            '[LAN /upload][send] will retry after '
+            '${200 + attempt * 100}ms (attempt ${attempt + 1}) err=$e',
+          );
+        }
         await Future<void>.delayed(Duration(milliseconds: 200 + attempt * 100));
       }
     }

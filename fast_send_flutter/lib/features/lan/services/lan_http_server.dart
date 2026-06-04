@@ -24,6 +24,25 @@ class LanHttpServer {
     String fileName,
   ) => '${shareId ?? '_'}|$fileIndex|$fileName';
 
+  static String? _shareIdFromQuery(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    return raw;
+  }
+
+  /// 仅对当前进行中的接收会话报告已写字节；同名已完成文件不参与续传判定。
+  Future<int> _writtenBytesForActiveSession({
+    required String? shareId,
+    required int fileIndex,
+    required String fileName,
+  }) async {
+    final pathKey = _uploadSessionKey(shareId, fileIndex, fileName);
+    final savePath = _receiveSavePathByKey[pathKey];
+    if (savePath == null) return 0;
+    final f = File(savePath);
+    if (!await f.exists()) return 0;
+    return f.length();
+  }
+
   /// 收到分享邀约（仅元数据，不含文件）
   final Future<void> Function(LanShareOfferPayload offer)? onShareOffer;
 
@@ -203,9 +222,14 @@ class LanHttpServer {
         await request.response.close();
         return;
       }
-      final path = p.join(saveDirectory, safeName);
-      final f = File(path);
-      final offset = await f.exists() ? await f.length() : 0;
+      final shareId = _shareIdFromQuery(request.uri.queryParameters['shareId']);
+      final fileIndex =
+          int.tryParse(request.uri.queryParameters['fileIndex'] ?? '0') ?? 0;
+      final offset = await _writtenBytesForActiveSession(
+        shareId: shareId,
+        fileIndex: fileIndex,
+        fileName: safeName,
+      );
       request.response.statusCode = HttpStatus.ok;
       request.response.headers.contentType = ContentType.json;
       request.response.write('{"offset":$offset}');
@@ -283,8 +307,18 @@ class LanHttpServer {
     final pathKey = _uploadSessionKey(shareId, fileIndex, fileName);
     late final String savePath;
     if (resumeOffset > 0) {
-      savePath =
-          _receiveSavePathByKey[pathKey] ?? p.join(saveDirectory, fileName);
+      final cached = _receiveSavePathByKey[pathKey];
+      if (cached == null) {
+        debugPrint(
+          '[LAN /upload][recv] no active session for resume peer=$peer '
+          'file=$fileName offset=$resumeOffset',
+        );
+        request.response.statusCode = HttpStatus.conflict;
+        request.response.write('No active receive session for resume');
+        await request.response.close();
+        return;
+      }
+      savePath = cached;
     } else {
       savePath =
           _receiveSavePathByKey[pathKey] ??
