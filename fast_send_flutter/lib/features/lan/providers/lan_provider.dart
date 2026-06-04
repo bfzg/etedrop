@@ -42,6 +42,41 @@ bool _lanDeviceListEquals(List<LanDevice> a, List<LanDevice> b) {
   return true;
 }
 
+/// [lanManagerProvider] 仅含对端；UI 用此函数拼出「本机首位 + 对端」列表。
+List<LanDevice> buildNearbyLanDevices({
+  required List<LanDevice> remotePeers,
+  required String myDeviceId,
+  required String myDeviceName,
+  required int myAvatar,
+  required int myHttpPort,
+  required String myOs,
+}) {
+  final others = remotePeers
+      .where((d) => d.deviceId != myDeviceId)
+      .toList()
+    ..sort(_compareRemoteLanPeers);
+  final self = LanDevice(
+    deviceId: myDeviceId,
+    deviceName: myDeviceName,
+    ip: '127.0.0.1',
+    port: myHttpPort,
+    os: myOs,
+    lastSeen: DateTime.now().millisecondsSinceEpoch,
+    avatar: myAvatar,
+    isOnline: true,
+    isPresenceWeak: false,
+  );
+  return [self, ...others];
+}
+
+int _compareRemoteLanPeers(LanDevice a, LanDevice b) {
+  if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
+  if (a.isOnline && b.isOnline && a.isPresenceWeak != b.isPresenceWeak) {
+    return a.isPresenceWeak ? 1 : -1;
+  }
+  return a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase());
+}
+
 class _LanProbeState {
   int nextProbeAtMs = 0;
   int backoffMs = 5000;
@@ -109,7 +144,7 @@ class LanManager extends _$LanManager {
     final cloudDir = ref.read(fileServiceProvider).storageDir;
     final downloadDir = await ref.read(downloadDirProvider.future);
 
-    final remembered = await _loadRememberedLanDevices();
+    final remembered = await _loadRememberedLanDevices(deviceId);
 
     _server = LanHttpServer(
       saveDirectory: downloadDir.isNotEmpty
@@ -176,24 +211,20 @@ class LanManager extends _$LanManager {
     });
   }
 
-  Future<List<LanDevice>> _loadRememberedLanDevices() async {
+  Future<List<LanDevice>> _loadRememberedLanDevices(String selfDeviceId) async {
     try {
       final raw = LocalStorageService.instance.get<String>(
         StorageKeys.lanRememberedDevices,
       );
       if (raw == null || raw.isEmpty) return [];
       final decoded = jsonDecode(raw) as List<dynamic>;
-      final now = DateTime.now().millisecondsSinceEpoch;
       return decoded
           .map(
             (e) => LanDevice.fromJson(
               Map<String, dynamic>.from(e as Map),
-            ).copyWith(
-              isOnline: true,
-              isPresenceWeak: true,
-              lastSeen: now,
-            ),
+            ).copyWith(isOnline: false, isPresenceWeak: false),
           )
+          .where((d) => d.deviceId != selfDeviceId)
           .toList();
     } catch (e) {
       debugPrint('LAN remembered load: $e');
@@ -255,7 +286,11 @@ class LanManager extends _$LanManager {
 
   Future<void> _flushPersistRememberedDevices() async {
     try {
-      final encoded = jsonEncode(state.map((d) => d.toJson()).toList());
+      final selfId = _localDeviceId;
+      final peers = selfId == null
+          ? state
+          : state.where((d) => d.deviceId != selfId).toList();
+      final encoded = jsonEncode(peers.map((d) => d.toJson()).toList());
       await LocalStorageService.instance.set<String>(
         StorageKeys.lanRememberedDevices,
         encoded,
@@ -269,6 +304,7 @@ class LanManager extends _$LanManager {
     final now = DateTime.now().millisecondsSinceEpoch;
     final next = <LanDevice>[];
     for (final d in state) {
+      if (d.deviceId == _localDeviceId) continue;
       if (now - d.lastSeen > LanPresenceConfig.forgetMs) continue;
       final age = now - d.lastSeen;
       if (age >= LanPresenceConfig.offlineMs) {

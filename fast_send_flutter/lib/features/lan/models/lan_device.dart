@@ -13,7 +13,7 @@ abstract class LanDevice with _$LanDevice {
     required String os,
     @Default(0) int lastSeen,
     @Default(1) int avatar,
-    /// 是否在局域网发现窗口内仍收到心跳（离线条目保留展示，样式置灰）
+    /// 是否近期收到对端 UDP 宣告（仅对 [lanManagerProvider] 中的远程设备有效）
     @Default(true) bool isOnline,
     /// 长时间未收到对端宣告时的「可疑」态：仍视为在线尝试连接，UI 略灰
     @Default(false) bool isPresenceWeak,

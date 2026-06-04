@@ -26,20 +26,19 @@ class NearbyDeviceGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final raw = ref.watch(lanManagerProvider);
-    final myDeviceId = ref.watch(deviceIdProvider);
+    final myDeviceId = ref.watch(deviceIdProvider) ?? '';
     final theme = Theme.of(context);
     final safeH = MediaQuery.paddingOf(context);
-    final devices = [...raw]
-      ..sort((a, b) {
-        if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
-        if (a.isOnline && b.isOnline && a.isPresenceWeak != b.isPresenceWeak) {
-          return a.isPresenceWeak ? 1 : -1;
-        }
-        final aSelf = a.deviceId == myDeviceId;
-        final bSelf = b.deviceId == myDeviceId;
-        if (aSelf != bSelf) return aSelf ? -1 : 1;
-        return a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase());
-      });
+    final devices = myDeviceId.isEmpty
+        ? [...raw]
+        : buildNearbyLanDevices(
+            remotePeers: raw,
+            myDeviceId: myDeviceId,
+            myDeviceName: ref.watch(deviceNameProvider),
+            myAvatar: ref.watch(deviceAvatarProvider),
+            myHttpPort: ref.read(lanManagerProvider.notifier).localHttpPort,
+            myOs: Platform.operatingSystem,
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,9 +222,9 @@ class _DeviceAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final offline = !device.isOnline;
-    final weak = device.isOnline && device.isPresenceWeak;
-    final dimmed = (offline || weak) && !isSelf;
+    final offline = !isSelf && !device.isOnline;
+    final weak = !isSelf && device.isOnline && device.isPresenceWeak;
+    final dimmed = offline || weak;
 
     return GestureDetector(
       onTap: onTap,
@@ -355,7 +354,9 @@ class _DeviceAvatar extends StatelessWidget {
             ),
             // 系统名称 / 离线
             Text(
-              offline
+              isSelf
+                  ? _osLabel(device.os)
+                  : offline
                   ? offlineLabel
                   : weak
                   ? weakSignalLabel

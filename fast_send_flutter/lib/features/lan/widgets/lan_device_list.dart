@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
+import '../../device/providers/device_provider.dart';
 import '../providers/lan_provider.dart';
 import '../models/lan_device.dart';
 
@@ -17,14 +18,17 @@ class LanDeviceList extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final raw = ref.watch(lanManagerProvider);
-    final devices = [...raw]
-      ..sort((a, b) {
-        if (a.isOnline != b.isOnline) return a.isOnline ? -1 : 1;
-        if (a.isOnline && b.isOnline && a.isPresenceWeak != b.isPresenceWeak) {
-          return a.isPresenceWeak ? 1 : -1;
-        }
-        return a.deviceName.toLowerCase().compareTo(b.deviceName.toLowerCase());
-      });
+    final myDeviceId = ref.watch(deviceIdProvider) ?? '';
+    final devices = myDeviceId.isEmpty
+        ? [...raw]
+        : buildNearbyLanDevices(
+            remotePeers: raw,
+            myDeviceId: myDeviceId,
+            myDeviceName: ref.watch(deviceNameProvider),
+            myAvatar: ref.watch(deviceAvatarProvider),
+            myHttpPort: ref.read(lanManagerProvider.notifier).localHttpPort,
+            myOs: Platform.operatingSystem,
+          );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,13 +91,15 @@ class LanDeviceList extends ConsumerWidget {
               separatorBuilder: (context, index) => const SizedBox(width: 16),
               itemBuilder: (context, index) {
                 final device = devices[index];
+                final isSelf = device.deviceId == myDeviceId;
                 return _DeviceItem(
                   device: device,
+                  isSelf: isSelf,
                   offlineLabel: l10n.offline,
                   weakSignalLabel: l10n.weakSignal,
-                  onTap: device.isOnline
-                      ? () => onDeviceSelected(device)
-                      : null,
+                  onTap: isSelf || !device.isOnline
+                      ? null
+                      : () => onDeviceSelected(device),
                 );
               },
             ),
@@ -105,12 +111,14 @@ class LanDeviceList extends ConsumerWidget {
 
 class _DeviceItem extends StatelessWidget {
   final LanDevice device;
+  final bool isSelf;
   final String offlineLabel;
   final String weakSignalLabel;
   final VoidCallback? onTap;
 
   const _DeviceItem({
     required this.device,
+    this.isSelf = false,
     required this.offlineLabel,
     required this.weakSignalLabel,
     required this.onTap,
@@ -142,8 +150,8 @@ class _DeviceItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final offline = !device.isOnline;
-    final weak = device.isOnline && device.isPresenceWeak;
+    final offline = !isSelf && !device.isOnline;
+    final weak = !isSelf && device.isOnline && device.isPresenceWeak;
 
     Widget iconCircle = Container(
       width: 48,
