@@ -22,6 +22,7 @@ import '../../../services/notification_service.dart';
 import '../models/lan_device.dart';
 import '../models/lan_share_payload.dart';
 import '../services/lan_discovery_service.dart';
+import '../services/lan_presence_config.dart';
 import '../services/lan_http_context.dart';
 import '../services/lan_http_server.dart';
 import '../services/lan_network_utils.dart';
@@ -29,19 +30,6 @@ import '../services/lan_transfer_service.dart';
 import 'transfer_receive_speed_provider.dart';
 
 part 'lan_provider.g.dart';
-
-/// 超过该时间未收到对端宣告则进入「可疑」态（`isPresenceWeak`），UI 灰显但仍可点。
-/// 与发现层 ~8s 周期、UDP 丢包对齐。
-const int _lanDeviceWeakMs = 20000;
-
-/// 超过该时间仍无宣告则视为离线（仍保留在列表，仅 `isOnline: false`）。
-const int _lanDeviceOfflineMs = 52000;
-
-/// 对端多久未更新后才启动单播探测（带退避，见 [_LanProbeState]）。
-const int _unicastProbeMinAgeMs = 12000;
-
-/// 超过该时间无任何发现包则从列表与本地缓存移除，避免无限增长。
-const int _lanDeviceForgetMs = 14 * 24 * 60 * 60 * 1000;
 
 /// 单文件在内层断点续传仍失败后，外层再试次数（网络闪断等）。
 const int _lanUploadOuterRetries = 5;
@@ -158,19 +146,7 @@ class LanManager extends _$LanManager {
       state = remembered;
     }
 
-    _sub = _discovery!.onDeviceFound.listen((device) {
-      _probeByDeviceId.remove(device.deviceId);
-      final online = device.copyWith(isOnline: true, isPresenceWeak: false);
-      final current = List<LanDevice>.from(state);
-      final index = current.indexWhere((d) => d.deviceId == online.deviceId);
-      if (index >= 0) {
-        current[index] = online;
-      } else {
-        current.add(online);
-      }
-      state = current;
-      _schedulePersistRememberedDevices();
-    });
+    _sub = _discovery!.onDeviceFound.listen(_onPeerPresence);
 
     _goneSub = _discovery!.onDeviceGone.listen((id) {
       _probeByDeviceId.remove(id);
@@ -188,9 +164,11 @@ class LanManager extends _$LanManager {
     });
 
     await _discovery!.start();
+    _discovery!.scheduleStartupPeerProbes(_peerIpv4Candidates());
+    _discovery!.schedulePresenceBurst(reason: 'manager_ready');
 
     _cleanupTimer = Timer.periodic(const Duration(seconds: 2), (_) {
-      _applyStaleForgetAndOffline();
+      _applyPresenceTimeouts();
     });
 
     ref.listen(messageListProvider, (prev, next) {
@@ -205,17 +183,67 @@ class LanManager extends _$LanManager {
       );
       if (raw == null || raw.isEmpty) return [];
       final decoded = jsonDecode(raw) as List<dynamic>;
+      final now = DateTime.now().millisecondsSinceEpoch;
       return decoded
           .map(
             (e) => LanDevice.fromJson(
               Map<String, dynamic>.from(e as Map),
-            ).copyWith(isOnline: false, isPresenceWeak: false),
+            ).copyWith(
+              isOnline: true,
+              isPresenceWeak: true,
+              lastSeen: now,
+            ),
           )
           .toList();
     } catch (e) {
       debugPrint('LAN remembered load: $e');
       return [];
     }
+  }
+
+  void _onPeerPresence(LanDevice device) {
+    if (device.deviceId == _localDeviceId) return;
+
+    _probeByDeviceId.remove(device.deviceId);
+    final fresh = device.copyWith(isOnline: true, isPresenceWeak: false);
+    final current = List<LanDevice>.from(state);
+    final index = current.indexWhere((d) => d.deviceId == fresh.deviceId);
+    final prev = index >= 0 ? current[index] : null;
+    final isNew = prev == null;
+    final endpointChanged = prev != null &&
+        (prev.ip != fresh.ip || prev.port != fresh.port);
+    final wasOffline = prev != null && !prev.isOnline;
+
+    if (index >= 0) {
+      current[index] = fresh;
+    } else {
+      current.add(fresh);
+    }
+    state = current;
+    _schedulePersistRememberedDevices();
+
+    if (isNew || endpointChanged || wasOffline) {
+      final ip = InternetAddress.tryParse(fresh.ip);
+      if (ip != null && ip.type == InternetAddressType.IPv4) {
+        _discovery?.sendUnicastProbe(ip);
+      }
+      _discovery?.schedulePresenceBurst(reason: 'peer');
+    }
+  }
+
+  Set<String> _peerIpv4Candidates() {
+    final out = <String>{};
+    final self = _localDeviceId;
+    for (final d in state) {
+      if (d.deviceId == self) continue;
+      final ip = d.ip.trim();
+      if (ip.isEmpty) continue;
+      if (InternetAddress.tryParse(ip)?.type != InternetAddressType.IPv4) {
+        continue;
+      }
+      out.add(ip);
+    }
+    return out;
   }
 
   void _schedulePersistRememberedDevices() {
@@ -237,23 +265,19 @@ class LanManager extends _$LanManager {
     }
   }
 
-  void _applyStaleForgetAndOffline() {
+  void _applyPresenceTimeouts() {
     final now = DateTime.now().millisecondsSinceEpoch;
     final next = <LanDevice>[];
     for (final d in state) {
-      if (now - d.lastSeen > _lanDeviceForgetMs) continue;
-      if (!d.isOnline) {
-        next.add(d);
-        continue;
-      }
+      if (now - d.lastSeen > LanPresenceConfig.forgetMs) continue;
       final age = now - d.lastSeen;
-      if (age >= _lanDeviceOfflineMs) {
+      if (age >= LanPresenceConfig.offlineMs) {
         _probeByDeviceId.remove(d.deviceId);
         next.add(d.copyWith(isOnline: false, isPresenceWeak: false));
-      } else if (age >= _lanDeviceWeakMs) {
-        next.add(d.copyWith(isPresenceWeak: true));
+      } else if (age >= LanPresenceConfig.weakMs) {
+        next.add(d.copyWith(isOnline: true, isPresenceWeak: true));
       } else {
-        next.add(d.copyWith(isPresenceWeak: false));
+        next.add(d.copyWith(isOnline: true, isPresenceWeak: false));
       }
     }
     if (!_lanDeviceListEquals(state, next)) {
@@ -263,17 +287,28 @@ class LanManager extends _$LanManager {
     _runUnicastProbes();
   }
 
+  bool _shouldProbePeer(LanDevice d, int now) {
+    if (d.deviceId == _localDeviceId) return false;
+    final ip = InternetAddress.tryParse(d.ip);
+    if (ip == null || ip.type != InternetAddressType.IPv4) return false;
+
+    final age = now - d.lastSeen;
+    if (d.isOnline) {
+      if (d.isPresenceWeak && age >= 4000) return true;
+      return age >= LanPresenceConfig.probeMinAgeMs;
+    }
+    return age < LanPresenceConfig.probeOfflineGraceMs;
+  }
+
   void _runUnicastProbes() {
     final disc = _discovery;
-    final self = _localDeviceId;
-    if (disc == null || self == null) return;
+    if (disc == null || _localDeviceId == null) return;
     final now = DateTime.now().millisecondsSinceEpoch;
     for (final d in state) {
-      if (d.deviceId == self) continue;
-      if (!d.isOnline) continue;
-      final age = now - d.lastSeen;
-      if (age < _unicastProbeMinAgeMs) {
-        _probeByDeviceId.remove(d.deviceId);
+      if (!_shouldProbePeer(d, now)) {
+        if (d.isOnline && now - d.lastSeen < LanPresenceConfig.probeMinAgeMs) {
+          _probeByDeviceId.remove(d.deviceId);
+        }
         continue;
       }
       var st = _probeByDeviceId[d.deviceId];
@@ -283,8 +318,7 @@ class LanManager extends _$LanManager {
         _probeByDeviceId[d.deviceId] = st;
       }
       if (now < st.nextProbeAtMs) continue;
-      final ip = InternetAddress.tryParse(d.ip);
-      if (ip == null || ip.type != InternetAddressType.IPv4) continue;
+      final ip = InternetAddress.tryParse(d.ip)!;
       disc.sendUnicastProbe(ip);
       st.nextProbeAtMs = now + st.backoffMs + _probeRandom.nextInt(480);
       st.backoffMs = min(72000, max(5000, (st.backoffMs * 1.45).round()));

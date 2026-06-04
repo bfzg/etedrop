@@ -9,29 +9,14 @@ import 'package:flutter/services.dart';
 
 import '../models/lan_device.dart';
 import 'lan_discovery_network.dart';
+import 'lan_presence_config.dart';
 
-/// 局域网 UDP 发现（与 LocalSend 同类方案：每块网卡独立 socket + 多播成员，避免单 socket 上频繁 leave/join 丢包）。
+/// 局域网 UDP 发现：被动多播/子网宣告 + 单播 probe 拉活（见 [LanPresenceConfig]）。
 ///
-/// 周期宣告默认 **8s**，且 **多数周期不发送 255.255.255.255**（见 [_fullBroadcastEveryNHeartbeats]），以降低对无线/交换的影响。
-///
-/// 仍使用既有 JSON 载荷，与旧版客户端互通。
+/// 仍使用既有 JSON 载荷（可选 `bootId`），与旧版客户端互通。
 class LanDiscoveryService {
-  static const int _udpPort = 53317;
-  static const String _multicastGroupIpv4 = '239.255.88.117';
-
-  /// 周期性宣告间隔（略拉长以减少局域网广播总量；全网广播见 [_fullBroadcastEvery]）。
-  static const Duration _heartbeatInterval = Duration(seconds: 8);
-
-  /// 仅多播+子网定向广播；不含 255.255.255.255 的「全接口」洪泛。
-  static const Duration _networkPollInterval = Duration(seconds: 20);
-  static const int _byeBurstPerSocket = 5;
-
-  /// 每 N 次周期心跳才附带一次 255.255.255.255，降低对交换机/无线的影响。
-  static const int _fullBroadcastEveryNHeartbeats = 6;
-
-  /// 上线 / 网卡重建后的短 burst 次数（带随机间隔，避免多机同步风暴）。
-  static const int _presenceBurstCount = 3;
   static final Random _rng = Random();
+  static const int _byeBurstPerSocket = 5;
 
   static const MethodChannel _androidMulticastLockChannel = MethodChannel(
     'com.etedrop.app/lan_multicast_lock',
@@ -41,6 +26,7 @@ class LanDiscoveryService {
   final String deviceId;
   final int httpPort;
   final String os;
+  final String bootId;
   String deviceName;
   int avatar;
 
@@ -80,7 +66,11 @@ class LanDiscoveryService {
     required this.httpPort,
     required this.os,
     this.avatar = 1,
-  });
+    String? bootId,
+  }) : bootId = bootId ?? _newBootId();
+
+  static String _newBootId() =>
+      DateTime.now().microsecondsSinceEpoch.toRadixString(36);
 
   void updateLocalInfo({String? deviceName, int? avatar}) {
     var changed = false;
@@ -95,7 +85,48 @@ class LanDiscoveryService {
       changed = true;
     }
     if (changed) {
-      _announceAll(includeGlobalBroadcast: true, includeSubnetBroadcast: true);
+      announcePresence(includeGlobalBroadcast: true);
+    }
+  }
+
+  /// 主动广播本机 presence（新对端、重绑、用户改昵称等）。
+  void announcePresence({bool includeGlobalBroadcast = false}) {
+    _announceAll(
+      includeGlobalBroadcast: includeGlobalBroadcast,
+      includeSubnetBroadcast: true,
+    );
+  }
+
+  /// 短 burst：加速上线/重绑后的互相发现。
+  void schedulePresenceBurst({String reason = 'burst'}) {
+    _schedulePresenceBurst(reason: reason);
+  }
+
+  /// 向已知 IPv4 发 probe，对端回显 presence。
+  void probeIpv4Addresses(Iterable<String> addresses) {
+    for (final raw in addresses) {
+      final ip = InternetAddress.tryParse(raw.trim());
+      if (ip == null || ip.type != InternetAddressType.IPv4) continue;
+      sendUnicastProbe(ip);
+    }
+  }
+
+  /// 启动或重绑后：多轮 probe 拉活本地记住的设备。
+  void scheduleStartupPeerProbes(Iterable<String> addresses) {
+    final ips = addresses
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toSet();
+    if (ips.isEmpty || _bindings.isEmpty) return;
+    for (final delayMs in LanPresenceConfig.startupProbeDelaysMs) {
+      if (delayMs == 0) {
+        probeIpv4Addresses(ips);
+      } else {
+        Future<void>.delayed(Duration(milliseconds: delayMs), () {
+          if (_bindings.isEmpty) return;
+          probeIpv4Addresses(ips);
+        });
+      }
     }
   }
 
@@ -106,13 +137,19 @@ class LanDiscoveryService {
       await _recreateBindings(force: true);
       _watchConnectivity();
       _networkPollTimer?.cancel();
-      _networkPollTimer = Timer.periodic(_networkPollInterval, (_) {
-        unawaited(_recreateBindings(force: false));
-      });
+      _networkPollTimer = Timer.periodic(
+        LanPresenceConfig.networkPollInterval,
+        (_) {
+          unawaited(_recreateBindings(force: false));
+        },
+      );
       _heartbeatTimer?.cancel();
-      _heartbeatTimer = Timer.periodic(_heartbeatInterval, (_) {
-        _heartbeatTick();
-      });
+      _heartbeatTimer = Timer.periodic(
+        LanPresenceConfig.heartbeatInterval,
+        (_) {
+          _heartbeatTick();
+        },
+      );
       _heartbeatTickCount = 0;
       _heartbeatTick();
       _schedulePresenceBurst(reason: 'start');
@@ -130,11 +167,11 @@ class LanDiscoveryService {
     _startupForceRebindTimer?.cancel();
     var rounds = 0;
     _startupForceRebindTimer = Timer.periodic(
-      const Duration(seconds: 3),
+      LanPresenceConfig.macosStartupRebindInterval,
       (timer) {
         rounds++;
         unawaited(_recreateBindings(force: true));
-        if (rounds >= 6) {
+        if (rounds >= LanPresenceConfig.macosStartupRebindRounds) {
           timer.cancel();
           _startupForceRebindTimer = null;
         }
@@ -262,8 +299,9 @@ class LanDiscoveryService {
 
   void _heartbeatTick() {
     _heartbeatTickCount++;
-    final includeGlobal =
-        _heartbeatTickCount % _fullBroadcastEveryNHeartbeats == 0;
+    final includeGlobal = _heartbeatTickCount %
+            LanPresenceConfig.fullBroadcastEveryNHeartbeats ==
+        0;
     _announceAll(
       includeGlobalBroadcast: includeGlobal,
       includeSubnetBroadcast: true,
@@ -275,10 +313,10 @@ class LanDiscoveryService {
     if (_bindings.isEmpty) return;
     var n = 0;
     void sendOne() {
-      if (n >= _presenceBurstCount) return;
+      if (n >= LanPresenceConfig.presenceBurstCount) return;
       n++;
       _announceAll(includeGlobalBroadcast: false, includeSubnetBroadcast: true);
-      if (n < _presenceBurstCount) {
+      if (n < LanPresenceConfig.presenceBurstCount) {
         final ms = 60 + _rng.nextInt(120);
         Future<void>.delayed(Duration(milliseconds: ms), sendOne);
       } else if (kDebugMode) {
@@ -295,7 +333,7 @@ class LanDiscoveryService {
     if (_bindings.isEmpty) return;
     final bytes = utf8.encode(jsonEncode(_presenceMap(unicastProbe: true)));
     try {
-      _bindings.first.socket.send(bytes, ipv4, _udpPort);
+      _bindings.first.socket.send(bytes, ipv4, LanPresenceConfig.udpPort);
     } catch (e) {
       debugPrint('LAN unicast probe → ${ipv4.address}: $e');
     }
@@ -365,12 +403,15 @@ class LanDiscoveryService {
       try {
         final socket = await RawDatagramSocket.bind(
           ip,
-          _udpPort,
+          LanPresenceConfig.udpPort,
           reuseAddress: true,
         );
         _setBroadcastEnabledBestEffort(socket);
         try {
-          socket.joinMulticast(InternetAddress(_multicastGroupIpv4), ni);
+          socket.joinMulticast(
+            InternetAddress(LanPresenceConfig.multicastGroupIpv4),
+            ni,
+          );
         } catch (e) {
           debugPrint('LAN joinMulticast ${ni.name}: $e');
         }
@@ -393,7 +434,7 @@ class LanDiscoveryService {
     try {
       final socket = await RawDatagramSocket.bind(
         InternetAddress.anyIPv4,
-        _udpPort,
+        LanPresenceConfig.udpPort,
         reuseAddress: true,
       );
       _setBroadcastEnabledBestEffort(socket);
@@ -403,7 +444,10 @@ class LanDiscoveryService {
       } catch (_) {}
       for (final ni in _lastEligibleIfaces) {
         try {
-          socket.joinMulticast(InternetAddress(_multicastGroupIpv4), ni);
+          socket.joinMulticast(
+            InternetAddress(LanPresenceConfig.multicastGroupIpv4),
+            ni,
+          );
         } catch (e) {
           debugPrint('LAN fallback joinMulticast ${ni.name}: $e');
         }
@@ -438,6 +482,7 @@ class LanDiscoveryService {
       'port': httpPort,
       'os': os,
       'avatar': avatar,
+      'bootId': bootId,
     };
     if (unicastProbe) {
       m['unicastProbe'] = true;
@@ -475,7 +520,7 @@ class LanDiscoveryService {
             addr.address == '0.0.0.0') {
           return;
         }
-        socket.send(bytes, addr, _udpPort);
+        socket.send(bytes, addr, LanPresenceConfig.udpPort);
       } catch (e) {
         debugPrint('LAN send ${addr.address}: $e');
       }
@@ -484,7 +529,7 @@ class LanDiscoveryService {
     if (includeGlobalBroadcast) {
       sendTo(InternetAddress('255.255.255.255'));
     }
-    sendTo(InternetAddress(_multicastGroupIpv4));
+    sendTo(InternetAddress(LanPresenceConfig.multicastGroupIpv4));
 
     if (!includeSubnetBroadcast) {
       return;
