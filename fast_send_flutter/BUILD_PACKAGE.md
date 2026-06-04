@@ -44,6 +44,9 @@ chmod +x scripts/package.sh
 
 # macOS DMG
 ./scripts/package.sh macos-dmg
+
+# Windows exe
+./scripts/package.sh windows-exe
 ```
 
 指定版本号示例：
