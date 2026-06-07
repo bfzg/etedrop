@@ -1,4 +1,5 @@
 ---
+description: "Fix the App Is Damaged error when installing EteDrop on macOS. Step-by-step guide to bypass Gatekeeper and open the app safely."
 slug: mac-install-damaged
 ---
 

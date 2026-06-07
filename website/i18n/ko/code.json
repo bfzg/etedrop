@@ -10,6 +10,9 @@
   "download.badge.testing": { "message": "테스트 중" },
   "download.meta.title": { "message": "다운로드" },
   "download.meta.description": { "message": "EteDrop 데스크톱 클라이언트를 받으세요." },
+  "download.seo.title": { "message": "EteDrop 다운로드 – Windows / macOS / Linux / iOS / Android" },
+  "download.seo.description": { "message": "EteDrop 무료 다운로드 – Windows, macOS, Linux, iOS, Android를 지원하는 빠르고 안전한 파일 전송 도구." },
+  "download.seo.keywords": { "message": "EteDrop 다운로드,파일 전송 앱,Windows 파일 전송,macOS 파일 전송,LAN 전송" },
   "download.page.title": { "message": "다운로드 센터" },
   "download.page.subtitle": {
     "message": "OS에 맞는 데스크톱 버전을 선택하세요. 모바일·Linux는 준비 중입니다."

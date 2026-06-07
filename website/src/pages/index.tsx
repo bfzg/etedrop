@@ -21,7 +21,7 @@ export default function Home(): ReactNode {
       title={siteConfig.title}
       description={translate({
         id: "homepage.meta.description",
-        message: "Fast Send 官网：产品能力、使用指南与技术文档。",
+        message: "EteDrop 官网：产品能力、使用指南与技术文档。",
       })}
     >
       <PageMetadata

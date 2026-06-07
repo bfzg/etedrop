@@ -10,6 +10,9 @@
   "download.badge.testing": { "message": "En pruebas" },
   "download.meta.title": { "message": "Descargar" },
   "download.meta.description": { "message": "Descarga el cliente de escritorio EteDrop." },
+  "download.seo.title": { "message": "Descargar EteDrop – Windows / macOS / Linux / iOS / Android" },
+  "download.seo.description": { "message": "Descarga EteDrop gratis – transferencia de archivos rápida, segura y privada para Windows, macOS, Linux, iOS y Android." },
+  "download.seo.keywords": { "message": "EteDrop descargar,transferencia de archivos,Windows transferencia,macOS transferencia,LAN transferencia" },
   "download.page.title": { "message": "Centro de descargas" },
   "download.page.subtitle": {
     "message": "Elige tu sistema para el escritorio. Las versiones móvil y Linux están en pruebas activas."

@@ -10,6 +10,9 @@
   "download.badge.testing": { "message": "テスト中" },
   "download.meta.title": { "message": "ダウンロード" },
   "download.meta.description": { "message": "EteDrop デスクトップ版をダウンロード。" },
+  "download.seo.title": { "message": "EteDrop をダウンロード – Windows / macOS / Linux / iOS / Android" },
+  "download.seo.description": { "message": "EteDrop を無料でダウンロード。Windows・macOS・Linux・iOS・Androidに対応した高速・安全なファイル転送ツール。" },
+  "download.seo.keywords": { "message": "EteDrop ダウンロード,ファイル転送,Windows ファイル転送,macOS ファイル転送,LAN 転送" },
   "download.page.title": { "message": "ダウンロードセンター" },
   "download.page.subtitle": {
     "message": "お使いのOS向けデスクトップ版を入手。モバイル・Linux版は準備中です。"

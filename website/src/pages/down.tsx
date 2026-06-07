@@ -6,6 +6,7 @@ import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import Heading from "@theme/Heading";
 import Translate, { translate } from "@docusaurus/Translate";
+import { PageMetadata } from "@docusaurus/theme-common";
 import Container from "@site/src/components/Container";
 import Footer from "@site/src/components/Footer";
 import type { ReleaseChangelogEntry } from "@site/src/constant/release";
@@ -489,6 +490,22 @@ export default function DownPage(): ReactNode {
         message: "下载 EteDrop 桌面客户端。",
       })}
     >
+      <PageMetadata
+        title={translate({
+          id: "download.seo.title",
+          message: "下载 EteDrop – Windows / macOS / Linux / iOS / Android",
+        })}
+        description={translate({
+          id: "download.seo.description",
+          message:
+            "免费下载 EteDrop 文件传输客户端，支持 Windows、macOS、Linux、iOS 与 Android。快速、安全、隐私优先的文件传输工具。",
+        })}
+        keywords={translate({
+          id: "download.seo.keywords",
+          message:
+            "EteDrop下载,文件传输软件下载,Windows文件传输,macOS文件传输,Android文件传输,iOS文件传输,局域网传输工具下载",
+        })}
+      />
       <main className="relative isolate overflow-hidden bg-gradient-to-b from-slate-50 via-white to-white pb-24 pt-16 dark:from-slate-950 dark:via-slate-950 dark:to-slate-950">
         {/* 顶部柔和蓝色光晕 */}
         <div

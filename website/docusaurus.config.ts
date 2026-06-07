@@ -22,7 +22,7 @@ const config: Config = {
   future: {
     v4: true, // Improve compatibility with the upcoming Docusaurus v4
   },
-  url: "https://etedrop.com",
+  url: DOMESTIC_SITE ? "https://etedrop.cn" : "https://etedrop.com",
   baseUrl: "/",
   headTags: [
     {
@@ -32,8 +32,10 @@ const config: Config = {
         "@context": "https://schema.org",
         "@type": "Organization",
         name: "EteDrop",
-        url: "https://etedrop.com",
-        logo: "https://etedrop.com/img/app_icon.png",
+        url: DOMESTIC_SITE ? "https://etedrop.cn" : "https://etedrop.com",
+        logo: DOMESTIC_SITE
+          ? "https://etedrop.cn/img/app_icon.png"
+          : "https://etedrop.com/img/app_icon.png",
       }),
     },
     {
@@ -43,7 +45,7 @@ const config: Config = {
         "@context": "https://schema.org",
         "@type": "WebSite",
         name: "EteDrop",
-        url: "https://etedrop.com",
+        url: DOMESTIC_SITE ? "https://etedrop.cn" : "https://etedrop.com",
         inLanguage: DOMESTIC_SITE
           ? ["zh-Hans", "en", "ja", "es", "ko"]
           : ["en", "zh-Hans", "ja", "es", "ko"],
@@ -159,6 +161,26 @@ const config: Config = {
     metadata: [
       { name: "application-name", content: "EteDrop" },
       { name: "apple-mobile-web-app-title", content: "EteDrop" },
+      // Open Graph 全局默认值（页面级 PageMetadata 可覆盖）
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "EteDrop" },
+      {
+        property: "og:image",
+        content: DOMESTIC_SITE
+          ? "https://etedrop.cn/img/og_cover.png"
+          : "https://etedrop.com/img/og_cover.png",
+      },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      // Twitter Card
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:site", content: "@EteDrop" },
+      {
+        name: "twitter:image",
+        content: DOMESTIC_SITE
+          ? "https://etedrop.cn/img/og_cover.png"
+          : "https://etedrop.com/img/og_cover.png",
+      },
     ],
     navbar: {
       hideOnScroll: false,

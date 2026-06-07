@@ -1,39 +1,64 @@
 {
-    "latestVersion": "1.0.3",
-    "windowsVersion": "1.0.3",
-    "macVersion": "1.0.3",
-    "linuxVersion": "1.0.3",
-    "iosVersion": "1.0.3",
-    "androidVersion": "1.0.3",
-    "windowsDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-Setup-1.0.3-win-x64.exe",
-    "macDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.3-macos.dmg",
+    "latestVersion": "1.0.4",
+    "windowsVersion": "1.0.4",
+    "macVersion": "1.0.4",
+    "linuxVersion": "1.0.4",
+    "iosVersion": "1.0.4",
+    "androidVersion": "1.0.4",
+    "windowsDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-Setup-1.0.4-win-x64.exe",
+    "macDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.4-macos.dmg",
     "linuxDownloadUrl": "",
     "iosDownloadUrl": "",
-    "androidDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.3-android.apk",
+    "androidDownloadUrl": "https://www.etedrop.cn/downloads/EteDrop-1.0.4-android.apk",
     "forceUpdate": false,
     "releaseNotes": {
         "zh": [
-            "[修复] 公网传输不稳定问题",
-            "[修复] Windows 重复启动问题"
+            "[修复] 局域网传输重名文件不替换、跳过的问题（自动命名为「文件名 (1)」等）",
+            "[优化] 内网传输设备发现速度与本机/离线状态显示"
         ],
         "en": [
-            "[Fixed] Unstable public network transfer issue",
-            "[Fixed] Duplicate startup issue on Windows"
+            "[Fixed] LAN transfer duplicate filenames not being saved correctly (auto-renamed as \"filename (1)\", etc.)",
+            "[Improved] LAN device discovery speed and local/offline device display"
         ],
         "ja": [
-            "[修正] 公網転送が不安定になる問題",
-            "[修正] Windows での重複起動問題"
+            "[修正] LAN転送で同名ファイルが上書き・スキップされる問題（「ファイル名 (1)」などに自動リネーム）",
+            "[改善] LAN転送のデバイス発見速度と自端末/オフライン表示"
         ],
         "ko": [
-            "[수정] 공용 네트워크 전송 불안정 문제",
-            "[수정] Windows 중복 실행 문제"
+            "[수정] LAN 전송 시 중복 파일명이 덮어쓰기/건너뛰기되던 문제 (\"파일명 (1)\" 등으로 자동 이름 변경)",
+            "[개선] 내부망 전송 기기 검색 속도 및 본 기기/오프라인 표시"
         ],
         "es": [
-            "[Corrección] Problema de inestabilidad en la transferencia por red pública",
-            "[Corrección] Problema de inicio duplicado en Windows"
+            "[Corrección] Archivos duplicados en transferencia LAN que no se guardaban correctamente (renombrado automático como \"nombre (1)\", etc.)",
+            "[Mejora] Velocidad de descubrimiento de dispositivos en LAN y visualización local/offline"
         ]
     },
     "changelog": [
+        {
+            "version": "1.0.4",
+            "notes": {
+                "zh": [
+                    "[修复] 局域网传输重名文件不替换、跳过的问题（自动命名为「文件名 (1)」等）",
+                    "[优化] 内网传输设备发现速度与本机/离线状态显示"
+                ],
+                "en": [
+                    "[Fixed] LAN transfer duplicate filenames not being saved correctly (auto-renamed as \"filename (1)\", etc.)",
+                    "[Improved] LAN device discovery speed and local/offline device display"
+                ],
+                "ja": [
+                    "[修正] LAN転送で同名ファイルが上書き・スキップされる問題（「ファイル名 (1)」などに自動リネーム）",
+                    "[改善] LAN転送のデバイス発見速度と自端末/オフライン表示"
+                ],
+                "ko": [
+                    "[수정] LAN 전송 시 중복 파일명이 덮어쓰기/건너뛰기되던 문제 (\"파일명 (1)\" 등으로 자동 이름 변경)",
+                    "[개선] 내부망 전송 기기 검색 속도 및 본 기기/오프라인 표시"
+                ],
+                "es": [
+                    "[Corrección] Archivos duplicados en transferencia LAN que no se guardaban correctamente (renombrado automático como \"nombre (1)\", etc.)",
+                    "[Mejora] Velocidad de descubrimiento de dispositivos en LAN y visualización local/offline"
+                ]
+            }
+        },
         {
             "version": "1.0.3",
             "notes": {

@@ -32,6 +32,15 @@
   "download.meta.description": {
     "message": "下载 EteDrop 桌面客户端。"
   },
+  "download.seo.title": {
+    "message": "下载 EteDrop – Windows / macOS / Linux / iOS / Android"
+  },
+  "download.seo.description": {
+    "message": "免费下载 EteDrop 文件传输客户端，支持 Windows、macOS、Linux、iOS 与 Android。快速、安全、隐私优先的文件传输工具。"
+  },
+  "download.seo.keywords": {
+    "message": "EteDrop下载,文件传输软件下载,Windows文件传输,macOS文件传输,Android文件传输,iOS文件传输,局域网传输工具下载"
+  },
   "download.page.title": {
     "message": "下载中心"
   },
@@ -60,7 +69,7 @@
     "message": "查看更新日志"
   },
   "homepage.meta.description": {
-    "message": "Fast Send 官网：产品能力、使用指南与技术文档。"
+    "message": "EteDrop 官网：产品能力、使用指南与技术文档。"
   },
   "homepage.seo.title": {
     "message": "EteDrop-快速、安全的文件传输与分享"

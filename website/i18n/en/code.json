@@ -10,6 +10,13 @@
   "download.badge.testing": { "message": "In testing" },
   "download.meta.title": { "message": "Download" },
   "download.meta.description": { "message": "Download the EteDrop desktop client." },
+  "download.seo.title": { "message": "Download EteDrop – Windows / macOS / Linux / iOS / Android" },
+  "download.seo.description": {
+    "message": "Download EteDrop free – fast, secure, privacy-first file transfer for Windows, macOS, Linux, iOS and Android."
+  },
+  "download.seo.keywords": {
+    "message": "EteDrop download, file transfer app, Windows file transfer, macOS file transfer, Android file transfer, iOS file transfer, LAN transfer tool"
+  },
   "download.page.title": { "message": "Download center" },
   "download.page.subtitle": {
     "message": "Choose your system for the desktop app. Mobile and Linux versions are in active testing."

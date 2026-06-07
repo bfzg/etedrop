@@ -1,4 +1,5 @@
 ---
+description: "解决 EteDrop 在 macOS 上安装时提示文件已损坏的问题，逐步引导您绕过 Gatekeeper 安全策略正常打开应用。"
 slug: mac-install-damaged
 ---
 
