@@ -14,7 +14,12 @@ const EN_DOC_DIR = path.join(
   root,
   "i18n/en/docusaurus-plugin-content-docs/current/doc",
 );
+const EN_BLOG_DIR = path.join(
+  root,
+  "i18n/en/docusaurus-plugin-content-blog",
+);
 const SRC_EN_DOCS = path.join(root, "docs/doc");
+const SRC_EN_BLOG = path.join(root, "blog");
 const REDIRECTS_PATH = path.join(root, "static/_redirects");
 const ROBOTS_PATH = path.join(root, "static/robots.txt");
 
@@ -64,6 +69,29 @@ function copyEnDocsForDomestic() {
   }
 }
 
+function clearEnBlogOverrides() {
+  if (!fs.existsSync(EN_BLOG_DIR)) {
+    fs.mkdirSync(EN_BLOG_DIR, { recursive: true });
+    return;
+  }
+  for (const name of fs.readdirSync(EN_BLOG_DIR)) {
+    if (name === "options.json") continue;
+    fs.rmSync(path.join(EN_BLOG_DIR, name), { recursive: true, force: true });
+  }
+}
+
+function copyEnBlogForDomestic() {
+  if (!fs.existsSync(SRC_EN_BLOG)) return;
+  clearEnBlogOverrides();
+  for (const name of fs.readdirSync(SRC_EN_BLOG)) {
+    fs.cpSync(
+      path.join(SRC_EN_BLOG, name),
+      path.join(EN_BLOG_DIR, name),
+      { recursive: true },
+    );
+  }
+}
+
 const mode = process.argv[2] ?? "international";
 
 if (mode !== "international" && mode !== "domestic") {
@@ -75,10 +103,12 @@ if (mode !== "international" && mode !== "domestic") {
 
 if (mode === "domestic") {
   copyEnDocsForDomestic();
+  copyEnBlogForDomestic();
   fs.writeFileSync(REDIRECTS_PATH, REDIRECTS_DOMESTIC, "utf8");
   fs.writeFileSync(ROBOTS_PATH, ROBOTS_DOMESTIC, "utf8");
 } else {
   clearEnDocOverrides();
+  clearEnBlogOverrides();
   fs.writeFileSync(REDIRECTS_PATH, REDIRECTS_INTERNATIONAL, "utf8");
   fs.writeFileSync(ROBOTS_PATH, ROBOTS_INTERNATIONAL, "utf8");
 }

@@ -1,11 +1,11 @@
 {
   "title": { "message": "Blog", "description": "The title for the blog used in SEO" },
   "description": {
-    "message": "Blog",
+    "message": "Guías sobre transferencia P2P privada y consejos de EteDrop",
     "description": "The description for the blog used in SEO"
   },
   "sidebar.title": {
-    "message": "Entradas recientes",
+    "message": "Publicaciones recientes",
     "description": "The label for the left sidebar"
   }
 }

@@ -1,7 +1,7 @@
 {
   "title": { "message": "Blog", "description": "The title for the blog used in SEO" },
   "description": {
-    "message": "Blog",
+    "message": "Guides on private P2P file transfer and EteDrop tips",
     "description": "The description for the blog used in SEO"
   },
   "sidebar.title": {

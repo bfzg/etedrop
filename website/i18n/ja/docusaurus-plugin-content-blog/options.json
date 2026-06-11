@@ -1,7 +1,7 @@
 {
   "title": { "message": "ブログ", "description": "The title for the blog used in SEO" },
   "description": {
-    "message": "ブログ",
+    "message": "プライベート P2P ファイル転送と EteDrop のヒント",
     "description": "The description for the blog used in SEO"
   },
   "sidebar.title": {

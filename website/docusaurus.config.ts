@@ -145,6 +145,21 @@ const config: Config = {
             : "docs",
           sidebarPath: "./sidebars.ts",
         },
+        blog: {
+          /** 与 docs 相同：国内默认中文 blog 在 i18n/zh-Hans；国际默认英文在 /blog */
+          path: DOMESTIC_SITE
+            ? "i18n/zh-Hans/docusaurus-plugin-content-blog"
+            : "blog",
+          routeBasePath: "blog",
+          showReadingTime: true,
+          blogTitle: "Blog",
+          blogDescription: "Guides on private P2P file transfer, LAN sharing, and EteDrop tips",
+          postsPerPage: 10,
+          feedOptions: {
+            type: "all",
+            copyright: `Copyright © ${new Date().getFullYear()} EteDrop`,
+          },
+        },
         sitemap: {
           changefreq: "weekly",
           priority: 0.7,
@@ -197,6 +212,11 @@ const config: Config = {
           label: "文档",
           activeBaseRegex:
             "^/(?:[a-z]{2}(?:-[a-zA-Z0-9]+)?/)?docs(?!/doc/(faq|contact-us)(/|$))",
+        },
+        {
+          to: "/blog",
+          position: "left",
+          label: "博客",
         },
         {
           to: "/down",

@@ -9,6 +9,10 @@
     "message": "ドキュメント",
     "description": "Navbar item with label 文档"
   },
+  "item.label.博客": {
+    "message": "ブログ",
+    "description": "Navbar item with label 博客"
+  },
   "item.label.下载": {
     "message": "ダウンロード",
     "description": "Navbar item with label 下载"
