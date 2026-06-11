@@ -20,6 +20,10 @@ const EN_BLOG_DIR = path.join(
 );
 const SRC_EN_DOCS = path.join(root, "docs/doc");
 const SRC_EN_BLOG = path.join(root, "blog");
+const ZH_BLOG_DIR = path.join(
+  root,
+  "i18n/zh-Hans/docusaurus-plugin-content-blog",
+);
 const REDIRECTS_PATH = path.join(root, "static/_redirects");
 const ROBOTS_PATH = path.join(root, "static/robots.txt");
 
@@ -92,6 +96,18 @@ function copyEnBlogForDomestic() {
   }
 }
 
+/** 国内站默认 blog 在 zh-Hans 目录，需同步 authors.yml（及 tags.yml 若存在） */
+function syncZhBlogDataFiles() {
+  if (!fs.existsSync(SRC_EN_BLOG)) return;
+  fs.mkdirSync(ZH_BLOG_DIR, { recursive: true });
+  for (const name of ["authors.yml", "tags.yml"]) {
+    const src = path.join(SRC_EN_BLOG, name);
+    if (fs.existsSync(src)) {
+      fs.cpSync(src, path.join(ZH_BLOG_DIR, name));
+    }
+  }
+}
+
 const mode = process.argv[2] ?? "international";
 
 if (mode !== "international" && mode !== "domestic") {
@@ -104,6 +120,7 @@ if (mode !== "international" && mode !== "domestic") {
 if (mode === "domestic") {
   copyEnDocsForDomestic();
   copyEnBlogForDomestic();
+  syncZhBlogDataFiles();
   fs.writeFileSync(REDIRECTS_PATH, REDIRECTS_DOMESTIC, "utf8");
   fs.writeFileSync(ROBOTS_PATH, ROBOTS_DOMESTIC, "utf8");
 } else {
