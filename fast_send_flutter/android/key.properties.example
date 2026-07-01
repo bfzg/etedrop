@@ -1,0 +1,7 @@
+# Copy this file to fast_send_flutter/android/key.properties for local release builds.
+# Never commit key.properties or keystore files.
+
+storePassword=change-me
+keyPassword=change-me
+keyAlias=upload
+storeFile=../keystore/upload-key.jks
