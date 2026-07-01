@@ -1,5 +1,7 @@
 # Third-Party Notices
 
+[简体中文](./THIRD_PARTY_NOTICES.zh-CN.md)
+
 This repository uses third-party open-source projects across the Flutter client,
 Nest server, React share page, and Docusaurus website. Dependency manifests are
 kept in each subproject:

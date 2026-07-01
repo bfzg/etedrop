@@ -1,67 +1,83 @@
 # EteDrop / Fast Send Workspace
 
-EteDrop is a cross-platform file transfer project. It combines a Flutter desktop
-and mobile client, a NestJS signaling service, a React-based public share page,
-and a Docusaurus website. The core goal is fast device-to-device file transfer
-with local-network discovery, WebRTC/P2P transfer, and share links for browser
-receivers.
+[简体中文](./README.zh-CN.md)
 
-The repository is organized as a workspace instead of a single package. Each
-subproject has its own dependency lockfile and local development commands.
+EteDrop is a cross-platform file transfer project. It includes a Flutter client,
+a NestJS signaling service, a file sharing page, and an official website. The
+project aims to make file transfer between phones, computers, desktop systems,
+and browsers easier, with local-network and WebRTC/P2P transfer paths preferred
+where possible. The server mainly provides signaling, share-page delivery, and
+operational endpoints.
 
 ## Background
 
-The project was built to make file transfer between phones, laptops, desktops,
-and browsers easier without forcing every file through centralized cloud
-storage. The app prefers direct transfer paths when possible and uses the server
-mainly for signaling, share-page delivery, and operational endpoints.
+Many file transfer tools rely on cloud relay, which can limit speed, privacy,
+and large-file handling. EteDrop is designed around these goals:
 
-Typical usage scenarios:
-
-- send files between devices on the same local network;
-- send a share link that can be opened in a browser;
-- preview common file types before download;
-- stream or transcode media where supported;
-- run independent global and mainland China service endpoints.
+- transfer directly on the local network when possible;
+- establish WebRTC connections through a signaling service across networks;
+- let receivers open share links in a browser;
+- support common file preview, download, and selected media playback/transcoding
+  workflows;
+- support separate global and mainland China service endpoints.
 
 ## Repository Layout
 
 | Path | Purpose |
 | --- | --- |
-| `fast_send_flutter/` | Flutter client for Android, iOS, macOS, Windows, and Linux. |
-| `fast_send_server/` | NestJS server for WebSocket signaling, share routing, static share-page hosting, health checks, and usage metrics. |
-| `share-page-app/` | React/Vite share page opened by browser receivers. Its production build is served by `fast_send_server`. |
-| `website/` | Docusaurus marketing/documentation website and release download pages. |
-| `doc/` | Architecture, deployment, packaging, protocol, and product planning documents. |
-| `ffmpeg_build/` | FFmpeg/FFprobe binaries used by packaging and media workflows. See `THIRD_PARTY_NOTICES.md` before redistributing builds. |
-| `images/` | Project images and supporting visual assets. |
+| [fast_send_flutter/](./fast_send_flutter/) | Flutter client for Android, iOS, macOS, Windows, and Linux. |
+| [fast_send_server/](./fast_send_server/) | NestJS server for WebSocket signaling, share routing, static share-page hosting, health checks, and metrics. |
+| [share-page-app/](./share-page-app/) | React/Vite share page opened by browser receivers. |
+| [website/](./website/) | Docusaurus website, download pages, blog, and product pages. |
+| [doc/](./doc/) | Architecture, deployment, packaging, protocol, and planning documents. |
+| [ffmpeg_build/](./ffmpeg_build/) | FFmpeg/FFprobe binaries used by media workflows. See [third-party notices](./THIRD_PARTY_NOTICES.md) before redistributing. |
+| [images/](./images/) | Project images and supporting visual assets. |
+
+## Documentation
+
+- [Server README](./fast_send_server/README.md)
+- [Flutter client README](./fast_send_flutter/README.md)
+- [Share page README](./share-page-app/README.md)
+- [Website README](./website/README.md)
+- [Server deployment guide](./doc/服务器部署文档.md)
+- [Desktop packaging guide](./doc/桌面端打包-DMG与EXE教程.md)
+- [Mobile packaging guide](./doc/移动端打包-Android APK与iOS安装包教程.md)
+- [Server architecture overview](./doc/服务端架构总览.md)
+- [Signaling protocol](./doc/信令协议说明.md)
+- [Share API](./doc/分享接口说明.md)
+- [Third-party notices](./THIRD_PARTY_NOTICES.md)
+- [Security policy](./SECURITY.md)
+- [Contributing guide](./CONTRIBUTING.md)
+- [License](./LICENSE)
 
 ## Tech Stack
 
-- Flutter and Dart for the multi-platform client.
-- NestJS, TypeScript, and `ws` for the signaling/API server.
-- React, Vite, Tailwind CSS, and i18next for the share page.
-- Docusaurus, React, and TypeScript for the website.
-- FFmpeg/FFprobe for selected media workflows.
+- Flutter / Dart for the multi-platform client.
+- NestJS / TypeScript / `ws` for the signaling and API service.
+- React / Vite / Tailwind CSS / i18next for the browser share page.
+- Docusaurus / React / TypeScript for the website.
+- FFmpeg / FFprobe for selected media handling workflows.
 
-## Development Prerequisites
+## Development Requirements
 
-Install the tools needed by the subproject you are working on:
+Install the tools required by the subproject you want to work on:
 
 - Git
 - Node.js 20 or newer
 - npm
 - Flutter SDK compatible with Dart `^3.9.2`
 - Android Studio and Android SDK for Android builds
-- Xcode and CocoaPods for iOS/macOS builds
-- CMake and desktop build tooling for Flutter desktop targets
-- Docker, Nginx, and PM2 for production-like server deployment, if needed
+- Xcode and CocoaPods for iOS / macOS builds
+- CMake and platform desktop build tools for Flutter desktop targets
+- Docker, Nginx, and PM2 for production-like deployment
 
-Run `flutter doctor` before working on the client.
+Before working on the client, run:
+
+```bash
+flutter doctor
+```
 
 ## Quick Start
-
-Clone the repository:
 
 ```bash
 git clone https://github.com/bfzg/fast_send_workspace.git
@@ -76,10 +92,14 @@ npm ci
 npm run start:dev
 ```
 
-The server defaults to `HOST=0.0.0.0` and `PORT=3000`. Production deployments in
-the existing docs use `PORT=40321` behind Nginx.
+The server defaults to:
 
-Useful commands:
+- `HOST=0.0.0.0`
+- `PORT=3000`
+
+Production deployment docs usually use `PORT=40321` behind Nginx.
+
+Common commands:
 
 ```bash
 npm run build
@@ -96,8 +116,10 @@ npm run tailwind
 npm run dev
 ```
 
-Open `http://localhost:5173/share`. A real share route uses
-`/share/:deviceId/:shareCode`.
+Open:
+
+- `http://localhost:5173/share`
+- real share route format: `/share/:deviceId/:shareCode`
 
 Build the share page:
 
@@ -105,9 +127,9 @@ Build the share page:
 npm run build
 ```
 
-The Vite build writes to `share-page-app/share/`. For deployment with the Nest
-server, follow the server build flow that places the final files under
-`fast_send_server/public/share/`.
+The current Vite build outputs to `share-page-app/share/`. For server
+deployment, confirm that the final files are placed under
+[fast_send_server/public/share/](./fast_send_server/public/share/).
 
 ### Flutter Client
 
@@ -119,24 +141,16 @@ flutter run -d macos
 ```
 
 Replace `macos` with `android`, `ios`, `windows`, or `linux` depending on your
-machine and installed SDKs.
+machine and SDK setup.
 
-The client API endpoints can be overridden at build time:
+For local server debugging, override the default API endpoints with
+`--dart-define`:
 
 ```bash
 flutter run -d macos \
   --dart-define=API_BASE_GLOBAL=http://localhost:3000 \
   --dart-define=API_BASE_MAINLAND=http://localhost:3000
 ```
-
-For Android release signing, copy the template and fill in local values:
-
-```bash
-cp fast_send_flutter/android/key.properties.example fast_send_flutter/android/key.properties
-```
-
-Never commit `key.properties`, keystores, certificates, Apple provisioning files,
-or service credentials.
 
 ### Website
 
@@ -162,51 +176,64 @@ npm run build:domestic
 
 ### Server
 
-Important runtime values:
+Common runtime values:
 
-- `PORT`: HTTP/WebSocket port. Defaults to `3000`.
-- `HOST`: bind host. Defaults to `0.0.0.0`.
-- `FAST_SEND_PUBLIC_ROOT`: optional absolute path to the server `public`
-  directory when the share page is served from a custom location.
+| Config | Description |
+| --- | --- |
+| `PORT` | HTTP / WebSocket port. Defaults to `3000`. |
+| `HOST` | Bind host. Defaults to `0.0.0.0`. |
+| `FAST_SEND_PUBLIC_ROOT` | Optional absolute path to the server `public` directory for share-page static assets. |
 
-Production deployments usually terminate TLS at Nginx and proxy to the Nest
-server. See `doc/服务器部署文档.md` and `fast_send_server/README.md`.
+For deployment details, see the [server deployment guide](./doc/服务器部署文档.md)
+and [server README](./fast_send_server/README.md).
 
-### Client Endpoints
+### Client API Endpoints
 
-The Flutter client resolves two API bases:
+The Flutter client reads two compile-time values:
 
-- `API_BASE_GLOBAL`, default `https://api.etedrop.com`
-- `API_BASE_MAINLAND`, default `https://api.etedrop.cn`
+| Config | Default |
+| --- | --- |
+| `API_BASE_GLOBAL` | `https://api.etedrop.com` |
+| `API_BASE_MAINLAND` | `https://api.etedrop.cn` |
 
-These are read from Dart compile-time environment values via `--dart-define`.
-The app derives WebSocket routes from the selected HTTP base:
+The client derives WebSocket routes from the selected HTTP API base:
 
 - `/api/share`
 - `/api/connect`
 
-### Signing and Store Credentials
+Related code: [server_endpoints.dart](./fast_send_flutter/lib/core/config/server_endpoints.dart).
 
-Signing files are intentionally ignored by Git. Keep these local or in a secure
-CI secret store:
+### Android Signing
+
+Android release builds need local signing configuration. Copy the template:
+
+```bash
+cp fast_send_flutter/android/key.properties.example fast_send_flutter/android/key.properties
+```
+
+Then fill in local values. Do not commit:
 
 - `fast_send_flutter/android/key.properties`
-- Android `.jks` / `.keystore` files
+- `.jks` / `.keystore`
 - Apple certificates and provisioning profiles
 - App Store Connect credentials
 - Google Play credentials
-- Firebase or Google service configuration files, if added later
+- Firebase / Google service configuration files
+
+Template: [key.properties.example](./fast_send_flutter/android/key.properties.example).
 
 ## Development Flow
 
-1. Pick the subproject you are changing.
-2. Install dependencies in that subproject with `npm ci` or `flutter pub get`.
-3. Run the local dev command.
-4. Keep generated artifacts and private config out of commits.
-5. Run the checks related to the changed package.
-6. Update docs when behavior, configuration, or deployment changes.
+Recommended flow:
 
-Recommended checks before opening a pull request:
+1. Choose the subproject you are changing.
+2. Install dependencies in that directory with `npm ci` or `flutter pub get`.
+3. Start the local dev service or run the client.
+4. Do not commit secrets, certificates, build output, or local config.
+5. Update documentation when behavior, configuration, or deployment changes.
+6. Run checks for the affected subproject before submitting changes.
+
+Recommended checks:
 
 ```bash
 cd fast_send_flutter && flutter analyze
@@ -215,45 +242,54 @@ cd share-page-app && npm run build
 cd website && npm run typecheck
 ```
 
-## Deployment Notes
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution notes.
 
-Server deployment and Nginx examples live in `doc/服务器部署文档.md`. Desktop and
-mobile packaging notes live in:
+## Deployment and Packaging
 
-- `doc/桌面端打包-DMG与EXE教程.md`
-- `doc/移动端打包-Android APK与iOS安装包教程.md`
-- `fast_send_flutter/BUILD_PACKAGE.md`
+Deployment and packaging docs:
 
-The repository contains public share-page assets in `fast_send_server/public/share/`.
-If you rebuild the share page, make sure the server is serving the intended
-version.
+- [Server deployment guide](./doc/服务器部署文档.md)
+- [Desktop packaging guide](./doc/桌面端打包-DMG与EXE教程.md)
+- [Mobile packaging guide](./doc/移动端打包-Android APK与iOS安装包教程.md)
+- [Flutter packaging notes](./fast_send_flutter/BUILD_PACKAGE.md)
+
+Server deployment usually terminates TLS at Nginx and proxies to the NestJS
+service. Share-page static assets are hosted by the server; after rebuilding the
+share page, confirm that [fast_send_server/public/share/](./fast_send_server/public/share/)
+contains the intended version.
 
 ## Security
 
-Do not commit secrets or signing material. If a credential has ever been pushed
-to a public repository, rotate it and remove it from Git history before relying
-on it again.
+Do not commit secrets, signing files, certificates, or private deployment
+configuration. If a credential was ever pushed to a public repository, treat it
+as leaked, rotate it, and clean the Git history.
 
-Report security issues privately by email. See `SECURITY.md`.
+Report security issues privately. See [SECURITY.md](./SECURITY.md).
 
-## Third-Party Components
+## Third-Party Components and FFmpeg
 
-Third-party dependencies are declared in each subproject manifest. FFmpeg
-binaries are present under `ffmpeg_build/`; verify their build configuration and
-license obligations before redistributing release packages. See
-`THIRD_PARTY_NOTICES.md`.
+Subproject dependencies are declared in:
+
+- [fast_send_flutter/pubspec.yaml](./fast_send_flutter/pubspec.yaml)
+- [fast_send_server/package.json](./fast_send_server/package.json)
+- [share-page-app/package.json](./share-page-app/package.json)
+- [website/package.json](./website/package.json)
+
+This repository includes [ffmpeg_build/](./ffmpeg_build/). FFmpeg license
+obligations depend on the exact build options and enabled components. Before
+publishing installers or binary releases, verify the FFmpeg build configuration,
+source origin, and license requirements. See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
 
 ## Contact
 
-Maintainer contact:
-
-- Email: yuanzhou_cn@qq.com
-- Website: https://etedrop.com
+- Email: [yuanzhou_cn@qq.com](mailto:yuanzhou_cn@qq.com)
+- Website: [https://etedrop.com](https://etedrop.com)
 
 ## Copyright and License
 
 Copyright (c) 2026 EteDrop contributors.
 
-The project source code is released under the MIT License unless a file or
-third-party component states otherwise. See `LICENSE` and
-`THIRD_PARTY_NOTICES.md`.
+Unless a file header or third-party component states otherwise, the source code
+is released under the [MIT License](./LICENSE). Third-party components, fonts,
+icons, and FFmpeg-related content are also covered by
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md).
