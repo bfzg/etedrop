@@ -93,7 +93,7 @@ export default function Footer(): ReactNode {
             </li>
             <li>
               <a
-                href="https://github.com/bfzg/fast_send_workspace"
+                href="https://github.com/bfzg/etedrop"
                 target="_blank"
                 rel="noreferrer noopener"
                 className={iconLinkClass}

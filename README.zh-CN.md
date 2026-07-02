@@ -73,7 +73,7 @@ flutter doctor
 ## 快速开始
 
 ```bash
-git clone https://github.com/bfzg/fast_send_workspace.git
+git clone https://github.com/bfzg/etedrop.git
 cd fast_send_workspace
 ```
 
