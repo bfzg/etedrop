@@ -237,6 +237,12 @@ const config: Config = {
           exact: true,
         },
         {
+          href: "https://github.com/bfzg/etedrop",
+          position: "right",
+          label: "GitHub",
+          className: "navbar-github-link",
+        },
+        {
           type: "localeDropdown",
           position: "right",
         },
