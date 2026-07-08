@@ -20,6 +20,8 @@
 #   sudo certbot certonly --webroot -w /var/www/html -d api.etedrop.cn
 #   sudo certbot certonly --webroot -w /var/www/html -d etedrop.cn -d www.etedrop.cn
 # 通配符 *.etedrop.cn 多为 DNS-01，且需单独一张证书，见文件末尾「可选通配符」段。
+# 若 nginx -t 报 /etc/letsencrypt/options-ssl-nginx.conf 不存在，
+# 见 `doc/服务器部署文档.md` 的「Certbot SSL 参数文件」。
 # =============================================================================
 
 map $http_upgrade $connection_upgrade {

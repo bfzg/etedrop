@@ -22,6 +22,8 @@
 # 证书（示例，按 certbot 实际输出改路径）：
 #   sudo certbot certonly --webroot -w /var/www/html -d etedrop.com -d www.etedrop.com
 #   sudo certbot certonly --webroot -w /var/www/html -d api.etedrop.com
+# 若 nginx -t 报 /etc/letsencrypt/options-ssl-nginx.conf 不存在，
+# 见 `doc/服务器部署文档.md` 的「Certbot SSL 参数文件」。
 # =============================================================================
 
 map $http_upgrade $connection_upgrade {
