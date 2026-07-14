@@ -12,6 +12,8 @@ import '../widgets/breadcrumb_nav.dart';
 import '../widgets/empty_storage_view.dart';
 import '../widgets/file_list_view.dart';
 import '../widgets/new_folder_dialog.dart';
+import '../../share/providers/share_provider.dart';
+import '../../share/services/share_service.dart';
 import '../../share/widgets/share_dialog.dart';
 import '../../../core/utils/access_utils.dart';
 import '../../../widgets/ui/e_button.dart';
@@ -29,8 +31,16 @@ class CloudPage extends ConsumerWidget {
     final hasStorage = ref.watch(hasStorageDirProvider);
     final storagePath = ref.watch(storageDirPathProvider);
     final fileListAsync = ref.watch(cloudFileListProvider);
+    final shareListAsync = ref.watch(shareListProvider);
+    final sharedPaths = shareListAsync.maybeWhen(
+      data: (shares) => shares
+          .map((share) => ShareService.canonicalCloudRelPath(share.path))
+          .toSet(),
+      orElse: () => <String>{},
+    );
     final isDesktopLayout = MediaQuery.sizeOf(context).width >= 640;
-    final isDesktopPlatform = Platform.isMacOS || Platform.isWindows || Platform.isLinux;
+    final isDesktopPlatform =
+        Platform.isMacOS || Platform.isWindows || Platform.isLinux;
     final showActions = hasStorage;
 
     return Scaffold(
@@ -51,9 +61,11 @@ class CloudPage extends ConsumerWidget {
           ? EmptyStorageView(
               // Mobile uses an app-owned directory automatically.
               onSelectDir: isDesktopPlatform
-                  ? () => ref.read(fileServiceProvider.notifier).selectStorageDir(
-                        dialogTitle: l10n.pickCloudStorageTitle,
-                      )
+                  ? () => ref
+                        .read(fileServiceProvider.notifier)
+                        .selectStorageDir(
+                          dialogTitle: l10n.pickCloudStorageTitle,
+                        )
                   : () {},
             )
           : Column(
@@ -70,6 +82,7 @@ class CloudPage extends ConsumerWidget {
                           if (constraints.maxWidth > 600) {
                             return FileTableView(
                               entries: entries,
+                              sharedPaths: sharedPaths,
                               onTap: (entry) => _handleTap(ref, entry),
                               onDelete: (entry) =>
                                   _handleDelete(context, ref, entry),
@@ -79,6 +92,7 @@ class CloudPage extends ConsumerWidget {
                           }
                           return FileListView(
                             entries: entries,
+                            sharedPaths: sharedPaths,
                             onTap: (entry) => _handleTap(ref, entry),
                             onDelete: (entry) =>
                                 _handleDelete(context, ref, entry),
@@ -183,9 +197,9 @@ class CloudPage extends ConsumerWidget {
       builder: (ctx) => EDialog.alert(
         title: Text(l10n.confirmDelete),
         content: Text(
-          l10n.deleteEntryConfirm(
+          l10n.moveToTrashConfirm(
             entry.name,
-            entry.isDirectory ? l10n.deleteFolderSuffix : '',
+            entry.isDirectory ? l10n.moveToTrashFolderSuffix : '',
           ),
         ),
         actions: [
@@ -195,7 +209,7 @@ class CloudPage extends ConsumerWidget {
             onPressed: () => Navigator.of(ctx).pop(false),
           ),
           EButton(
-            text: l10n.deleteAction,
+            text: l10n.moveToTrashAction,
             variant: EButtonVariant.danger,
             onPressed: () => Navigator.of(ctx).pop(true),
           ),
@@ -258,9 +272,9 @@ class CloudPage extends ConsumerWidget {
         ),
         onSelected: (value) {
           if (value == 'change_dir') {
-            ref.read(fileServiceProvider.notifier).selectStorageDir(
-                  dialogTitle: l10n.pickCloudStorageTitle,
-                );
+            ref
+                .read(fileServiceProvider.notifier)
+                .selectStorageDir(dialogTitle: l10n.pickCloudStorageTitle);
           }
         },
         itemBuilder: (_) => [

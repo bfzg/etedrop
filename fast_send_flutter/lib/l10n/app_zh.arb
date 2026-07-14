@@ -140,6 +140,19 @@
     }
   },
   "deleteFolderSuffix": "\n文件夹内所有内容将被删除。",
+  "moveToTrashAction": "移到垃圾桶",
+  "moveToTrashConfirm": "确定要将 \"{name}\" 移到垃圾桶吗？{suffix}",
+  "@moveToTrashConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "moveToTrashFolderSuffix": "\n文件夹内所有内容会一起移到垃圾桶。",
   "newFolderTooltip": "新建文件夹",
   "uploadFileTooltip": "上传文件",
   "refreshTooltip": "刷新",

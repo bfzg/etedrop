@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/utils/file_type_icon.dart';
+import '../../share/services/share_service.dart';
 import '../models/fs_entry.dart';
 
 class FileTableView extends StatelessWidget {
@@ -10,6 +11,7 @@ class FileTableView extends StatelessWidget {
   final Function(FsEntry) onTap;
   final Function(FsEntry) onDelete;
   final Function(FsEntry) onShare;
+  final Set<String> sharedPaths;
 
   const FileTableView({
     super.key,
@@ -17,6 +19,7 @@ class FileTableView extends StatelessWidget {
     required this.onTap,
     required this.onDelete,
     required this.onShare,
+    required this.sharedPaths,
   });
 
   @override
@@ -49,8 +52,12 @@ class FileTableView extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final dividerColor = theme.colorScheme.outlineVariant.withValues(alpha: 0.15);
-        final headerStyle = theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600);
+        final dividerColor = theme.colorScheme.outlineVariant.withValues(
+          alpha: 0.15,
+        );
+        final headerStyle = theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w600,
+        );
 
         return SingleChildScrollView(
           child: ConstrainedBox(
@@ -63,7 +70,10 @@ class FileTableView extends StatelessWidget {
                   decoration: BoxDecoration(
                     border: Border(bottom: BorderSide(color: dividerColor)),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -86,13 +96,19 @@ class FileTableView extends StatelessWidget {
                 ),
                 // Rows
                 ...entries.map((entry) {
+                  final isShared = sharedPaths.contains(
+                    ShareService.canonicalCloudRelPath(entry.path),
+                  );
                   return InkWell(
                     onTap: () => onTap(entry),
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border(bottom: BorderSide(color: dividerColor)),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 4,
+                      ),
                       child: Row(
                         children: [
                           Expanded(
@@ -136,12 +152,22 @@ class FileTableView extends StatelessWidget {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       IconButton(
-                                        icon: const Icon(Icons.share, size: 18),
-                                        tooltip: l10n.shareTooltip,
+                                        icon: Icon(
+                                          isShared
+                                              ? Icons.link_off
+                                              : Icons.share,
+                                          size: 18,
+                                        ),
+                                        tooltip: isShared
+                                            ? l10n.cancelShareButton
+                                            : l10n.shareTooltip,
                                         onPressed: () => onShare(entry),
                                       ),
                                       IconButton(
-                                        icon: const Icon(Icons.delete, size: 18),
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          size: 18,
+                                        ),
                                         tooltip: l10n.deleteTooltip,
                                         color: theme.colorScheme.error,
                                         onPressed: () => onDelete(entry),

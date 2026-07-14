@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/utils/resumable_transfer.dart';
@@ -11,6 +12,11 @@ bool _isHiddenCloudEntryName(String name) =>
     name.isNotEmpty &&
     (name.startsWith('.') ||
         name.endsWith(ResumableTransferPaths.cloudPartialSuffix));
+
+const String cloudTrashDirName = '_trash';
+const MethodChannel _macosTrashChannel = MethodChannel(
+  'com.etedrop.app/macos_trash',
+);
 
 /// 文件系统服务
 /// 对应 Electron: src/ipc/fs/handlers.ts
@@ -300,11 +306,83 @@ class FileService {
     final resolved = resolveStoragePath(relativePath);
     final type = await FileSystemEntity.type(resolved);
 
-    if (type == FileSystemEntityType.directory) {
-      await Directory(resolved).delete(recursive: recursive);
-    } else {
-      await File(resolved).delete();
+    if (_isInTrash(relativePath)) {
+      if (type == FileSystemEntityType.directory) {
+        await Directory(resolved).delete(recursive: recursive);
+      } else {
+        await File(resolved).delete();
+      }
+      return;
     }
+
+    await moveToTrash(relativePath);
+  }
+
+  /// 将云盘条目移到垃圾桶。
+  ///
+  /// macOS 使用系统废纸篓；其他平台暂用云盘根目录 `_trash`，保留原相对路径。
+  Future<void> moveToTrash(String relativePath) async {
+    await ensureStorageDir();
+    final source = resolveStoragePath(relativePath);
+    final sourceType = await FileSystemEntity.type(source);
+    if (sourceType == FileSystemEntityType.notFound) {
+      throw FileSystemException('文件不存在', source);
+    }
+
+    final normalizedRel = _normalizeRelativePath(relativePath);
+    if (_isInTrash(normalizedRel)) return;
+
+    if (Platform.isMacOS) {
+      await _moveToMacOSTrash(source);
+      return;
+    }
+
+    final trashRoot = resolveStoragePath(cloudTrashDirName);
+    await Directory(trashRoot).create(recursive: true);
+
+    final targetRel = p.join(cloudTrashDirName, normalizedRel);
+    final target = await _availableTrashPath(resolveStoragePath(targetRel));
+    await Directory(p.dirname(target)).create(recursive: true);
+
+    if (sourceType == FileSystemEntityType.directory) {
+      await Directory(source).rename(target);
+    } else {
+      await File(source).rename(target);
+    }
+  }
+
+  Future<void> _moveToMacOSTrash(String absolutePath) async {
+    try {
+      await _macosTrashChannel.invokeMethod<void>('moveToTrash', {
+        'path': absolutePath,
+      });
+    } on PlatformException catch (e) {
+      throw FileSystemException(e.message ?? '移到 macOS 废纸篓失败', absolutePath);
+    } on MissingPluginException {
+      throw FileSystemException('macOS 废纸篓能力未注册', absolutePath);
+    }
+  }
+
+  String _normalizeRelativePath(String relativePath) =>
+      p.normalize(relativePath).replaceAll(RegExp(r'^[\\/]+'), '');
+
+  bool _isInTrash(String relativePath) {
+    final normalized = _normalizeRelativePath(relativePath);
+    return normalized == cloudTrashDirName ||
+        normalized.startsWith('$cloudTrashDirName${p.separator}') ||
+        normalized.startsWith('$cloudTrashDirName/');
+  }
+
+  Future<String> _availableTrashPath(String desiredPath) async {
+    if (await FileSystemEntity.type(desiredPath) ==
+        FileSystemEntityType.notFound) {
+      return desiredPath;
+    }
+    final dir = p.dirname(desiredPath);
+    final ext = p.extension(desiredPath);
+    final base = p.basenameWithoutExtension(desiredPath);
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    return p.join(dir, '$base-$stamp$ext');
   }
 
   /// 创建文件夹

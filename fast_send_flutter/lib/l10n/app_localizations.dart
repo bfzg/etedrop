@@ -734,6 +734,24 @@ abstract class AppLocalizations {
   /// **'\nAll contents in this folder will be deleted.'**
   String get deleteFolderSuffix;
 
+  /// No description provided for @moveToTrashAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Move to Trash'**
+  String get moveToTrashAction;
+
+  /// No description provided for @moveToTrashConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Move \"{name}\" to Trash?{suffix}'**
+  String moveToTrashConfirm(String name, String suffix);
+
+  /// No description provided for @moveToTrashFolderSuffix.
+  ///
+  /// In en, this message translates to:
+  /// **'\nAll contents in this folder will be moved to Trash.'**
+  String get moveToTrashFolderSuffix;
+
   /// No description provided for @newFolderTooltip.
   ///
   /// In en, this message translates to:

@@ -140,6 +140,19 @@
     }
   },
   "deleteFolderSuffix": "\n폴더 안의 모든 내용이 삭제됩니다.",
+  "moveToTrashAction": "휴지통으로 이동",
+  "moveToTrashConfirm": "\"{name}\"을(를) 휴지통으로 이동할까요?{suffix}",
+  "@moveToTrashConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "moveToTrashFolderSuffix": "\n폴더 안의 모든 내용도 휴지통으로 이동됩니다.",
   "newFolderTooltip": "새 폴더",
   "uploadFileTooltip": "파일 업로드",
   "refreshTooltip": "새로 고침",

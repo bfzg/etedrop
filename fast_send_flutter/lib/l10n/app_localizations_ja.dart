@@ -335,6 +335,17 @@ class AppLocalizationsJa extends AppLocalizations {
   String get deleteFolderSuffix => '\nフォルダ内のすべての内容が削除されます。';
 
   @override
+  String get moveToTrashAction => 'ゴミ箱へ移動';
+
+  @override
+  String moveToTrashConfirm(String name, String suffix) {
+    return '「$name」をゴミ箱へ移動しますか？$suffix';
+  }
+
+  @override
+  String get moveToTrashFolderSuffix => '\nフォルダ内のすべての内容もゴミ箱へ移動します。';
+
+  @override
   String get newFolderTooltip => '新規フォルダ';
 
   @override

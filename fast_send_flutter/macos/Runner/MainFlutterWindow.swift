@@ -30,6 +30,31 @@ class MainFlutterWindow: NSWindow {
       }
     }
 
+    FlutterMethodChannel(
+      name: "com.etedrop.app/macos_trash",
+      binaryMessenger: flutterViewController.engine.binaryMessenger
+    ).setMethodCallHandler { (_ call: FlutterMethodCall, result: @escaping FlutterResult) in
+      switch call.method {
+      case "moveToTrash":
+        guard let arguments = call.arguments as? [String: Any],
+              let path = arguments["path"] as? String,
+              !path.isEmpty else {
+          result(FlutterError(code: "bad_args", message: "Missing path", details: nil))
+          return
+        }
+
+        let url = URL(fileURLWithPath: path)
+        do {
+          try FileManager.default.trashItem(at: url, resultingItemURL: nil)
+          result(nil)
+        } catch {
+          result(FlutterError(code: "trash_failed", message: error.localizedDescription, details: nil))
+        }
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+
     RegisterGeneratedPlugins(registry: flutterViewController)
 
     super.awakeFromNib()

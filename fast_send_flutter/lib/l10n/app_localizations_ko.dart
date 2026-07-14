@@ -335,6 +335,17 @@ class AppLocalizationsKo extends AppLocalizations {
   String get deleteFolderSuffix => '\n폴더 안의 모든 내용이 삭제됩니다.';
 
   @override
+  String get moveToTrashAction => '휴지통으로 이동';
+
+  @override
+  String moveToTrashConfirm(String name, String suffix) {
+    return '\"$name\"을(를) 휴지통으로 이동할까요?$suffix';
+  }
+
+  @override
+  String get moveToTrashFolderSuffix => '\n폴더 안의 모든 내용도 휴지통으로 이동됩니다.';
+
+  @override
   String get newFolderTooltip => '새 폴더';
 
   @override

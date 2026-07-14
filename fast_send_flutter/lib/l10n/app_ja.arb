@@ -140,6 +140,19 @@
     }
   },
   "deleteFolderSuffix": "\nフォルダ内のすべての内容が削除されます。",
+  "moveToTrashAction": "ゴミ箱へ移動",
+  "moveToTrashConfirm": "「{name}」をゴミ箱へ移動しますか？{suffix}",
+  "@moveToTrashConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "moveToTrashFolderSuffix": "\nフォルダ内のすべての内容もゴミ箱へ移動します。",
   "newFolderTooltip": "新規フォルダ",
   "uploadFileTooltip": "ファイルをアップロード",
   "refreshTooltip": "更新",

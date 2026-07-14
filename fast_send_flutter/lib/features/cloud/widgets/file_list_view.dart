@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/utils/format_utils.dart';
 import '../../../core/utils/file_type_icon.dart';
+import '../../share/services/share_service.dart';
 import '../models/fs_entry.dart';
 
 /// 文件列表项回调
@@ -15,6 +16,7 @@ class FileListView extends StatelessWidget {
   final FileEntryCallback? onTap;
   final FileEntryCallback? onDelete;
   final FileEntryCallback? onShare;
+  final Set<String> sharedPaths;
 
   const FileListView({
     super.key,
@@ -22,6 +24,7 @@ class FileListView extends StatelessWidget {
     this.onTap,
     this.onDelete,
     this.onShare,
+    required this.sharedPaths,
   });
 
   @override
@@ -64,6 +67,9 @@ class FileListView extends StatelessWidget {
           onTap: onTap,
           onDelete: onDelete,
           onShare: onShare,
+          isShared: sharedPaths.contains(
+            ShareService.canonicalCloudRelPath(entry.path),
+          ),
         );
       },
     );
@@ -76,6 +82,7 @@ class _FileListTile extends StatelessWidget {
   final FileEntryCallback? onTap;
   final FileEntryCallback? onDelete;
   final FileEntryCallback? onShare;
+  final bool isShared;
 
   const _FileListTile({
     required this.entry,
@@ -83,6 +90,7 @@ class _FileListTile extends StatelessWidget {
     this.onTap,
     this.onDelete,
     this.onShare,
+    required this.isShared,
   });
 
   @override
@@ -110,10 +118,7 @@ class _FileListTile extends StatelessWidget {
         style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
       ),
       trailing: entry.isDirectory
-          ? const SizedBox(
-              width: 48,
-              height: 48,
-            )
+          ? const SizedBox(width: 48, height: 48)
           : PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
               onSelected: (value) {
@@ -131,9 +136,11 @@ class _FileListTile extends StatelessWidget {
                   value: 'share',
                   child: Row(
                     children: [
-                      const Icon(Icons.share, size: 18),
+                      Icon(isShared ? Icons.link_off : Icons.share, size: 18),
                       const SizedBox(width: 8),
-                      Text(l10n.shareAction),
+                      Text(
+                        isShared ? l10n.cancelShareButton : l10n.shareAction,
+                      ),
                     ],
                   ),
                 ),
@@ -141,9 +148,16 @@ class _FileListTile extends StatelessWidget {
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
+                      Icon(
+                        Icons.delete_outline,
+                        size: 18,
+                        color: colorScheme.error,
+                      ),
                       const SizedBox(width: 8),
-                      Text(l10n.deleteAction, style: TextStyle(color: colorScheme.error)),
+                      Text(
+                        l10n.deleteAction,
+                        style: TextStyle(color: colorScheme.error),
+                      ),
                     ],
                   ),
                 ),

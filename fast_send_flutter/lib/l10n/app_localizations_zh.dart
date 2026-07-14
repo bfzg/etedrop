@@ -335,6 +335,17 @@ class AppLocalizationsZh extends AppLocalizations {
   String get deleteFolderSuffix => '\n文件夹内所有内容将被删除。';
 
   @override
+  String get moveToTrashAction => '移到垃圾桶';
+
+  @override
+  String moveToTrashConfirm(String name, String suffix) {
+    return '确定要将 \"$name\" 移到垃圾桶吗？$suffix';
+  }
+
+  @override
+  String get moveToTrashFolderSuffix => '\n文件夹内所有内容会一起移到垃圾桶。';
+
+  @override
   String get newFolderTooltip => '新建文件夹';
 
   @override

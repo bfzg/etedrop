@@ -140,6 +140,19 @@
     }
   },
   "deleteFolderSuffix": "\nAll contents in this folder will be deleted.",
+  "moveToTrashAction": "Move to Trash",
+  "moveToTrashConfirm": "Move \"{name}\" to Trash?{suffix}",
+  "@moveToTrashConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "moveToTrashFolderSuffix": "\nAll contents in this folder will be moved to Trash.",
   "newFolderTooltip": "New folder",
   "uploadFileTooltip": "Upload files",
   "refreshTooltip": "Refresh",
@@ -451,4 +464,3 @@
   "webrtcBackgroundFgNotificationBody": "Tap to return to the app",
   "webrtcBackgroundKeepaliveEnableFailed": "Could not enable background keep-alive. Allow notification access, then try again."
 }
-

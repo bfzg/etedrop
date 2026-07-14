@@ -340,6 +340,18 @@ class AppLocalizationsEn extends AppLocalizations {
       '\nAll contents in this folder will be deleted.';
 
   @override
+  String get moveToTrashAction => 'Move to Trash';
+
+  @override
+  String moveToTrashConfirm(String name, String suffix) {
+    return 'Move \"$name\" to Trash?$suffix';
+  }
+
+  @override
+  String get moveToTrashFolderSuffix =>
+      '\nAll contents in this folder will be moved to Trash.';
+
+  @override
   String get newFolderTooltip => 'New folder';
 
   @override

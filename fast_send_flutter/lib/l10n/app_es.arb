@@ -140,6 +140,19 @@
     }
   },
   "deleteFolderSuffix": "\nSe eliminará todo el contenido de la carpeta.",
+  "moveToTrashAction": "Mover a la papelera",
+  "moveToTrashConfirm": "¿Mover «{name}» a la papelera?{suffix}",
+  "@moveToTrashConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "moveToTrashFolderSuffix": "\nTodo el contenido de la carpeta se moverá a la papelera.",
   "newFolderTooltip": "Nueva carpeta",
   "uploadFileTooltip": "Subir archivos",
   "refreshTooltip": "Actualizar",

@@ -339,6 +339,18 @@ class AppLocalizationsEs extends AppLocalizations {
       '\nSe eliminará todo el contenido de la carpeta.';
 
   @override
+  String get moveToTrashAction => 'Mover a la papelera';
+
+  @override
+  String moveToTrashConfirm(String name, String suffix) {
+    return '¿Mover «$name» a la papelera?$suffix';
+  }
+
+  @override
+  String get moveToTrashFolderSuffix =>
+      '\nTodo el contenido de la carpeta se moverá a la papelera.';
+
+  @override
   String get newFolderTooltip => 'Nueva carpeta';
 
   @override
