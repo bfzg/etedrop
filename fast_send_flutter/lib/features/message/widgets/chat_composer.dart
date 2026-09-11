@@ -28,58 +28,17 @@ class _ChatComposerState extends State<ChatComposer> {
   bool _dragging = false;
   bool _sending = false;
 
-  bool get _desktop =>
-      Platform.isMacOS || Platform.isWindows || Platform.isLinux;
-
   @override
   void initState() {
     super.initState();
-    _focus.onKeyEvent = _handleKeyEvent;
-    HardwareKeyboard.instance.addHandler(_onKey);
     unawaited(pruneTransferTempCacheOlderThan(const Duration(days: 2)));
   }
 
   @override
   void dispose() {
-    HardwareKeyboard.instance.removeHandler(_onKey);
     _text.dispose();
     _focus.dispose();
     super.dispose();
-  }
-
-  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
-    if (event is! KeyDownEvent ||
-        event.logicalKey != LogicalKeyboardKey.enter) {
-      return KeyEventResult.ignored;
-    }
-    final keyboard = HardwareKeyboard.instance;
-    if (keyboard.isMetaPressed || keyboard.isControlPressed) {
-      final value = _text.value;
-      final offset = value.selection.isValid
-          ? value.selection.baseOffset
-          : value.text.length;
-      final start = offset.clamp(0, value.text.length);
-      _text.value = value.copyWith(
-        text:
-            '${value.text.substring(0, start)}\n${value.text.substring(start)}',
-        selection: TextSelection.collapsed(offset: start + 1),
-        composing: TextRange.empty,
-      );
-    } else {
-      unawaited(_send());
-    }
-    return KeyEventResult.handled;
-  }
-
-  bool _onKey(KeyEvent event) {
-    if (!_focus.hasFocus || event is! KeyDownEvent) return false;
-    if (event.logicalKey != LogicalKeyboardKey.keyV) return false;
-    if (!HardwareKeyboard.instance.isMetaPressed &&
-        !HardwareKeyboard.instance.isControlPressed) {
-      return false;
-    }
-    unawaited(_pasteImage());
-    return false;
   }
 
   String _clean(String raw) {
@@ -120,6 +79,21 @@ class _ChatComposerState extends State<ChatComposer> {
     if (mounted) _addPaths([path]);
   }
 
+  void _insertNewline() {
+    final value = _text.value;
+    final text = value.text;
+    final selection = value.selection;
+    final start = selection.isValid
+        ? selection.start.clamp(0, text.length)
+        : text.length;
+    final end = selection.isValid ? selection.end.clamp(0, text.length) : start;
+    _text.value = value.copyWith(
+      text: '${text.substring(0, start)}\n${text.substring(end)}',
+      selection: TextSelection.collapsed(offset: start + 1),
+      composing: TextRange.empty,
+    );
+  }
+
   Future<void> _send() async {
     if (_sending) return;
     final caption = _text.text.trim();
@@ -151,7 +125,7 @@ class _ChatComposerState extends State<ChatComposer> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         height: 220,
-        padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 4),
         decoration: BoxDecoration(
           color: _dragging
               ? theme.colorScheme.primary.withValues(alpha: .04)
@@ -167,28 +141,40 @@ class _ChatComposerState extends State<ChatComposer> {
         child: Column(
           children: [
             Expanded(
-              child: TextField(
-                controller: _text,
-                focusNode: _focus,
-                minLines: 3,
-                maxLines: 8,
-                textInputAction: TextInputAction.newline,
-                textAlignVertical: TextAlignVertical.top,
-                decoration: InputDecoration(
-                  hintText: _desktop
-                      ? '输入消息，回车发送，⌘/Ctrl+回车换行，或拖入文件'
-                      : '输入消息，回车发送',
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                  hintStyle: TextStyle(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: .7,
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.enter): () =>
+                      unawaited(_send()),
+                  const SingleActivator(LogicalKeyboardKey.enter, meta: true):
+                      _insertNewline,
+                  const SingleActivator(
+                    LogicalKeyboardKey.enter,
+                    control: true,
+                  ): _insertNewline,
+                },
+                child: TextField(
+                  controller: _text,
+                  focusNode: _focus,
+                  minLines: 3,
+                  maxLines: 8,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  textAlignVertical: TextAlignVertical.top,
+                  decoration: InputDecoration(
+                    hintText: '输入消息，或拖入文件',
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    hintStyle: TextStyle(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: .7,
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (_paths.isNotEmpty)
                   Expanded(
@@ -207,9 +193,7 @@ class _ChatComposerState extends State<ChatComposer> {
                         ],
                       ),
                     ),
-                  )
-                else
-                  const Spacer(),
+                  ),
                 IconButton(
                   tooltip: '表情',
                   icon: const Icon(Icons.emoji_emotions_outlined),
@@ -235,23 +219,12 @@ class _ChatComposerState extends State<ChatComposer> {
                 ),
                 const Spacer(),
                 TDButton(
-                  type: TDButtonType.text,
-                  size: TDButtonSize.medium,
+                  type: TDButtonType.fill,
+                  size: TDButtonSize.small,
                   disabled: _sending,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  textStyle: TextStyle(
-                    color: theme.colorScheme.primary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  padding: const EdgeInsets.only(left: 12, right: 12, top: 7),
                   onTap: _sending ? null : _send,
-                  child: _sending
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('发送'),
+                  text: '发送',
                 ),
               ],
             ),
