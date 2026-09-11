@@ -51,6 +51,17 @@ class _ChatViewState extends ConsumerState<ChatView> {
     if (shouldScrollToBottom && messages.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
     }
+    final hasUnreadInCurrentConversation = messages.any(
+      (message) => !message.isOutgoing && !message.isRead,
+    );
+    if (hasUnreadInCurrentConversation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || widget.conversationId != _lastConversationId) return;
+        ref
+            .read(contactBookProvider.notifier)
+            .markConversationRead(widget.conversationId);
+      });
+    }
 
     return Column(
       children: [
@@ -87,7 +98,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   itemCount: messages.length,
                   itemBuilder: (context, index) => ChatBubble(
                     message: messages[index],
-                    onDelete: () => ref
+                    onDelete: () async => ref
                         .read(contactBookProvider.notifier)
                         .deleteMessage(messages[index].messageId),
                   ),

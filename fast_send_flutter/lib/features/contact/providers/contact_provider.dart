@@ -557,7 +557,23 @@ class ContactBook extends Notifier<ContactBookState> {
     _persist();
   }
 
-  void deleteMessage(String messageId) {
+  Future<void> deleteMessage(String messageId) async {
+    final matches = state.messages.where((m) => m.messageId == messageId);
+    final message = matches.isEmpty ? null : matches.first;
+    if (message != null &&
+        !message.isOutgoing &&
+        message.kind == ChatMessageKind.file &&
+        message.localPath != null &&
+        message.localPath!.isNotEmpty) {
+      try {
+        final file = File(message.localPath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        debugPrint('[chat][file][delete] failed=$e');
+      }
+    }
     final next = state.messages
         .where((message) => message.messageId != messageId)
         .toList();

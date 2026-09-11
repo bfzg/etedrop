@@ -24,10 +24,18 @@ Future<bool> revealFileInExplorer(String absoluteFilePath) async {
     }
     if (Platform.isWindows) {
       // explorer.exe 常在已成功打开并选中文件时仍返回非零退出码，不能据此判断失败。
-      // 语法为 /select,"<路径>"（逗号后无空格），需作为单个参数传入。
-      // 不加引号时，带空格/非 ASCII 的路径在部分 Windows 环境会退回到默认文档目录。
-      final selectArg = '/select,"${file.absolute.path}"';
-      await Process.run('explorer.exe', [selectArg]);
+      // Windows 的 explorer /select 参数对引号和分隔符很敏感。
+      // 通过 cmd/start 让 Windows 自己解析完整命令行，并强制反斜杠路径；
+      // 否则包含空格、中文或正斜杠的路径在部分环境会退回到默认文档目录。
+      final target = await _windowsExplorerPath(file);
+      final selectArg = '/select,"$target"';
+      await Process.run('cmd.exe', [
+        '/c',
+        'start',
+        '',
+        'explorer.exe',
+        selectArg,
+      ]);
       return true;
     }
     if (Platform.isLinux) {
@@ -39,4 +47,12 @@ Future<bool> revealFileInExplorer(String absoluteFilePath) async {
     return false;
   }
   return false;
+}
+
+Future<String> _windowsExplorerPath(File file) async {
+  try {
+    return (await file.resolveSymbolicLinks()).replaceAll('/', r'\');
+  } catch (_) {
+    return file.absolute.path.replaceAll('/', r'\');
+  }
 }
