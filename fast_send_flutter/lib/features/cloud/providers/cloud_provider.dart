@@ -16,9 +16,11 @@ import '../services/macos_cloud_storage_access.dart';
 part 'cloud_provider.g.dart';
 
 const _downloadDirKey = 'download_dir';
+const _fileStorageDirKey = 'file_storage_dir_v1';
 const _mobileDefaultCloudSubdir = 'etedrop';
+const _desktopDefaultReceiveSubdir = 'received_files';
 
-Future<String> _defaultDownloadDir() async {
+Future<String> _defaultFileStorageDir() async {
   if (Platform.isAndroid) {
     final dir = await getExternalStorageDirectory();
     if (dir != null) return dir.path;
@@ -30,9 +32,10 @@ Future<String> _defaultDownloadDir() async {
   }
 
   // macOS / Windows / Linux
-  final downloads = await getDownloadsDirectory();
-  if (downloads != null) return downloads.path;
-  return (await getApplicationDocumentsDirectory()).path;
+  final appDir = await getApplicationSupportDirectory();
+  final target = Directory(p.join(appDir.path, _desktopDefaultReceiveSubdir));
+  await target.create(recursive: true);
+  return target.path;
 }
 
 /// 文件服务单例 Provider
@@ -57,7 +60,9 @@ class FileServiceNotifier extends _$FileServiceNotifier {
 
     // 仅当用户明确手动选择过网盘目录时才恢复，默认保持未设置
     final userSelected =
-        LocalStorageService.instance.get<bool>(kCloudStorageDirUserSelectedKey) ??
+        LocalStorageService.instance.get<bool>(
+          kCloudStorageDirUserSelectedKey,
+        ) ??
         false;
     if (!userSelected) {
       return fileService;
@@ -120,21 +125,22 @@ class FileServiceNotifier extends _$FileServiceNotifier {
   }
 }
 
-/// 下载目录（用于接收文件保存位置）
+/// 文件存储目录（用于接收文件保存位置）
 @riverpod
 class DownloadDir extends _$DownloadDir {
   @override
   FutureOr<String> build() async {
-    final saved = LocalStorageService.instance.get<String>(_downloadDirKey);
+    final saved = LocalStorageService.instance.get<String>(_fileStorageDirKey);
     if (saved != null && saved.isNotEmpty) return saved;
 
-    final def = await _defaultDownloadDir();
-    await LocalStorageService.instance.set<String>(_downloadDirKey, def);
+    final def = await _defaultFileStorageDir();
+    await LocalStorageService.instance.set<String>(_fileStorageDirKey, def);
     return def;
   }
 
   Future<void> setDownloadDir(String path) async {
     state = AsyncData(path);
+    await LocalStorageService.instance.set<String>(_fileStorageDirKey, path);
     await LocalStorageService.instance.set<String>(_downloadDirKey, path);
   }
 

@@ -779,7 +779,7 @@ abstract class AppLocalizations {
   /// No description provided for @downloadDirectoryLabel.
   ///
   /// In en, this message translates to:
-  /// **'Downloads folder'**
+  /// **'File storage folder'**
   String get downloadDirectoryLabel;
 
   /// No description provided for @clipboardImageSaveFailed.
@@ -1031,7 +1031,7 @@ abstract class AppLocalizations {
   /// No description provided for @pickDownloadDirTitle.
   ///
   /// In en, this message translates to:
-  /// **'Choose downloads folder'**
+  /// **'Choose file storage folder'**
   String get pickDownloadDirTitle;
 
   /// No description provided for @messagePageTitle.

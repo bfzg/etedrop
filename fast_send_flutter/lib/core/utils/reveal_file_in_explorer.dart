@@ -24,9 +24,10 @@ Future<bool> revealFileInExplorer(String absoluteFilePath) async {
     }
     if (Platform.isWindows) {
       // explorer.exe 常在已成功打开并选中文件时仍返回非零退出码，不能据此判断失败。
-      // 语法为 /select,<路径>（逗号后无空格），需作为单个参数传入。
-      final selectArg = '/select,${file.absolute.path}';
-      await Process.run('explorer', [selectArg]);
+      // 语法为 /select,"<路径>"（逗号后无空格），需作为单个参数传入。
+      // 不加引号时，带空格/非 ASCII 的路径在部分 Windows 环境会退回到默认文档目录。
+      final selectArg = '/select,"${file.absolute.path}"';
+      await Process.run('explorer.exe', [selectArg]);
       return true;
     }
     if (Platform.isLinux) {

@@ -358,7 +358,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get cloudDirectoryLabel => 'クラウドフォルダ';
 
   @override
-  String get downloadDirectoryLabel => 'ダウンロードフォルダ';
+  String get downloadDirectoryLabel => 'ファイル保存フォルダ';
 
   @override
   String clipboardImageSaveFailed(String error) {
@@ -499,7 +499,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pickCloudStorageTitle => 'クラウド保存フォルダを選択';
 
   @override
-  String get pickDownloadDirTitle => 'ダウンロードフォルダを選択';
+  String get pickDownloadDirTitle => 'ファイル保存フォルダを選択';
 
   @override
   String get messagePageTitle => 'メッセージ';

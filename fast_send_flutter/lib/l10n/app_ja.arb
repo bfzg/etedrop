@@ -157,7 +157,7 @@
   "uploadFileTooltip": "ファイルをアップロード",
   "refreshTooltip": "更新",
   "cloudDirectoryLabel": "クラウドフォルダ",
-  "downloadDirectoryLabel": "ダウンロードフォルダ",
+  "downloadDirectoryLabel": "ファイル保存フォルダ",
   "clipboardImageSaveFailed": "クリップボードの画像を保存できませんでした: {error}",
   "@clipboardImageSaveFailed": {
     "placeholders": {
@@ -248,7 +248,7 @@
   "createShareAction": "共有を作成",
   "copyShareLinkTooltip": "共有リンクをコピー",
   "pickCloudStorageTitle": "クラウド保存フォルダを選択",
-  "pickDownloadDirTitle": "ダウンロードフォルダを選択",
+  "pickDownloadDirTitle": "ファイル保存フォルダを選択",
   "messagePageTitle": "メッセージ",
   "clearMessagesTooltip": "消去",
   "noMessagesYet": "メッセージはありません",

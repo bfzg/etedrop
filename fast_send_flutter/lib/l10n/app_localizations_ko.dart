@@ -358,7 +358,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get cloudDirectoryLabel => '클라우드 폴더';
 
   @override
-  String get downloadDirectoryLabel => '다운로드 폴더';
+  String get downloadDirectoryLabel => '파일 저장 폴더';
 
   @override
   String clipboardImageSaveFailed(String error) {
@@ -498,7 +498,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pickCloudStorageTitle => '클라우드 저장 폴더 선택';
 
   @override
-  String get pickDownloadDirTitle => '다운로드 폴더 선택';
+  String get pickDownloadDirTitle => '파일 저장 폴더 선택';
 
   @override
   String get messagePageTitle => '메시지';

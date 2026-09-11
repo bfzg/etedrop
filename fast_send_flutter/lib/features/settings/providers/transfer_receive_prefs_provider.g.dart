@@ -42,7 +42,7 @@ final class AutoReceiveLanTransferProvider
 }
 
 String _$autoReceiveLanTransferHash() =>
-    r'd11e878c43d496f82ab540bc6a1a118cfe0e78b6';
+    r'2b422742a105e2e27e54438ea8526c3756ef22ba';
 
 abstract class _$AutoReceiveLanTransfer extends $Notifier<bool> {
   bool build();

@@ -364,7 +364,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cloudDirectoryLabel => 'Cloud folder';
 
   @override
-  String get downloadDirectoryLabel => 'Downloads folder';
+  String get downloadDirectoryLabel => 'File storage folder';
 
   @override
   String clipboardImageSaveFailed(String error) {
@@ -511,7 +511,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pickCloudStorageTitle => 'Choose cloud storage folder';
 
   @override
-  String get pickDownloadDirTitle => 'Choose downloads folder';
+  String get pickDownloadDirTitle => 'Choose file storage folder';
 
   @override
   String get messagePageTitle => 'Messages';

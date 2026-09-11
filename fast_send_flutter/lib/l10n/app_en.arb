@@ -157,7 +157,7 @@
   "uploadFileTooltip": "Upload files",
   "refreshTooltip": "Refresh",
   "cloudDirectoryLabel": "Cloud folder",
-  "downloadDirectoryLabel": "Downloads folder",
+  "downloadDirectoryLabel": "File storage folder",
   "clipboardImageSaveFailed": "Could not save clipboard image: {error}",
   "@clipboardImageSaveFailed": {
     "placeholders": {
@@ -248,7 +248,7 @@
   "createShareAction": "Create share",
   "copyShareLinkTooltip": "Copy share link",
   "pickCloudStorageTitle": "Choose cloud storage folder",
-  "pickDownloadDirTitle": "Choose downloads folder",
+  "pickDownloadDirTitle": "Choose file storage folder",
   "messagePageTitle": "Messages",
   "clearMessagesTooltip": "Clear",
   "noMessagesYet": "No messages yet",

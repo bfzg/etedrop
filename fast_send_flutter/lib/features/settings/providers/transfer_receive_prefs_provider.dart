@@ -7,17 +7,13 @@ part 'transfer_receive_prefs_provider.g.dart';
 @Riverpod(keepAlive: true)
 class AutoReceiveLanTransfer extends _$AutoReceiveLanTransfer {
   @override
-  bool build() {
-    return LocalStorageService.instance
-            .get<bool>(StorageKeys.transferAutoReceiveLan) ??
-        false;
-  }
+  bool build() => true;
 
   Future<void> setEnabled(bool value) async {
-    state = value;
+    state = true;
     await LocalStorageService.instance.set<bool>(
       StorageKeys.transferAutoReceiveLan,
-      value,
+      true,
     );
   }
 }
@@ -27,8 +23,9 @@ class AutoReceiveLanTransfer extends _$AutoReceiveLanTransfer {
 class VideoTranscodeEnabled extends _$VideoTranscodeEnabled {
   @override
   bool build() {
-    return LocalStorageService.instance
-            .get<bool>(StorageKeys.videoTranscodeStream) ??
+    return LocalStorageService.instance.get<bool>(
+          StorageKeys.videoTranscodeStream,
+        ) ??
         true;
   }
 

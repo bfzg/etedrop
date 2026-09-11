@@ -363,7 +363,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get cloudDirectoryLabel => 'Carpeta de la nube';
 
   @override
-  String get downloadDirectoryLabel => 'Carpeta de descargas';
+  String get downloadDirectoryLabel => 'Carpeta de almacenamiento de archivos';
 
   @override
   String clipboardImageSaveFailed(String error) {
@@ -510,7 +510,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get pickCloudStorageTitle => 'Elegir carpeta de la nube';
 
   @override
-  String get pickDownloadDirTitle => 'Elegir carpeta de descargas';
+  String get pickDownloadDirTitle =>
+      'Elegir carpeta de almacenamiento de archivos';
 
   @override
   String get messagePageTitle => 'Mensajes';

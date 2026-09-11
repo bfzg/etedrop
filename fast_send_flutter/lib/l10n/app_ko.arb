@@ -157,7 +157,7 @@
   "uploadFileTooltip": "파일 업로드",
   "refreshTooltip": "새로 고침",
   "cloudDirectoryLabel": "클라우드 폴더",
-  "downloadDirectoryLabel": "다운로드 폴더",
+  "downloadDirectoryLabel": "파일 저장 폴더",
   "clipboardImageSaveFailed": "클립보드 이미지를 저장하지 못했습니다: {error}",
   "@clipboardImageSaveFailed": {
     "placeholders": {
@@ -248,7 +248,7 @@
   "createShareAction": "공유 만들기",
   "copyShareLinkTooltip": "공유 링크 복사",
   "pickCloudStorageTitle": "클라우드 저장 폴더 선택",
-  "pickDownloadDirTitle": "다운로드 폴더 선택",
+  "pickDownloadDirTitle": "파일 저장 폴더 선택",
   "messagePageTitle": "메시지",
   "clearMessagesTooltip": "비우기",
   "noMessagesYet": "메시지가 없습니다",

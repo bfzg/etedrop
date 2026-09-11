@@ -79,15 +79,15 @@ abstract class _$FileServiceNotifier extends $Notifier<FileService> {
   }
 }
 
-/// 下载目录（用于接收文件保存位置）
+/// 文件存储目录（用于接收文件保存位置）
 
 @ProviderFor(DownloadDir)
 final downloadDirProvider = DownloadDirProvider._();
 
-/// 下载目录（用于接收文件保存位置）
+/// 文件存储目录（用于接收文件保存位置）
 final class DownloadDirProvider
     extends $AsyncNotifierProvider<DownloadDir, String> {
-  /// 下载目录（用于接收文件保存位置）
+  /// 文件存储目录（用于接收文件保存位置）
   DownloadDirProvider._()
     : super(
         from: null,
@@ -107,9 +107,9 @@ final class DownloadDirProvider
   DownloadDir create() => DownloadDir();
 }
 
-String _$downloadDirHash() => r'a1e503fae0924109be7790404bca70ee6d0b4012';
+String _$downloadDirHash() => r'ea82e3e26f24da907660b7a7dfc4e2a8783d609c';
 
-/// 下载目录（用于接收文件保存位置）
+/// 文件存储目录（用于接收文件保存位置）
 
 abstract class _$DownloadDir extends $AsyncNotifier<String> {
   FutureOr<String> build();

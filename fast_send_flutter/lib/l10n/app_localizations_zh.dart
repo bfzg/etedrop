@@ -358,7 +358,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get cloudDirectoryLabel => '网盘目录';
 
   @override
-  String get downloadDirectoryLabel => '下载目录';
+  String get downloadDirectoryLabel => '文件存储目录';
 
   @override
   String clipboardImageSaveFailed(String error) {
@@ -498,7 +498,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get pickCloudStorageTitle => '选择网盘存储目录';
 
   @override
-  String get pickDownloadDirTitle => '选择下载目录';
+  String get pickDownloadDirTitle => '选择文件存储目录';
 
   @override
   String get messagePageTitle => '消息';

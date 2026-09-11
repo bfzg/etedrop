@@ -15,13 +15,13 @@ class TransferReceiveSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final autoReceive = ref.watch(autoReceiveLanTransferProvider);
     final transcodeEnabled = ref.watch(videoTranscodeEnabledProvider);
 
     // 桌面与 Android 均可能内置 ffmpeg；移动端常见为仅 remux（无 libx264），
     // 开关仍影响「是否允许尝试转码路径」（不兼容编码时的提示与行为）。
     final showTranscode =
         Platform.isWindows || Platform.isMacOS || Platform.isAndroid;
+    if (!showTranscode) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,19 +30,7 @@ class TransferReceiveSection extends ConsumerWidget {
         SettingsCard(
           child: Column(
             children: [
-              SwitchListTile.adaptive(
-                secondary: const Icon(Icons.download_done_outlined),
-                title: Text(l10n.transferAutoReceiveTitle),
-                subtitle: Text(l10n.transferAutoReceiveSubtitle),
-                value: autoReceive,
-                onChanged: (v) {
-                  ref
-                      .read(autoReceiveLanTransferProvider.notifier)
-                      .setEnabled(v);
-                },
-              ),
-              if (showTranscode) ...[
-                const Divider(height: 1, indent: 16, endIndent: 16),
+              if (showTranscode)
                 SwitchListTile.adaptive(
                   secondary: const Icon(Icons.tune_outlined),
                   title: Text(l10n.videoTranscodeTitle),
@@ -54,7 +42,6 @@ class TransferReceiveSection extends ConsumerWidget {
                         .setEnabled(v);
                   },
                 ),
-              ],
             ],
           ),
         ),

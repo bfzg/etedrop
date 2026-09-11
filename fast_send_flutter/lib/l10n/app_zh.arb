@@ -157,7 +157,7 @@
   "uploadFileTooltip": "上传文件",
   "refreshTooltip": "刷新",
   "cloudDirectoryLabel": "网盘目录",
-  "downloadDirectoryLabel": "下载目录",
+  "downloadDirectoryLabel": "文件存储目录",
   "clipboardImageSaveFailed": "保存剪贴板图片失败: {error}",
   "@clipboardImageSaveFailed": {
     "placeholders": {
@@ -248,7 +248,7 @@
   "createShareAction": "创建分享",
   "copyShareLinkTooltip": "复制分享链接",
   "pickCloudStorageTitle": "选择网盘存储目录",
-  "pickDownloadDirTitle": "选择下载目录",
+  "pickDownloadDirTitle": "选择文件存储目录",
   "messagePageTitle": "消息",
   "clearMessagesTooltip": "清空",
   "noMessagesYet": "暂无消息",

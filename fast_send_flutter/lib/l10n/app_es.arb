@@ -157,7 +157,7 @@
   "uploadFileTooltip": "Subir archivos",
   "refreshTooltip": "Actualizar",
   "cloudDirectoryLabel": "Carpeta de la nube",
-  "downloadDirectoryLabel": "Carpeta de descargas",
+  "downloadDirectoryLabel": "Carpeta de almacenamiento de archivos",
   "clipboardImageSaveFailed": "No se pudo guardar la imagen del portapapeles: {error}",
   "@clipboardImageSaveFailed": {
     "placeholders": {
@@ -248,7 +248,7 @@
   "createShareAction": "Crear compartición",
   "copyShareLinkTooltip": "Copiar enlace de compartición",
   "pickCloudStorageTitle": "Elegir carpeta de la nube",
-  "pickDownloadDirTitle": "Elegir carpeta de descargas",
+  "pickDownloadDirTitle": "Elegir carpeta de almacenamiento de archivos",
   "messagePageTitle": "Mensajes",
   "clearMessagesTooltip": "Vaciar",
   "noMessagesYet": "No hay mensajes",
