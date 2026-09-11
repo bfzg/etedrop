@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-import '../deskflow_service.dart';
+import '../services/deskflow_service.dart';
 
 class DeskflowPage extends ConsumerStatefulWidget {
   const DeskflowPage({super.key});
@@ -14,6 +14,8 @@ class _DeskflowPageState extends ConsumerState<DeskflowPage> {
   final port = TextEditingController(text: '24800');
   DeskflowMode mode = DeskflowMode.server;
   bool clipboard = true;
+  List<String> discovered = const [];
+  bool scanning = false;
   @override
   void dispose() {
     host.dispose();
@@ -31,6 +33,14 @@ class _DeskflowPageState extends ConsumerState<DeskflowPage> {
         builder: (_, __) => ListView(
           padding: const EdgeInsets.all(24),
           children: [
+            FutureBuilder<List<String>>(
+              future: service.localIpv4Addresses(),
+              builder: (_, snapshot) => Text(
+                '本机 IP：${(snapshot.data ?? const []).join('、')}',
+                style: const TextStyle(fontSize: 16),
+              ),
+            ),
+            const SizedBox(height: 18),
             const Text(
               '选择工作模式',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
@@ -56,13 +66,48 @@ class _DeskflowPageState extends ConsumerState<DeskflowPage> {
             ),
             const SizedBox(height: 20),
             if (mode == DeskflowMode.client)
-              TextField(
-                controller: host,
-                enabled: !service.isRunning,
-                decoration: const InputDecoration(
-                  labelText: '远程电脑地址',
-                  border: OutlineInputBorder(),
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: host,
+                      enabled: !service.isRunning,
+                      decoration: const InputDecoration(
+                        labelText: '远程电脑地址',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  TDButton(
+                    text: scanning ? '扫描中' : '扫描',
+                    onTap: scanning
+                        ? null
+                        : () async {
+                            setState(() => scanning = true);
+                            final result = await service.scanLocalNetwork(
+                              port: int.tryParse(port.text) ?? 24800,
+                            );
+                            if (mounted)
+                              setState(() {
+                                discovered = result;
+                                scanning = false;
+                              });
+                          },
+                  ),
+                ],
+              ),
+            if (discovered.isNotEmpty)
+              Wrap(
+                spacing: 8,
+                children: discovered
+                    .map(
+                      (ip) => ActionChip(
+                        label: Text(ip),
+                        onPressed: () => host.text = ip,
+                      ),
+                    )
+                    .toList(),
               ),
             if (mode == DeskflowMode.client) const SizedBox(height: 12),
             TextField(
@@ -106,6 +151,27 @@ class _DeskflowPageState extends ConsumerState<DeskflowPage> {
                 child: Text(
                   service.lastError!,
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            if (service.lastError?.contains('辅助功能') == true &&
+                Theme.of(context).platform == TargetPlatform.macOS)
+              TDButton(
+                text: '打开系统权限设置',
+                type: TDButtonType.outline,
+                isBlock: true,
+                onTap: service.openAccessibilitySettings,
+              ),
+            if (service.logs.isNotEmpty)
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.all(10),
+                constraints: const BoxConstraints(maxHeight: 180),
+                color: Colors.black87,
+                child: SingleChildScrollView(
+                  child: Text(
+                    service.logs.join('\n'),
+                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                  ),
                 ),
               ),
           ],

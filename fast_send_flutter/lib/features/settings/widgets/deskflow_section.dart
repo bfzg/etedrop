@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import '../../deskflow/deskflow_service.dart';
+import '../../deskflow/services/deskflow_service.dart';
 import 'settings_card.dart';
 import 'settings_section_header.dart';
 

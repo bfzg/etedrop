@@ -17,7 +17,7 @@ import 'features/settings/providers/server_line_provider.dart';
 import 'features/lan/providers/lan_provider.dart';
 import 'services/desktop_service.dart';
 import 'services/webrtc_background_keepalive.dart';
-import 'features/deskflow/deskflow_service.dart';
+import 'features/deskflow/services/deskflow_service.dart';
 
 class App extends ConsumerStatefulWidget {
   const App({super.key});
