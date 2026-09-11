@@ -130,9 +130,11 @@ class _MessagePageState extends ConsumerState<MessagePage> {
                 }
                 final list = _sortedConversations(book);
                 final conversation = list[index];
-                return ConversationTile(
+                final tile = ConversationTile(
                   title: conversation.title,
-                  subtitle: conversation.subtitle,
+                  subtitle:
+                      conversation.subtitle +
+                      (conversation.remote ? ' · 远端' : ''),
                   avatar: conversation.avatar,
                   online: conversation.online,
                   selected:
@@ -141,6 +143,16 @@ class _MessagePageState extends ConsumerState<MessagePage> {
                   unreadCount: _unreadCount(book, conversation.conversationId),
                   onTap: () => _selectConversation(conversation.conversationId),
                 );
+                if (conversation.contact != null) {
+                  return _SwipeDeleteCell(
+                    key: ValueKey('contact:${conversation.contact!.userId}'),
+                    onDelete: () => ref
+                        .read(contactBookProvider.notifier)
+                        .removeContact(conversation.contact!.userId),
+                    child: tile,
+                  );
+                }
+                return tile;
               },
               separatorBuilder: (ctx, index) {
                 // 空状态不渲染分割线
@@ -177,6 +189,7 @@ class _MessagePageState extends ConsumerState<MessagePage> {
               : '离线',
           avatar: contact.avatar,
           online: contact.isOnline,
+          contact: contact,
         ),
       for (final group in book.groups)
         _Conversation(
@@ -365,6 +378,8 @@ class _Conversation {
   final String subtitle;
   final int avatar;
   final bool online;
+  final Contact? contact;
+  bool get remote => contact != null && !contact!.autoDiscovered;
 
   const _Conversation({
     required this.conversationId,
@@ -372,5 +387,79 @@ class _Conversation {
     required this.subtitle,
     required this.avatar,
     this.online = false,
+    this.contact,
   });
+}
+
+class _SwipeDeleteCell extends StatefulWidget {
+  const _SwipeDeleteCell({
+    super.key,
+    required this.child,
+    required this.onDelete,
+  });
+
+  final Widget child;
+  final VoidCallback onDelete;
+
+  @override
+  State<_SwipeDeleteCell> createState() => _SwipeDeleteCellState();
+}
+
+class _SwipeDeleteCellState extends State<_SwipeDeleteCell> {
+  static const _actionWidth = 88.0;
+  double _offset = 0;
+
+  void _settle() {
+    setState(
+      () => _offset = _offset.abs() > _actionWidth / 2 ? -_actionWidth : 0,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRect(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: SizedBox(
+                width: _actionWidth,
+                child: Material(
+                  color: Colors.red,
+                  child: InkWell(
+                    onTap: widget.onDelete,
+                    child: const Center(
+                      child: Icon(Icons.delete_outline, color: Colors.white),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            curve: Curves.easeOut,
+            transform: Matrix4.translationValues(_offset, 0, 0),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onHorizontalDragUpdate: (details) {
+                setState(() {
+                  _offset = (_offset + details.delta.dx).clamp(
+                    -_actionWidth,
+                    0,
+                  );
+                });
+              },
+              onHorizontalDragEnd: (_) => _settle(),
+              child: ColoredBox(
+                color: const Color(0xFFeeeef0),
+                child: widget.child,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

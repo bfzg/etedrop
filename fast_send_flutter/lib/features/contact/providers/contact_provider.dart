@@ -160,6 +160,13 @@ class ContactBook extends Notifier<ContactBookState> {
     _persist();
   }
 
+  void removeContact(String userId) {
+    final next = state.contacts.where((c) => c.userId != userId).toList();
+    if (next.length == state.contacts.length) return;
+    state = state.copyWith(contacts: next);
+    _persist();
+  }
+
   void createGroup(String name, List<String> memberIds) {
     final clean = name.trim();
     if (clean.isEmpty || memberIds.isEmpty) return;

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:pasteboard/pasteboard.dart';
 import 'package:path/path.dart' as p;
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 
 import '../../../core/config/emojis.dart';
 import '../../../core/utils/clipboard_image.dart';
@@ -304,13 +303,15 @@ class _ChatComposerState extends State<ChatComposer> {
                 ),
 
                 const Spacer(),
-                TDButton(
-                  type: TDButtonType.fill,
-                  size: TDButtonSize.small,
-                  disabled: _sending,
-                  padding: const EdgeInsets.only(left: 12, right: 12, top: 7),
-                  onTap: _sending ? null : _send,
-                  text: '发送',
+                ElevatedButton(
+                  onPressed: _sending ? null : _send,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                  ),
+                  child: const Text('发送'),
                 ),
               ],
             ),

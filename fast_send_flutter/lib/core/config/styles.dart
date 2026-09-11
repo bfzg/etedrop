@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
 
 class AppStyles {
   AppStyles._();
@@ -44,7 +43,6 @@ class AppStyles {
         color: Color(0xFFEAEAEA),
         thickness: 1,
       ),
-      extensions: [TDThemeData.defaultData()],
     );
 
     // 保证 TextTheme / PrimaryTextTheme 均带上 fontFamily（含组件库内部样式）。
