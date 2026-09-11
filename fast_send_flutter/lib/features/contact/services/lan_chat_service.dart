@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import '../models/chat_message.dart';
 
 class LanChatPayload {
@@ -86,9 +88,16 @@ class LanChatService {
       final response = await request.close().timeout(
         const Duration(seconds: 8),
       );
-      await response.drain<void>();
+      final responseBody = await response.transform(utf8.decoder).join();
+      if (response.statusCode != HttpStatus.ok) {
+        debugPrint(
+          '[chat][lan] ${response.statusCode} '
+          '${responseBody.isEmpty ? '' : responseBody}',
+        );
+      }
       return response.statusCode == HttpStatus.ok;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[chat][lan] request failed $ip:$port $e');
       return false;
     } finally {
       client.close(force: true);

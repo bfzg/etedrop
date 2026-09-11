@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -164,6 +165,10 @@ class ContactBook extends Notifier<ContactBookState> {
   }
 
   Future<void> receiveLanMessage(LanChatPayload payload) async {
+    debugPrint(
+      '[chat][recv] message=${payload.messageId} '
+      'from=${payload.senderId} conversation=${payload.conversationId}',
+    );
     if (state.messages.any((m) => m.messageId == payload.messageId)) return;
     final existing = state.contacts.where((c) => c.userId == payload.senderId);
     if (existing.isEmpty) {
@@ -247,16 +252,24 @@ class ContactBook extends Notifier<ContactBookState> {
         conversationTitle: groupInfo?.name,
         memberIds: groupInfo?.memberIds ?? const [],
       );
-      final ok = contact?.transport == ContactTransport.webrtc
+      debugPrint(
+        '[chat][send] message=${message.messageId} to=$id '
+        'transport=${contact?.transport} ip=${contact?.ip}:${contact?.port} '
+        'online=${contact?.isOnline}',
+      );
+      final ip = contact?.ip;
+      final port = contact?.port;
+      final ok = ip != null && port != null
+          ? await service.send(ip: ip, port: port, payload: payload)
+          : contact?.transport == ContactTransport.webrtc
           ? await _sendWebRtc(id, payload)
-          : contact?.ip == null || contact?.port == null || !contact!.isOnline
-          ? false
-          : await service.send(
-              ip: contact.ip!,
-              port: contact.port!,
-              payload: payload,
-            );
+          : false;
       delivered = delivered || ok;
+    }
+    if (targetIds.isEmpty) {
+      debugPrint(
+        '[chat][send] message=${message.messageId} failed: no targets',
+      );
     }
     state = state.copyWith(
       messages: [
@@ -270,6 +283,9 @@ class ContactBook extends Notifier<ContactBookState> {
           else
             item,
       ],
+    );
+    debugPrint(
+      '[chat][send] message=${message.messageId} delivered=$delivered',
     );
     _persist();
   }
@@ -338,8 +354,10 @@ class ContactBook extends Notifier<ContactBookState> {
       await ref
           .read(deviceManagerProvider)
           .sendPeerData(peerId, payload.toJson());
+      debugPrint('[chat][send][webrtc] peer=$peerId delivered=true');
       return true;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[chat][send][webrtc] peer=$peerId failed=$e');
       return false;
     }
   }

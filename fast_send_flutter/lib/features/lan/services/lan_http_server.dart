@@ -150,7 +150,12 @@ class LanHttpServer {
     try {
       final raw = await utf8.decoder.bind(request).join();
       final map = jsonDecode(raw) as Map<String, dynamic>;
-      await onChatMessage!(LanChatPayload.fromJson(map));
+      final payload = LanChatPayload.fromJson(map);
+      debugPrint(
+        '[chat][http][recv] message=${payload.messageId} '
+        'from=${payload.senderId}',
+      );
+      await onChatMessage!(payload);
       request.response.statusCode = HttpStatus.ok;
       request.response.headers.contentType = ContentType.json;
       request.response.write(jsonEncode({'ok': true}));

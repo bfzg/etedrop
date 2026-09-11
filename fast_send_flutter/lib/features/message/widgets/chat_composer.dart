@@ -27,7 +27,6 @@ class _ChatComposerState extends State<ChatComposer> {
   final _paths = <String>[];
   bool _dragging = false;
   bool _sending = false;
-  double _height = 220;
 
   bool get _desktop =>
       Platform.isMacOS || Platform.isWindows || Platform.isLinux;
@@ -35,6 +34,7 @@ class _ChatComposerState extends State<ChatComposer> {
   @override
   void initState() {
     super.initState();
+    _focus.onKeyEvent = _handleKeyEvent;
     HardwareKeyboard.instance.addHandler(_onKey);
     unawaited(pruneTransferTempCacheOlderThan(const Duration(days: 2)));
   }
@@ -45,6 +45,30 @@ class _ChatComposerState extends State<ChatComposer> {
     _text.dispose();
     _focus.dispose();
     super.dispose();
+  }
+
+  KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent ||
+        event.logicalKey != LogicalKeyboardKey.enter) {
+      return KeyEventResult.ignored;
+    }
+    final keyboard = HardwareKeyboard.instance;
+    if (keyboard.isMetaPressed || keyboard.isControlPressed) {
+      final value = _text.value;
+      final offset = value.selection.isValid
+          ? value.selection.baseOffset
+          : value.text.length;
+      final start = offset.clamp(0, value.text.length);
+      _text.value = value.copyWith(
+        text:
+            '${value.text.substring(0, start)}\n${value.text.substring(start)}',
+        selection: TextSelection.collapsed(offset: start + 1),
+        composing: TextRange.empty,
+      );
+    } else {
+      unawaited(_send());
+    }
+    return KeyEventResult.handled;
   }
 
   bool _onKey(KeyEvent event) {
@@ -126,7 +150,7 @@ class _ChatComposerState extends State<ChatComposer> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
-        height: _height,
+        height: 220,
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
         decoration: BoxDecoration(
           color: _dragging
@@ -140,133 +164,96 @@ class _ChatComposerState extends State<ChatComposer> {
           ),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Stack(
+        child: Column(
           children: [
-            Column(
-              children: [
-                if (_paths.isNotEmpty)
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        for (var i = 0; i < _paths.length; i++)
-                          _AttachmentPreview(
-                            path: _paths[i],
-                            onRemove: () => setState(() => _paths.removeAt(i)),
-                          ),
-                      ],
-                    ),
-                  ),
-                Expanded(
-                  child: TextField(
-                    controller: _text,
-                    focusNode: _focus,
-                    minLines: 1,
-                    maxLines: null,
-                    textAlignVertical: TextAlignVertical.top,
-                    decoration: InputDecoration(
-                      hintText: _desktop ? '输入消息，⌘V 粘贴截图，或拖入文件' : '输入消息',
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.zero,
-                      hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurfaceVariant.withValues(
-                          alpha: .7,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      tooltip: '表情',
-                      icon: const Icon(Icons.emoji_emotions_outlined),
-                      onPressed: () {
-                        final value = _text.value;
-                        _text.value = value.copyWith(
-                          text: '${value.text}🙂',
-                          selection: TextSelection.collapsed(
-                            offset: value.text.length + 2,
-                          ),
-                        );
-                      },
-                    ),
-                    IconButton(
-                      tooltip: '选择文件',
-                      icon: const Icon(Icons.folder_outlined),
-                      onPressed: _pickFiles,
-                    ),
-                    IconButton(
-                      tooltip: '粘贴图片',
-                      icon: const Icon(Icons.content_paste_outlined),
-                      onPressed: _pasteImage,
-                    ),
-                    const Spacer(),
-                    TDButton(
-                      type: TDButtonType.text,
-                      size: TDButtonSize.medium,
-                      disabled: _sending,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      textStyle: TextStyle(
-                        color: theme.colorScheme.primary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      onTap: _sending ? null : _send,
-                      child: _sending
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('发送'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: MouseRegion(
-                cursor: SystemMouseCursors.resizeUpLeft,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onVerticalDragUpdate: (details) {
-                    setState(() {
-                      _height = (_height - details.delta.dy).clamp(150, 520);
-                    });
-                  },
-                  child: SizedBox(
-                    width: 28,
-                    height: 24,
-                    child: Align(
-                      alignment: Alignment.topRight,
-                      child: Container(
-                        width: 16,
-                        height: 16,
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(
-                              color: theme.colorScheme.outlineVariant,
-                              width: 2,
-                            ),
-                            right: BorderSide(
-                              color: theme.colorScheme.outlineVariant,
-                              width: 2,
-                            ),
-                          ),
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(10),
-                          ),
-                        ),
-                      ),
+            Expanded(
+              child: TextField(
+                controller: _text,
+                focusNode: _focus,
+                minLines: 3,
+                maxLines: 8,
+                textInputAction: TextInputAction.newline,
+                textAlignVertical: TextAlignVertical.top,
+                decoration: InputDecoration(
+                  hintText: _desktop
+                      ? '输入消息，回车发送，⌘/Ctrl+回车换行，或拖入文件'
+                      : '输入消息，回车发送',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                  hintStyle: TextStyle(
+                    color: theme.colorScheme.onSurfaceVariant.withValues(
+                      alpha: .7,
                     ),
                   ),
                 ),
               ),
+            ),
+            Row(
+              children: [
+                if (_paths.isNotEmpty)
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (var i = 0; i < _paths.length; i++)
+                            _AttachmentPreview(
+                              path: _paths[i],
+                              onRemove: () =>
+                                  setState(() => _paths.removeAt(i)),
+                            ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                IconButton(
+                  tooltip: '表情',
+                  icon: const Icon(Icons.emoji_emotions_outlined),
+                  onPressed: () {
+                    final value = _text.value;
+                    _text.value = value.copyWith(
+                      text: '${value.text}🙂',
+                      selection: TextSelection.collapsed(
+                        offset: value.text.length + 2,
+                      ),
+                    );
+                  },
+                ),
+                IconButton(
+                  tooltip: '选择文件',
+                  icon: const Icon(Icons.folder_outlined),
+                  onPressed: _pickFiles,
+                ),
+                IconButton(
+                  tooltip: '粘贴图片',
+                  icon: const Icon(Icons.content_paste_outlined),
+                  onPressed: _pasteImage,
+                ),
+                const Spacer(),
+                TDButton(
+                  type: TDButtonType.text,
+                  size: TDButtonSize.medium,
+                  disabled: _sending,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  textStyle: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  onTap: _sending ? null : _send,
+                  child: _sending
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Text('发送'),
+                ),
+              ],
             ),
           ],
         ),
