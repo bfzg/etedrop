@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../../l10n/app_localizations.dart';
@@ -207,6 +208,17 @@ class DeviceInfoSection extends ConsumerWidget {
                         fontFamily: 'monospace',
                       ),
                       softWrap: true,
+                    ),
+                    trailing: IconButton(
+                      tooltip: l10n.copyAction,
+                      icon: const Icon(Icons.copy_outlined),
+                      onPressed: () async {
+                        await Clipboard.setData(ClipboardData(text: devId!));
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.copiedToClipboard)),
+                        );
+                      },
                     ),
                   ),
                 ),

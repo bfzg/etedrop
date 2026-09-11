@@ -10,6 +10,7 @@ import '../widgets/conversation_pane_resizer.dart';
 import '../widgets/conversation_tile.dart';
 import '../widgets/message_avatar.dart';
 import '../widgets/message_empty_view.dart';
+import '../../../widgets/ui/e_dialog.dart';
 
 class MessagePage extends ConsumerStatefulWidget {
   const MessagePage({super.key});
@@ -82,11 +83,6 @@ class _MessagePageState extends ConsumerState<MessagePage> {
                   tooltip: '添加联系人',
                   onPressed: _addContact,
                 ),
-                IconButton(
-                  icon: const Icon(Icons.group_add_outlined),
-                  tooltip: '创建群组',
-                  onPressed: _createGroup,
-                ),
               ],
             ),
       body: SafeArea(bottom: false, child: content),
@@ -117,11 +113,6 @@ class _MessagePageState extends ConsumerState<MessagePage> {
                     icon: const Icon(Icons.person_add_alt_1),
                     tooltip: '添加联系人',
                     onPressed: _addContact,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.group_add_outlined),
-                    tooltip: '创建群组',
-                    onPressed: _createGroup,
                   ),
                 ],
               ),
@@ -263,14 +254,17 @@ class _MessagePageState extends ConsumerState<MessagePage> {
     final controller = TextEditingController();
     final id = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => EDialog.alert(
         title: const Text('添加联系人'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: const InputDecoration(
-            labelText: '用户 ID',
-            hintText: '输入对方的 WebRTC 用户 ID',
+        content: EDialog.formBody(
+          context,
+          TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(
+              labelText: '用户 ID',
+              hintText: '输入对方的 WebRTC 用户 ID',
+            ),
           ),
         ),
         actions: [
@@ -287,7 +281,9 @@ class _MessagePageState extends ConsumerState<MessagePage> {
     );
     controller.dispose();
     if (id != null && id.trim().isNotEmpty) {
-      ref.read(contactBookProvider.notifier).addByUserId(id);
+      final userId = id.trim();
+      ref.read(contactBookProvider.notifier).addByUserId(userId);
+      setState(() => _selectedConversationId = 'dm:$userId');
     }
   }
 

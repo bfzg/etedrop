@@ -7,7 +7,6 @@ import 'dart:ui';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../../core/config/constants.dart';
@@ -65,6 +64,15 @@ class DeviceManager {
     return n == 'localhost' || n == 'unknown';
   }
 
+  String _generateDeviceId() {
+    // Keep the identifier short enough to type while retaining six digits.
+    final value = Random.secure().nextInt(1000000);
+    return value.toString().padLeft(6, '0');
+  }
+
+  bool _isShortDeviceId(String? id) =>
+      id != null && RegExp(r'^\d{6}$').hasMatch(id);
+
   /// UI 通过此 stream 监听状态变化
   Stream<int> get stateStream => _stateController.stream;
   Stream<Map<String, dynamic>> get peerMessageStream =>
@@ -96,11 +104,20 @@ class DeviceManager {
       if (await file.exists()) {
         final data = await file.readAsString();
         _config = DeviceConfig.fromJson(jsonDecode(data));
+        var changed = false;
+        if (!_isShortDeviceId(_config?.deviceId)) {
+          // Migrate UUID-era configurations to the new six-digit format.
+          _config = _config!.copyWith(deviceId: _generateDeviceId());
+          changed = true;
+        }
         if (_looksLikeDefaultPlaceholderName(_config?.deviceName)) {
           // Replace the default placeholder name with a locale-based nickname.
           _config = _config!.copyWith(
             deviceName: _randomNicknameForSystemLocale(),
           );
+          changed = true;
+        }
+        if (changed) {
           await _saveConfig();
         }
         _setState(_state);
@@ -109,7 +126,7 @@ class DeviceManager {
     } catch (_) {}
 
     _config = DeviceConfig(
-      deviceId: const Uuid().v4(),
+      deviceId: _generateDeviceId(),
       deviceName: _randomNicknameForSystemLocale(),
       createdAt: DateTime.now().millisecondsSinceEpoch,
       avatar: Random().nextInt(kMemojiCount) + 1,
