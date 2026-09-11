@@ -7,14 +7,22 @@ import '../../widgets/bottom_nav_bar.dart';
 import '../../features/cloud/pages/cloud_page.dart';
 import '../../features/message/pages/message_page.dart';
 import '../../features/settings/pages/settings_page.dart';
+import '../../features/deskflow/pages/deskflow_page.dart';
 
 class Routes {
   static const cloud = '/cloud';
   static const messages = '/messages';
   static const settings = '/settings';
+  static const deskflow = '/deskflow';
 }
 
 List<NavItemConfig> buildNavItems(AppLocalizations l10n) => [
+  NavItemConfig(
+    label: '跨屏协同',
+    outlinedIcon: Icons.devices_other_outlined,
+    roundedIcon: Icons.devices_other,
+    path: Routes.deskflow,
+  ),
   NavItemConfig(
     label: l10n.messages,
     outlinedIcon: Icons.chat_bubble_outline,
@@ -73,6 +81,14 @@ final router = GoRouter(
             GoRoute(
               path: Routes.settings,
               builder: (context, state) => const SettingsPage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.deskflow,
+              builder: (context, state) => const DeskflowPage(),
             ),
           ],
         ),

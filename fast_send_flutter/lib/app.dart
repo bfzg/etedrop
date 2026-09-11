@@ -17,6 +17,7 @@ import 'features/settings/providers/server_line_provider.dart';
 import 'features/lan/providers/lan_provider.dart';
 import 'services/desktop_service.dart';
 import 'services/webrtc_background_keepalive.dart';
+import 'features/deskflow/deskflow_service.dart';
 
 class App extends ConsumerStatefulWidget {
   const App({super.key});
@@ -80,6 +81,8 @@ class _AppState extends ConsumerState<App> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     ref.read(deviceAutoConnectProvider);
     ref.read(lanManagerProvider);
+    // Keep the Deskflow process service alive for the desktop app lifetime.
+    ref.read(deskflowServiceProvider);
 
     ref.listen(serverEndpointsProvider, (previous, next) {
       ref.read(deviceManagerProvider).applyEndpoints(next);

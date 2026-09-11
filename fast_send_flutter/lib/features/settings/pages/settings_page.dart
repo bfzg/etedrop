@@ -51,45 +51,45 @@ class SettingsPage extends ConsumerWidget {
         child: Center(
           child: ListView(
             children: [
-            DeviceInfoSection(
-              connected: connected,
-              connecting: connecting,
-              lastError: lastError,
-              devName: devName,
-              devId: devId,
-            ),
-
-            const SizedBox(height: 16),
-
-            StorageSection(
-              storagePath: storagePath,
-              downloadPath: downloadPath,
-            ),
-
-            const SizedBox(height: 16),
-
-            const TransferReceiveSection(),
-
-            const SizedBox(height: 16),
-
-            if (isDesktop) ...[
-              DesktopIntegrationSection(
-                autoStart: autoStart,
-                minimizeToTray: minimizeToTray,
+              DeviceInfoSection(
+                connected: connected,
+                connecting: connecting,
+                lastError: lastError,
+                devName: devName,
+                devId: devId,
               ),
+
               const SizedBox(height: 16),
+
+              StorageSection(
+                storagePath: storagePath,
+                downloadPath: downloadPath,
+              ),
+
+              const SizedBox(height: 16),
+
+              const TransferReceiveSection(),
+
+              const SizedBox(height: 16),
+
+              if (isDesktop) ...[
+                DesktopIntegrationSection(
+                  autoStart: autoStart,
+                  minimizeToTray: minimizeToTray,
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              AppearanceSection(locale: locale),
+
+              const SizedBox(height: 16),
+              const NetworkLineSection(),
+              const SizedBox(height: 16),
+              const AboutSection(),
+              const SizedBox(height: 32),
             ],
-
-            AppearanceSection(locale: locale),
-
-            const SizedBox(height: 16),
-            const NetworkLineSection(),
-            const SizedBox(height: 16),
-            const AboutSection(),
-            const SizedBox(height: 32),
-          ],
+          ),
         ),
-      ),
       ),
     );
   }
