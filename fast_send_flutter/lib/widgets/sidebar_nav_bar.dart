@@ -35,6 +35,7 @@ class AppSidebarNavBar extends ConsumerWidget {
       width: kSidebarWidth,
       child: DecoratedBox(
         decoration: BoxDecoration(
+          color: isWindowsPlatform() ? const Color(0xFFeeeef0) : null,
           border: isWindowsPlatform()
               ? Border(
                   right: BorderSide(

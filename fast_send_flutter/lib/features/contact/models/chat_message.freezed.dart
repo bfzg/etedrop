@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$ChatMessage {
 
- String get messageId; String get conversationId; String get senderId; String get senderName; int get senderAvatar; String get text; int get timestamp; bool get isOutgoing; bool get isRead; ChatMessageStatus get status;
+ String get messageId; String get conversationId; String get senderId; String get senderName; int get senderAvatar; String get text; int get timestamp; bool get isOutgoing; bool get isRead; ChatMessageStatus get status; ChatMessageKind get kind; String? get fileName; int? get fileSize; String? get localPath; String? get shareId;
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +28,16 @@ $ChatMessageCopyWith<ChatMessage> get copyWith => _$ChatMessageCopyWithImpl<Chat
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatMessage&&(identical(other.messageId, messageId) || other.messageId == messageId)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.text, text) || other.text == text)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.isOutgoing, isOutgoing) || other.isOutgoing == isOutgoing)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatMessage&&(identical(other.messageId, messageId) || other.messageId == messageId)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.text, text) || other.text == text)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.isOutgoing, isOutgoing) || other.isOutgoing == isOutgoing)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.status, status) || other.status == status)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.fileSize, fileSize) || other.fileSize == fileSize)&&(identical(other.localPath, localPath) || other.localPath == localPath)&&(identical(other.shareId, shareId) || other.shareId == shareId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,messageId,conversationId,senderId,senderName,senderAvatar,text,timestamp,isOutgoing,isRead,status);
+int get hashCode => Object.hash(runtimeType,messageId,conversationId,senderId,senderName,senderAvatar,text,timestamp,isOutgoing,isRead,status,kind,fileName,fileSize,localPath,shareId);
 
 @override
 String toString() {
-  return 'ChatMessage(messageId: $messageId, conversationId: $conversationId, senderId: $senderId, senderName: $senderName, senderAvatar: $senderAvatar, text: $text, timestamp: $timestamp, isOutgoing: $isOutgoing, isRead: $isRead, status: $status)';
+  return 'ChatMessage(messageId: $messageId, conversationId: $conversationId, senderId: $senderId, senderName: $senderName, senderAvatar: $senderAvatar, text: $text, timestamp: $timestamp, isOutgoing: $isOutgoing, isRead: $isRead, status: $status, kind: $kind, fileName: $fileName, fileSize: $fileSize, localPath: $localPath, shareId: $shareId)';
 }
 
 
@@ -48,7 +48,7 @@ abstract mixin class $ChatMessageCopyWith<$Res>  {
   factory $ChatMessageCopyWith(ChatMessage value, $Res Function(ChatMessage) _then) = _$ChatMessageCopyWithImpl;
 @useResult
 $Res call({
- String messageId, String conversationId, String senderId, String senderName, int senderAvatar, String text, int timestamp, bool isOutgoing, bool isRead, ChatMessageStatus status
+ String messageId, String conversationId, String senderId, String senderName, int senderAvatar, String text, int timestamp, bool isOutgoing, bool isRead, ChatMessageStatus status, ChatMessageKind kind, String? fileName, int? fileSize, String? localPath, String? shareId
 });
 
 
@@ -65,7 +65,7 @@ class _$ChatMessageCopyWithImpl<$Res>
 
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? messageId = null,Object? conversationId = null,Object? senderId = null,Object? senderName = null,Object? senderAvatar = null,Object? text = null,Object? timestamp = null,Object? isOutgoing = null,Object? isRead = null,Object? status = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? messageId = null,Object? conversationId = null,Object? senderId = null,Object? senderName = null,Object? senderAvatar = null,Object? text = null,Object? timestamp = null,Object? isOutgoing = null,Object? isRead = null,Object? status = null,Object? kind = null,Object? fileName = freezed,Object? fileSize = freezed,Object? localPath = freezed,Object? shareId = freezed,}) {
   return _then(_self.copyWith(
 messageId: null == messageId ? _self.messageId : messageId // ignore: cast_nullable_to_non_nullable
 as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
@@ -77,7 +77,12 @@ as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: 
 as int,isOutgoing: null == isOutgoing ? _self.isOutgoing : isOutgoing // ignore: cast_nullable_to_non_nullable
 as bool,isRead: null == isRead ? _self.isRead : isRead // ignore: cast_nullable_to_non_nullable
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as ChatMessageStatus,
+as ChatMessageStatus,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as ChatMessageKind,fileName: freezed == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
+as String?,fileSize: freezed == fileSize ? _self.fileSize : fileSize // ignore: cast_nullable_to_non_nullable
+as int?,localPath: freezed == localPath ? _self.localPath : localPath // ignore: cast_nullable_to_non_nullable
+as String?,shareId: freezed == shareId ? _self.shareId : shareId // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -162,10 +167,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String messageId,  String conversationId,  String senderId,  String senderName,  int senderAvatar,  String text,  int timestamp,  bool isOutgoing,  bool isRead,  ChatMessageStatus status)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String messageId,  String conversationId,  String senderId,  String senderName,  int senderAvatar,  String text,  int timestamp,  bool isOutgoing,  bool isRead,  ChatMessageStatus status,  ChatMessageKind kind,  String? fileName,  int? fileSize,  String? localPath,  String? shareId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ChatMessage() when $default != null:
-return $default(_that.messageId,_that.conversationId,_that.senderId,_that.senderName,_that.senderAvatar,_that.text,_that.timestamp,_that.isOutgoing,_that.isRead,_that.status);case _:
+return $default(_that.messageId,_that.conversationId,_that.senderId,_that.senderName,_that.senderAvatar,_that.text,_that.timestamp,_that.isOutgoing,_that.isRead,_that.status,_that.kind,_that.fileName,_that.fileSize,_that.localPath,_that.shareId);case _:
   return orElse();
 
 }
@@ -183,10 +188,10 @@ return $default(_that.messageId,_that.conversationId,_that.senderId,_that.sender
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String messageId,  String conversationId,  String senderId,  String senderName,  int senderAvatar,  String text,  int timestamp,  bool isOutgoing,  bool isRead,  ChatMessageStatus status)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String messageId,  String conversationId,  String senderId,  String senderName,  int senderAvatar,  String text,  int timestamp,  bool isOutgoing,  bool isRead,  ChatMessageStatus status,  ChatMessageKind kind,  String? fileName,  int? fileSize,  String? localPath,  String? shareId)  $default,) {final _that = this;
 switch (_that) {
 case _ChatMessage():
-return $default(_that.messageId,_that.conversationId,_that.senderId,_that.senderName,_that.senderAvatar,_that.text,_that.timestamp,_that.isOutgoing,_that.isRead,_that.status);case _:
+return $default(_that.messageId,_that.conversationId,_that.senderId,_that.senderName,_that.senderAvatar,_that.text,_that.timestamp,_that.isOutgoing,_that.isRead,_that.status,_that.kind,_that.fileName,_that.fileSize,_that.localPath,_that.shareId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +208,10 @@ return $default(_that.messageId,_that.conversationId,_that.senderId,_that.sender
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String messageId,  String conversationId,  String senderId,  String senderName,  int senderAvatar,  String text,  int timestamp,  bool isOutgoing,  bool isRead,  ChatMessageStatus status)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String messageId,  String conversationId,  String senderId,  String senderName,  int senderAvatar,  String text,  int timestamp,  bool isOutgoing,  bool isRead,  ChatMessageStatus status,  ChatMessageKind kind,  String? fileName,  int? fileSize,  String? localPath,  String? shareId)?  $default,) {final _that = this;
 switch (_that) {
 case _ChatMessage() when $default != null:
-return $default(_that.messageId,_that.conversationId,_that.senderId,_that.senderName,_that.senderAvatar,_that.text,_that.timestamp,_that.isOutgoing,_that.isRead,_that.status);case _:
+return $default(_that.messageId,_that.conversationId,_that.senderId,_that.senderName,_that.senderAvatar,_that.text,_that.timestamp,_that.isOutgoing,_that.isRead,_that.status,_that.kind,_that.fileName,_that.fileSize,_that.localPath,_that.shareId);case _:
   return null;
 
 }
@@ -218,7 +223,7 @@ return $default(_that.messageId,_that.conversationId,_that.senderId,_that.sender
 @JsonSerializable()
 
 class _ChatMessage implements ChatMessage {
-  const _ChatMessage({required this.messageId, required this.conversationId, required this.senderId, required this.senderName, required this.senderAvatar, required this.text, required this.timestamp, this.isOutgoing = false, this.isRead = false, this.status = ChatMessageStatus.sent});
+  const _ChatMessage({required this.messageId, required this.conversationId, required this.senderId, required this.senderName, required this.senderAvatar, required this.text, required this.timestamp, this.isOutgoing = false, this.isRead = false, this.status = ChatMessageStatus.sent, this.kind = ChatMessageKind.text, this.fileName, this.fileSize, this.localPath, this.shareId});
   factory _ChatMessage.fromJson(Map<String, dynamic> json) => _$ChatMessageFromJson(json);
 
 @override final  String messageId;
@@ -231,6 +236,11 @@ class _ChatMessage implements ChatMessage {
 @override@JsonKey() final  bool isOutgoing;
 @override@JsonKey() final  bool isRead;
 @override@JsonKey() final  ChatMessageStatus status;
+@override@JsonKey() final  ChatMessageKind kind;
+@override final  String? fileName;
+@override final  int? fileSize;
+@override final  String? localPath;
+@override final  String? shareId;
 
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
@@ -245,16 +255,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChatMessage&&(identical(other.messageId, messageId) || other.messageId == messageId)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.text, text) || other.text == text)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.isOutgoing, isOutgoing) || other.isOutgoing == isOutgoing)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.status, status) || other.status == status));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChatMessage&&(identical(other.messageId, messageId) || other.messageId == messageId)&&(identical(other.conversationId, conversationId) || other.conversationId == conversationId)&&(identical(other.senderId, senderId) || other.senderId == senderId)&&(identical(other.senderName, senderName) || other.senderName == senderName)&&(identical(other.senderAvatar, senderAvatar) || other.senderAvatar == senderAvatar)&&(identical(other.text, text) || other.text == text)&&(identical(other.timestamp, timestamp) || other.timestamp == timestamp)&&(identical(other.isOutgoing, isOutgoing) || other.isOutgoing == isOutgoing)&&(identical(other.isRead, isRead) || other.isRead == isRead)&&(identical(other.status, status) || other.status == status)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.fileName, fileName) || other.fileName == fileName)&&(identical(other.fileSize, fileSize) || other.fileSize == fileSize)&&(identical(other.localPath, localPath) || other.localPath == localPath)&&(identical(other.shareId, shareId) || other.shareId == shareId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,messageId,conversationId,senderId,senderName,senderAvatar,text,timestamp,isOutgoing,isRead,status);
+int get hashCode => Object.hash(runtimeType,messageId,conversationId,senderId,senderName,senderAvatar,text,timestamp,isOutgoing,isRead,status,kind,fileName,fileSize,localPath,shareId);
 
 @override
 String toString() {
-  return 'ChatMessage(messageId: $messageId, conversationId: $conversationId, senderId: $senderId, senderName: $senderName, senderAvatar: $senderAvatar, text: $text, timestamp: $timestamp, isOutgoing: $isOutgoing, isRead: $isRead, status: $status)';
+  return 'ChatMessage(messageId: $messageId, conversationId: $conversationId, senderId: $senderId, senderName: $senderName, senderAvatar: $senderAvatar, text: $text, timestamp: $timestamp, isOutgoing: $isOutgoing, isRead: $isRead, status: $status, kind: $kind, fileName: $fileName, fileSize: $fileSize, localPath: $localPath, shareId: $shareId)';
 }
 
 
@@ -265,7 +275,7 @@ abstract mixin class _$ChatMessageCopyWith<$Res> implements $ChatMessageCopyWith
   factory _$ChatMessageCopyWith(_ChatMessage value, $Res Function(_ChatMessage) _then) = __$ChatMessageCopyWithImpl;
 @override @useResult
 $Res call({
- String messageId, String conversationId, String senderId, String senderName, int senderAvatar, String text, int timestamp, bool isOutgoing, bool isRead, ChatMessageStatus status
+ String messageId, String conversationId, String senderId, String senderName, int senderAvatar, String text, int timestamp, bool isOutgoing, bool isRead, ChatMessageStatus status, ChatMessageKind kind, String? fileName, int? fileSize, String? localPath, String? shareId
 });
 
 
@@ -282,7 +292,7 @@ class __$ChatMessageCopyWithImpl<$Res>
 
 /// Create a copy of ChatMessage
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? messageId = null,Object? conversationId = null,Object? senderId = null,Object? senderName = null,Object? senderAvatar = null,Object? text = null,Object? timestamp = null,Object? isOutgoing = null,Object? isRead = null,Object? status = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? messageId = null,Object? conversationId = null,Object? senderId = null,Object? senderName = null,Object? senderAvatar = null,Object? text = null,Object? timestamp = null,Object? isOutgoing = null,Object? isRead = null,Object? status = null,Object? kind = null,Object? fileName = freezed,Object? fileSize = freezed,Object? localPath = freezed,Object? shareId = freezed,}) {
   return _then(_ChatMessage(
 messageId: null == messageId ? _self.messageId : messageId // ignore: cast_nullable_to_non_nullable
 as String,conversationId: null == conversationId ? _self.conversationId : conversationId // ignore: cast_nullable_to_non_nullable
@@ -294,7 +304,12 @@ as String,timestamp: null == timestamp ? _self.timestamp : timestamp // ignore: 
 as int,isOutgoing: null == isOutgoing ? _self.isOutgoing : isOutgoing // ignore: cast_nullable_to_non_nullable
 as bool,isRead: null == isRead ? _self.isRead : isRead // ignore: cast_nullable_to_non_nullable
 as bool,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
-as ChatMessageStatus,
+as ChatMessageStatus,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
+as ChatMessageKind,fileName: freezed == fileName ? _self.fileName : fileName // ignore: cast_nullable_to_non_nullable
+as String?,fileSize: freezed == fileSize ? _self.fileSize : fileSize // ignore: cast_nullable_to_non_nullable
+as int?,localPath: freezed == localPath ? _self.localPath : localPath // ignore: cast_nullable_to_non_nullable
+as String?,shareId: freezed == shareId ? _self.shareId : shareId // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

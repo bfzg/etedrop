@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:tdesign_flutter/tdesign_flutter.dart';
+
 import '../../../core/config/styles.dart';
 import 'message_avatar.dart';
 
@@ -57,6 +57,27 @@ class ConversationTile extends StatelessWidget {
                   ),
                 ),
               ),
+
+            if (unreadCount > 0)
+              Positioned(
+                right: 0,
+                top: 0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : '$unreadCount',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
         title: Column(
@@ -76,13 +97,6 @@ class ConversationTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (unreadCount > 0)
-                  TDBadge(
-                    TDBadgeType.message,
-                    count: '$unreadCount',
-                    maxCount: '99',
-                    showZero: false,
-                  ),
               ],
             ),
             const SizedBox(height: 4),

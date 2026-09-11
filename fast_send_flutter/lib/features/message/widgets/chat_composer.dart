@@ -141,48 +141,21 @@ class _ChatComposerState extends State<ChatComposer> {
         child: Column(
           children: [
             Expanded(
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.enter): () =>
-                      unawaited(_send()),
-                  const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-                      _insertNewline,
-                  const SingleActivator(
-                    LogicalKeyboardKey.enter,
-                    control: true,
-                  ): _insertNewline,
-                },
-                child: TextField(
-                  controller: _text,
-                  focusNode: _focus,
-                  minLines: 3,
-                  maxLines: 8,
-                  keyboardType: TextInputType.multiline,
-                  textInputAction: TextInputAction.newline,
-                  textAlignVertical: TextAlignVertical.top,
-                  decoration: InputDecoration(
-                    hintText: '输入消息，或拖入文件',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    hintStyle: TextStyle(
-                      color: theme.colorScheme.onSurfaceVariant.withValues(
-                        alpha: .7,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (_paths.isNotEmpty)
-                  Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final inputWidth = _paths.isEmpty
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth - 196).clamp(
+                          260.0,
+                          constraints.maxWidth,
+                        );
+                  return SingleChildScrollView(
                     child: Align(
-                      alignment: Alignment.centerLeft,
+                      alignment: Alignment.topLeft,
                       child: Wrap(
                         spacing: 8,
                         runSpacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
                           for (var i = 0; i < _paths.length; i++)
                             _AttachmentPreview(
@@ -190,10 +163,55 @@ class _ChatComposerState extends State<ChatComposer> {
                               onRemove: () =>
                                   setState(() => _paths.removeAt(i)),
                             ),
+                          SizedBox(
+                            width: inputWidth,
+                            child: CallbackShortcuts(
+                              bindings: {
+                                const SingleActivator(
+                                  LogicalKeyboardKey.enter,
+                                ): () =>
+                                    unawaited(_send()),
+                                const SingleActivator(
+                                  LogicalKeyboardKey.enter,
+                                  meta: true,
+                                ): _insertNewline,
+                                const SingleActivator(
+                                  LogicalKeyboardKey.enter,
+                                  control: true,
+                                ): _insertNewline,
+                              },
+                              child: TextField(
+                                controller: _text,
+                                focusNode: _focus,
+                                minLines: _paths.isEmpty ? 3 : 1,
+                                maxLines: 8,
+                                keyboardType: TextInputType.multiline,
+                                textInputAction: TextInputAction.newline,
+                                textAlignVertical: TextAlignVertical.top,
+                                decoration: InputDecoration(
+                                  hintText: _paths.isEmpty
+                                      ? '输入消息，或拖入文件'
+                                      : null,
+                                  border: InputBorder.none,
+                                  contentPadding: EdgeInsets.zero,
+                                  hintStyle: TextStyle(
+                                    color: theme.colorScheme.onSurfaceVariant
+                                        .withValues(alpha: .7),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ),
+                  );
+                },
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 IconButton(
                   tooltip: '表情',
                   icon: const Icon(Icons.emoji_emotions_outlined),

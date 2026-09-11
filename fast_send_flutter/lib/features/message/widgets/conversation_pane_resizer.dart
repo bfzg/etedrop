@@ -12,7 +12,7 @@ class ConversationPaneResizer extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onHorizontalDragUpdate: (details) => onDrag(details.delta.dx),
-        child: SizedBox(width: 3, child: Center(child: Container(width: 3))),
+        child: SizedBox(width: 2, child: Center(child: Container(width: 2))),
       ),
     );
   }

@@ -5,6 +5,8 @@ part 'chat_message.g.dart';
 
 enum ChatMessageStatus { sending, sent, delivered, failed }
 
+enum ChatMessageKind { text, file }
+
 @freezed
 abstract class ChatMessage with _$ChatMessage {
   const factory ChatMessage({
@@ -18,6 +20,11 @@ abstract class ChatMessage with _$ChatMessage {
     @Default(false) bool isOutgoing,
     @Default(false) bool isRead,
     @Default(ChatMessageStatus.sent) ChatMessageStatus status,
+    @Default(ChatMessageKind.text) ChatMessageKind kind,
+    String? fileName,
+    int? fileSize,
+    String? localPath,
+    String? shareId,
   }) = _ChatMessage;
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) =>

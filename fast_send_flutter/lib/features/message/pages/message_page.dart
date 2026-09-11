@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../contact/models/contact.dart';
+import '../../contact/models/chat_message.dart';
 import '../../contact/models/contact_state.dart';
 import '../../contact/providers/contact_provider.dart';
 import '../widgets/chat_view.dart';
@@ -217,7 +218,11 @@ class _MessagePageState extends ConsumerState<MessagePage> {
         .toList();
     if (matches.isEmpty) return null;
     matches.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-    return matches.first.text;
+    final latest = matches.first;
+    if (latest.kind == ChatMessageKind.file) {
+      return '[文件] ${latest.fileName ?? '文件'}';
+    }
+    return latest.text;
   }
 
   int _lastMessageTime(ContactBookState book, String conversationId) {

@@ -45,6 +45,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 color: Theme.of(
                   context,
                 ).colorScheme.outlineVariant.withValues(alpha: .45),
+                width: 0.5,
               ),
             ),
           ),
@@ -65,8 +66,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
               : ListView.builder(
                   padding: const EdgeInsets.all(20),
                   itemCount: messages.length,
-                  itemBuilder: (context, index) =>
-                      ChatBubble(message: messages[index]),
+                  itemBuilder: (context, index) => ChatBubble(
+                    message: messages[index],
+                    onDelete: () => ref
+                        .read(contactBookProvider.notifier)
+                        .deleteMessage(messages[index].messageId),
+                  ),
                 ),
         ),
         SafeArea(

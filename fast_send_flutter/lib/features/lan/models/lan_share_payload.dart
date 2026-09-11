@@ -32,6 +32,10 @@ class LanShareOfferPayload {
 
   /// 可选附言（旧版客户端忽略）
   final String? caption;
+  final String? chatMessageId;
+  final String? chatConversationId;
+  final String? chatConversationTitle;
+  final List<String> chatMemberIds;
 
   const LanShareOfferPayload({
     required this.shareId,
@@ -43,7 +47,13 @@ class LanShareOfferPayload {
     required this.files,
     required this.expiresAtMs,
     this.caption,
+    this.chatMessageId,
+    this.chatConversationId,
+    this.chatConversationTitle,
+    this.chatMemberIds = const [],
   });
+
+  bool get isChatFile => chatMessageId != null && chatConversationId != null;
 
   Map<String, dynamic> toJson() => {
     'shareId': shareId,
@@ -55,6 +65,11 @@ class LanShareOfferPayload {
     'files': files.map((e) => e.toJson()).toList(),
     'expiresAtMs': expiresAtMs,
     if (caption != null && caption!.isNotEmpty) 'caption': caption,
+    if (chatMessageId != null) 'chatMessageId': chatMessageId,
+    if (chatConversationId != null) 'chatConversationId': chatConversationId,
+    if (chatConversationTitle != null && chatConversationTitle!.isNotEmpty)
+      'chatConversationTitle': chatConversationTitle,
+    if (chatMemberIds.isNotEmpty) 'chatMemberIds': chatMemberIds,
   };
 
   static LanShareOfferPayload fromJson(Map<String, dynamic> json) {
@@ -71,6 +86,12 @@ class LanShareOfferPayload {
           .toList(),
       expiresAtMs: (json['expiresAtMs'] as num).toInt(),
       caption: json['caption'] as String?,
+      chatMessageId: json['chatMessageId'] as String?,
+      chatConversationId: json['chatConversationId'] as String?,
+      chatConversationTitle: json['chatConversationTitle'] as String?,
+      chatMemberIds: (json['chatMemberIds'] as List<dynamic>? ?? const [])
+          .map((e) => e.toString())
+          .toList(),
     );
   }
 

@@ -13,7 +13,8 @@ import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/incoming_transfer_toast_provider.dart';
 import '../../message/providers/message_provider.dart';
-import '../../contact/providers/contact_provider.dart';
+import '../../contact/services/lan_chat_file_bus.dart';
+import '../../contact/services/incoming_lan_chat_bus.dart';
 import '../../settings/providers/transfer_receive_prefs_provider.dart';
 import '../../../core/http/cancel_token.dart';
 import '../../../core/utils/android_public_downloads.dart';
@@ -86,6 +87,7 @@ class _OutgoingShare {
   final List<String> filePaths;
   final List<LanDevice> targets;
   final Timer expiryTimer;
+  final String? chatMessageId;
   final LanCancelToken uploadCancelToken = LanCancelToken();
   bool cancelled = false;
 
@@ -97,8 +99,11 @@ class _OutgoingShare {
     required this.filePaths,
     required this.targets,
     required this.expiryTimer,
+    this.chatMessageId,
     this.managedTempPathsToDeleteAfterDelivery = const [],
   });
+
+  bool get isChatFileShare => chatMessageId != null;
 }
 
 @Riverpod(keepAlive: true)
@@ -113,6 +118,7 @@ class LanManager extends _$LanManager {
 
   final Map<String, Completer<bool>> _pendingDecisions = {};
   final Map<String, _OutgoingShare> _outgoingShares = {};
+  final Map<String, String> _incomingChatShareMessageIds = {};
 
   /// 多设备同时接受时，每个上传任务结束递减；归零且任一批成功则收尾会话
   final Map<String, int> _outboundUploadRefCount = {};
@@ -151,8 +157,7 @@ class LanManager extends _$LanManager {
           : (cloudDir.isNotEmpty ? cloudDir : Directory.systemTemp.path),
       deviceId: deviceId,
       onShareOffer: _onIncomingShareOffer,
-      onChatMessage: (message) =>
-          ref.read(contactBookProvider.notifier).receiveLanMessage(message),
+      onChatMessage: (message) async => publishIncomingLanChat(message),
       onShareAccept: _onShareAcceptFromReceiver,
       onShareCancel: _onIncomingShareCancel,
       onReceiveUpload: _onReceiveUploadPermission,
@@ -378,6 +383,7 @@ class LanManager extends _$LanManager {
       s.expiryTimer.cancel();
     }
     _outgoingShares.clear();
+    _incomingChatShareMessageIds.clear();
     _outboundUploadRefCount.clear();
     _outboundHadSuccess.clear();
     _probeByDeviceId.clear();
@@ -387,6 +393,11 @@ class LanManager extends _$LanManager {
   // —— 接收：分享邀约 —— //
   Future<void> _onIncomingShareOffer(LanShareOfferPayload offer) async {
     if (DateTime.now().millisecondsSinceEpoch > offer.expiresAtMs) return;
+
+    if (offer.isChatFile) {
+      await _onIncomingChatFileOffer(offer);
+      return;
+    }
 
     final files = offer.files.map((e) => e.toJson()).toList();
     final added = ref
@@ -434,6 +445,57 @@ class LanManager extends _$LanManager {
     }
   }
 
+  Future<void> _onIncomingChatFileOffer(LanShareOfferPayload offer) async {
+    final first = offer.files.isEmpty ? null : offer.files.first;
+    if (first == null) return;
+    _incomingChatShareMessageIds[offer.shareId] = offer.chatMessageId!;
+    publishLanChatFileEvent(
+      LanChatFileEvent(
+        type: LanChatFileEventType.incomingOffer,
+        messageId: offer.chatMessageId!,
+        conversationId: offer.chatConversationId!,
+        senderId: offer.senderDeviceId,
+        senderName: offer.senderName,
+        senderAvatar: offer.senderAvatar,
+        fileName: first.name,
+        fileSize: first.size,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        shareId: offer.shareId,
+        conversationTitle: offer.chatConversationTitle,
+        memberIds: offer.chatMemberIds,
+      ),
+    );
+    try {
+      final myId = ref.read(deviceIdProvider) ?? '';
+      await LanTransferService().postShareAccept(
+        senderHost: offer.senderHost,
+        senderPort: offer.senderPort,
+        payload: LanShareAcceptPayload(
+          shareId: offer.shareId,
+          receiverDeviceId: myId,
+          accepted: true,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[chat][file][accept] failed=$e');
+      publishLanChatFileEvent(
+        LanChatFileEvent(
+          type: LanChatFileEventType.failed,
+          messageId: offer.chatMessageId!,
+          conversationId: offer.chatConversationId!,
+          senderId: offer.senderDeviceId,
+          senderName: offer.senderName,
+          senderAvatar: offer.senderAvatar,
+          fileName: first.name,
+          fileSize: first.size,
+          timestamp: DateTime.now().millisecondsSinceEpoch,
+          shareId: offer.shareId,
+          error: e.toString(),
+        ),
+      );
+    }
+  }
+
   /// 设置项「自动接收」：与消息卡片中手动点「接收」等价的批量分享接受流程。
   Future<void> _autoAcceptIncomingBatchShare(TransferMessage msg) async {
     if (!msg.isBatch || msg.shareId == null || msg.isOutgoing) return;
@@ -465,6 +527,24 @@ class LanManager extends _$LanManager {
   }
 
   Future<void> _onIncomingShareCancel(LanShareCancelPayload cancel) async {
+    final chatMessageId = _incomingChatShareMessageIds.remove(cancel.shareId);
+    if (chatMessageId != null) {
+      publishLanChatFileEvent(
+        LanChatFileEvent(
+          type: LanChatFileEventType.failed,
+          messageId: chatMessageId,
+          conversationId: '',
+          senderId: '',
+          senderName: '',
+          senderAvatar: 1,
+          fileName: '',
+          fileSize: 0,
+          timestamp: DateTime.now().millisecondsSinceEpoch,
+          shareId: cancel.shareId,
+        ),
+      );
+      return;
+    }
     ref
         .read(messageListProvider.notifier)
         .rejectByShareId(cancel.shareId, reason: '发送方已取消');
@@ -511,9 +591,11 @@ class LanManager extends _$LanManager {
 
     _outboundUploadRefCount[payload.shareId] =
         (_outboundUploadRefCount[payload.shareId] ?? 0) + 1;
-    ref
-        .read(messageListProvider.notifier)
-        .markOutgoingShareReceivingByShareId(payload.shareId);
+    if (!session.isChatFileShare) {
+      ref
+          .read(messageListProvider.notifier)
+          .markOutgoingShareReceivingByShareId(payload.shareId);
+    }
     unawaited(_uploadBatchToDevice(device, session));
   }
 
@@ -528,10 +610,28 @@ class LanManager extends _$LanManager {
       if (anyOk) {
         _finalizeOutboundShareDelivery(shareId);
       } else {
-        ref
-            .read(messageListProvider.notifier)
-            .markOutgoingShareFailedByShareId(shareId, '传输中断或接收失败，可让对方重试接收');
         final session = _outgoingShares.remove(shareId);
+        if (session?.isChatFileShare == true) {
+          publishLanChatFileEvent(
+            LanChatFileEvent(
+              type: LanChatFileEventType.failed,
+              messageId: session!.chatMessageId!,
+              conversationId: '',
+              senderId: '',
+              senderName: '',
+              senderAvatar: 1,
+              fileName: '',
+              fileSize: 0,
+              timestamp: DateTime.now().millisecondsSinceEpoch,
+              shareId: shareId,
+              error: '传输中断或接收失败',
+            ),
+          );
+        } else {
+          ref
+              .read(messageListProvider.notifier)
+              .markOutgoingShareFailedByShareId(shareId, '传输中断或接收失败，可让对方重试接收');
+        }
         if (session != null) {
           session.cancelled = true;
           session.expiryTimer.cancel();
@@ -555,9 +655,26 @@ class LanManager extends _$LanManager {
         ),
       );
     }
-    ref
-        .read(messageListProvider.notifier)
-        .markOutgoingShareCompletedByShareId(shareId);
+    if (session?.isChatFileShare == true) {
+      publishLanChatFileEvent(
+        LanChatFileEvent(
+          type: LanChatFileEventType.outgoingDelivered,
+          messageId: session!.chatMessageId!,
+          conversationId: '',
+          senderId: '',
+          senderName: '',
+          senderAvatar: 1,
+          fileName: '',
+          fileSize: 0,
+          timestamp: DateTime.now().millisecondsSinceEpoch,
+          shareId: shareId,
+        ),
+      );
+    } else {
+      ref
+          .read(messageListProvider.notifier)
+          .markOutgoingShareCompletedByShareId(shareId);
+    }
   }
 
   Future<void> _uploadBatchToDevice(
@@ -776,12 +893,111 @@ class LanManager extends _$LanManager {
     return shareId;
   }
 
+  Future<String> startChatFileShare({
+    required String absoluteFilePath,
+    required List<String> targetDeviceIds,
+    required String conversationId,
+    required String chatMessageId,
+    String? conversationTitle,
+    List<String> memberIds = const [],
+  }) async {
+    if (targetDeviceIds.isEmpty) {
+      throw Exception('请选择至少一台设备');
+    }
+    if (_listenPort == 0) {
+      throw Exception('本地服务未就绪');
+    }
+
+    final file = File(absoluteFilePath);
+    if (!await file.exists()) {
+      throw Exception('无法读取所选文件');
+    }
+
+    final manager = ref.read(deviceManagerProvider);
+    final config = manager.config ?? await manager.loadConfig();
+    final shareId = const Uuid().v4();
+    final expiresAt = DateTime.now()
+        .add(const Duration(minutes: 2))
+        .millisecondsSinceEpoch;
+    final fileMeta = LanShareFileMeta(
+      name: p.basename(absoluteFilePath),
+      size: await file.length(),
+    );
+
+    final targets = state
+        .where((d) => targetDeviceIds.contains(d.deviceId) && d.isOnline)
+        .toList();
+    if (targets.isEmpty) {
+      throw Exception('所选设备不在线或已离线，请等待设备上线后再试');
+    }
+
+    final timer = Timer(const Duration(minutes: 2), () {
+      cancelOutgoingShare(shareId);
+    });
+    _outgoingShares[shareId] = _OutgoingShare(
+      shareId: shareId,
+      filePaths: [absoluteFilePath],
+      targets: targets,
+      expiryTimer: timer,
+      chatMessageId: chatMessageId,
+    );
+
+    final transfer = LanTransferService();
+    var offered = false;
+    for (final d in targets) {
+      final ok = await transfer.ping(d.ip, d.port);
+      if (!ok) continue;
+      final hostForPeer =
+          await getOutboundLocalIPv4ForPeer(d.ip) ??
+          await getLanIPv4() ??
+          '127.0.0.1';
+      final payload = LanShareOfferPayload(
+        shareId: shareId,
+        senderDeviceId: config.deviceId,
+        senderName: config.deviceName,
+        senderAvatar: config.avatar,
+        senderHost: hostForPeer,
+        senderPort: _listenPort,
+        files: [fileMeta],
+        expiresAtMs: expiresAt,
+        chatMessageId: chatMessageId,
+        chatConversationId: conversationId,
+        chatConversationTitle: conversationTitle,
+        chatMemberIds: memberIds,
+      );
+      await transfer.postShareOffer(ip: d.ip, port: d.port, payload: payload);
+      offered = true;
+    }
+    if (!offered) {
+      cancelOutgoingShare(shareId);
+      throw Exception('所选设备无响应');
+    }
+    return shareId;
+  }
+
   void cancelOutgoingShare(String shareId, {bool userCancelled = false}) {
     final session = _outgoingShares.remove(shareId);
     if (session != null && !session.cancelled) {
       session.cancelled = true;
       session.expiryTimer.cancel();
       session.uploadCancelToken.cancel();
+      if (session.isChatFileShare) {
+        publishLanChatFileEvent(
+          LanChatFileEvent(
+            type: LanChatFileEventType.failed,
+            messageId: session.chatMessageId!,
+            conversationId: '',
+            senderId: '',
+            senderName: '',
+            senderAvatar: 1,
+            fileName: '',
+            fileSize: 0,
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+            shareId: shareId,
+            error: userCancelled ? '已取消' : '已超时',
+          ),
+        );
+      }
 
       final transfer = LanTransferService();
       final cancel = LanShareCancelPayload(shareId: shareId);
@@ -810,6 +1026,7 @@ class LanManager extends _$LanManager {
     final msg = ref
         .read(messageListProvider.notifier)
         .findIncomingByShareId(sid);
+    if (_incomingChatShareMessageIds.containsKey(sid)) return true;
     if (msg == null) return false;
     if (msg.status == TransferMessageStatus.pending) return false;
     if (msg.status == TransferMessageStatus.rejected) return false;
@@ -926,9 +1143,31 @@ class LanManager extends _$LanManager {
           fileCount: ctx.fileCount,
           absolutePath: savedPath,
         );
+        final messageId = _incomingChatShareMessageIds[ctx.shareId!];
+        if (messageId != null) {
+          publishLanChatFileEvent(
+            LanChatFileEvent(
+              type: LanChatFileEventType.saved,
+              messageId: messageId,
+              conversationId: '',
+              senderId: ctx.senderDeviceId,
+              senderName: ctx.senderName,
+              senderAvatar: ctx.senderAvatar,
+              fileName: ctx.fileName,
+              fileSize: ctx.fileSize,
+              timestamp: DateTime.now().millisecondsSinceEpoch,
+              localPath: savedPath,
+              shareId: ctx.shareId,
+            ),
+          );
+        }
       }
       if (ctx.fileIndex == ctx.fileCount - 1) {
         ref.read(transferReceiveSpeedProvider.notifier).clear(ctx.shareId!);
+        if (_incomingChatShareMessageIds.remove(ctx.shareId!) != null) {
+          ref.read(cloudFileListProvider.notifier).refresh();
+          return;
+        }
         final msg = msgNotifier.findIncomingByShareId(ctx.shareId!);
         if (msg != null) {
           msgNotifier.markCompleted(msg.id);
@@ -968,6 +1207,25 @@ class LanManager extends _$LanManager {
     );
     if (ctx.shareId != null && ctx.shareId!.isNotEmpty) {
       ref.read(transferReceiveSpeedProvider.notifier).clear(ctx.shareId!);
+      final chatMessageId = _incomingChatShareMessageIds.remove(ctx.shareId!);
+      if (chatMessageId != null) {
+        publishLanChatFileEvent(
+          LanChatFileEvent(
+            type: LanChatFileEventType.failed,
+            messageId: chatMessageId,
+            conversationId: '',
+            senderId: ctx.senderDeviceId,
+            senderName: ctx.senderName,
+            senderAvatar: ctx.senderAvatar,
+            fileName: ctx.fileName,
+            fileSize: ctx.fileSize,
+            timestamp: DateTime.now().millisecondsSinceEpoch,
+            shareId: ctx.shareId,
+            error: error,
+          ),
+        );
+        return;
+      }
       final msg = ref
           .read(messageListProvider.notifier)
           .findIncomingByShareId(ctx.shareId!);

@@ -62,11 +62,15 @@ abstract class _$AutoReceiveLanTransfer extends $Notifier<bool> {
   }
 }
 
+/// 在线播放时是否对不兼容格式进行转码（默认开启）
+
 @ProviderFor(VideoTranscodeEnabled)
 final videoTranscodeEnabledProvider = VideoTranscodeEnabledProvider._();
 
+/// 在线播放时是否对不兼容格式进行转码（默认开启）
 final class VideoTranscodeEnabledProvider
     extends $NotifierProvider<VideoTranscodeEnabled, bool> {
+  /// 在线播放时是否对不兼容格式进行转码（默认开启）
   VideoTranscodeEnabledProvider._()
     : super(
         from: null,
@@ -95,7 +99,9 @@ final class VideoTranscodeEnabledProvider
 }
 
 String _$videoTranscodeEnabledHash() =>
-    r'a3f7c21d8e4b96f0152c3d47e8a1b05f9c2e7d4a';
+    r'79eb21e065d446acf456d85ea53de2d79ce56d96';
+
+/// 在线播放时是否对不兼容格式进行转码（默认开启）
 
 abstract class _$VideoTranscodeEnabled extends $Notifier<bool> {
   bool build();

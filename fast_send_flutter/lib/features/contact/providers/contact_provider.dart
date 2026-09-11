@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
 import '../../../services/local_storage_service.dart';
@@ -13,6 +15,8 @@ import '../models/chat_message.dart';
 import '../models/contact.dart';
 import '../models/contact_group.dart';
 import '../models/contact_state.dart';
+import '../services/lan_chat_file_bus.dart';
+import '../services/incoming_lan_chat_bus.dart';
 import '../services/lan_chat_service.dart';
 
 const _contactsKey = 'contacts_v1';
@@ -40,6 +44,19 @@ class ContactBook extends Notifier<ContactBookState> {
     state = loaded;
     ref.listen<List<LanDevice>>(lanManagerProvider, (_, devices) {
       syncLanDevices(devices);
+    });
+    ref.listen<AsyncValue<LanChatPayload>>(incomingLanChatProvider, (_, next) {
+      next.whenData((message) {
+        receiveLanMessage(message);
+      });
+    });
+    ref.listen<AsyncValue<LanChatFileEvent>>(lanChatFileEventProvider, (
+      _,
+      next,
+    ) {
+      next.whenData((event) {
+        _handleLanChatFileEvent(event);
+      });
     });
     ref.listen<AsyncValue<Map<String, dynamic>>>(peerChatMessageProvider, (
       _,
@@ -300,11 +317,15 @@ class ContactBook extends Notifier<ContactBookState> {
     if (cleanPaths.isEmpty && (cleanCaption == null || cleanCaption.isEmpty)) {
       return;
     }
+    if (cleanCaption != null && cleanCaption.isNotEmpty) {
+      await sendText(conversationId, cleanCaption);
+    }
+    if (cleanPaths.isEmpty) return;
 
-    final targetIds = _targetIds(
-      conversationId,
-      ref.read(deviceIdProvider) ?? '',
-    );
+    final me = ref.read(deviceManagerProvider).config;
+    if (me == null) return;
+
+    final targetIds = _targetIds(conversationId, me.deviceId);
     final targets = state.contacts
         .where(
           (contact) =>
@@ -320,13 +341,168 @@ class ContactBook extends Notifier<ContactBookState> {
       throw Exception('当前会话没有可用的局域网联系人');
     }
 
-    await ref
-        .read(lanManagerProvider.notifier)
-        .startBatchShare(
-          absoluteFilePaths: cleanPaths,
+    final groupInfo = _groupInfo(conversationId);
+    final lan = ref.read(lanManagerProvider.notifier);
+    for (final path in cleanPaths) {
+      final file = File(path);
+      if (!await file.exists()) continue;
+      final message = ChatMessage(
+        messageId: const Uuid().v4(),
+        conversationId: conversationId,
+        senderId: me.deviceId,
+        senderName: me.deviceName,
+        senderAvatar: me.avatar,
+        text: '',
+        timestamp: DateTime.now().millisecondsSinceEpoch,
+        isOutgoing: true,
+        isRead: true,
+        status: ChatMessageStatus.sending,
+        kind: ChatMessageKind.file,
+        fileName: p.basename(path),
+        fileSize: await file.length(),
+        localPath: path,
+      );
+      state = state.copyWith(messages: [...state.messages, message]);
+      _persist();
+      try {
+        final shareId = await lan.startChatFileShare(
+          absoluteFilePath: path,
           targetDeviceIds: targets,
-          caption: cleanCaption?.isEmpty == true ? null : cleanCaption,
+          conversationId: conversationId,
+          chatMessageId: message.messageId,
+          conversationTitle: groupInfo?.name,
+          memberIds: groupInfo?.memberIds ?? const [],
         );
+        state = state.copyWith(
+          messages: [
+            for (final item in state.messages)
+              if (item.messageId == message.messageId)
+                item.copyWith(shareId: shareId)
+              else
+                item,
+          ],
+        );
+        _persist();
+      } catch (_) {
+        state = state.copyWith(
+          messages: [
+            for (final item in state.messages)
+              if (item.messageId == message.messageId)
+                item.copyWith(status: ChatMessageStatus.failed)
+              else
+                item,
+          ],
+        );
+        _persist();
+      }
+    }
+  }
+
+  void _handleLanChatFileEvent(LanChatFileEvent event) {
+    switch (event.type) {
+      case LanChatFileEventType.incomingOffer:
+        _receiveLanFileOffer(event);
+        break;
+      case LanChatFileEventType.saved:
+        _updateFileMessage(event.messageId, (message) {
+          return message.copyWith(
+            localPath: event.localPath ?? message.localPath,
+            status: ChatMessageStatus.delivered,
+          );
+        });
+        break;
+      case LanChatFileEventType.outgoingDelivered:
+        _updateFileMessage(
+          event.messageId,
+          (message) => message.copyWith(status: ChatMessageStatus.delivered),
+        );
+        break;
+      case LanChatFileEventType.failed:
+        _updateFileMessage(
+          event.messageId,
+          (message) => message.copyWith(status: ChatMessageStatus.failed),
+        );
+        break;
+    }
+  }
+
+  void _receiveLanFileOffer(LanChatFileEvent event) {
+    if (state.messages.any((m) => m.messageId == event.messageId)) return;
+    final conversationId = event.conversationId.startsWith('dm:')
+        ? 'dm:${event.senderId}'
+        : event.conversationId;
+    if (!state.contacts.any((c) => c.userId == event.senderId)) {
+      addByUserId(event.senderId);
+    }
+    var groups = state.groups;
+    if (conversationId.startsWith('group:')) {
+      final groupId = conversationId.substring(6);
+      if (!groups.any((g) => g.groupId == groupId)) {
+        final now = DateTime.now().millisecondsSinceEpoch;
+        final me = ref.read(deviceIdProvider) ?? '';
+        groups = [
+          ...groups,
+          ContactGroup(
+            groupId: groupId,
+            name: event.conversationTitle?.trim().isNotEmpty == true
+                ? event.conversationTitle!.trim()
+                : '群组',
+            ownerId: event.senderId,
+            memberIds: {...event.memberIds, event.senderId, me}.toList(),
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ];
+      }
+    }
+    state = state.copyWith(
+      groups: groups,
+      messages: [
+        ...state.messages,
+        ChatMessage(
+          messageId: event.messageId,
+          conversationId: conversationId,
+          senderId: event.senderId,
+          senderName: event.senderName,
+          senderAvatar: event.senderAvatar,
+          text: '',
+          timestamp: event.timestamp,
+          isOutgoing: false,
+          isRead: false,
+          status: ChatMessageStatus.sending,
+          kind: ChatMessageKind.file,
+          fileName: event.fileName,
+          fileSize: event.fileSize,
+          localPath: event.localPath,
+          shareId: event.shareId,
+        ),
+      ],
+    );
+    _persist();
+    NotificationService.instance.showIncomingChat(
+      senderName: event.senderName,
+      text: '[文件] ${event.fileName}',
+    );
+  }
+
+  void _updateFileMessage(
+    String messageId,
+    ChatMessage Function(ChatMessage message) update,
+  ) {
+    var changed = false;
+    state = state.copyWith(
+      messages: [
+        for (final item in state.messages)
+          if (item.messageId == messageId)
+            (() {
+              changed = true;
+              return update(item);
+            })()
+          else
+            item,
+      ],
+    );
+    if (changed) _persist();
   }
 
   List<String> _targetIds(String conversationId, String selfId) {
@@ -378,6 +554,15 @@ class ContactBook extends Notifier<ContactBookState> {
     ];
     if (!changed) return;
     state = state.copyWith(messages: messages);
+    _persist();
+  }
+
+  void deleteMessage(String messageId) {
+    final next = state.messages
+        .where((message) => message.messageId != messageId)
+        .toList();
+    if (next.length == state.messages.length) return;
+    state = state.copyWith(messages: next);
     _persist();
   }
 }

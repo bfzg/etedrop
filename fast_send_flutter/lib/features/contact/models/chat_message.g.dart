@@ -19,6 +19,13 @@ _ChatMessage _$ChatMessageFromJson(Map<String, dynamic> json) => _ChatMessage(
   status:
       $enumDecodeNullable(_$ChatMessageStatusEnumMap, json['status']) ??
       ChatMessageStatus.sent,
+  kind:
+      $enumDecodeNullable(_$ChatMessageKindEnumMap, json['kind']) ??
+      ChatMessageKind.text,
+  fileName: json['fileName'] as String?,
+  fileSize: (json['fileSize'] as num?)?.toInt(),
+  localPath: json['localPath'] as String?,
+  shareId: json['shareId'] as String?,
 );
 
 Map<String, dynamic> _$ChatMessageToJson(_ChatMessage instance) =>
@@ -33,6 +40,11 @@ Map<String, dynamic> _$ChatMessageToJson(_ChatMessage instance) =>
       'isOutgoing': instance.isOutgoing,
       'isRead': instance.isRead,
       'status': _$ChatMessageStatusEnumMap[instance.status]!,
+      'kind': _$ChatMessageKindEnumMap[instance.kind]!,
+      'fileName': instance.fileName,
+      'fileSize': instance.fileSize,
+      'localPath': instance.localPath,
+      'shareId': instance.shareId,
     };
 
 const _$ChatMessageStatusEnumMap = {
@@ -40,4 +52,9 @@ const _$ChatMessageStatusEnumMap = {
   ChatMessageStatus.sent: 'sent',
   ChatMessageStatus.delivered: 'delivered',
   ChatMessageStatus.failed: 'failed',
+};
+
+const _$ChatMessageKindEnumMap = {
+  ChatMessageKind.text: 'text',
+  ChatMessageKind.file: 'file',
 };
