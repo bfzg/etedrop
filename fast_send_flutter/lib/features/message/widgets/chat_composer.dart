@@ -5,9 +5,11 @@ import 'package:desktop_drop/desktop_drop.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:pasteboard/pasteboard.dart';
 import 'package:path/path.dart' as p;
 import 'package:tdesign_flutter/tdesign_flutter.dart';
 
+import '../../../core/config/emojis.dart';
 import '../../../core/utils/clipboard_image.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
 
@@ -25,6 +27,7 @@ class _ChatComposerState extends State<ChatComposer> {
   final _text = TextEditingController();
   final _focus = FocusNode();
   final _paths = <String>[];
+  final _recentEmojis = <String>[];
   bool _dragging = false;
   bool _sending = false;
 
@@ -72,11 +75,76 @@ class _ChatComposerState extends State<ChatComposer> {
     );
   }
 
-  Future<void> _pasteImage() async {
+  Future<void> _pasteFromClipboard() async {
     final bytes = await readClipboardImageBytes();
-    if (!mounted || bytes == null || bytes.isEmpty) return;
-    final path = await saveClipboardImageBytesToTempFile(bytes);
-    if (mounted) _addPaths([path]);
+    if (!mounted) return;
+    if (bytes != null && bytes.isNotEmpty) {
+      final path = await saveClipboardImageBytesToTempFile(bytes);
+      if (mounted) _addPaths([path]);
+      return;
+    }
+    try {
+      final files = await Pasteboard.files();
+      if (!mounted) return;
+      final existingFiles = files.where((path) => File(path).existsSync());
+      if (existingFiles.isNotEmpty) {
+        _addPaths(existingFiles);
+        return;
+      }
+    } catch (_) {}
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text;
+    if (text == null || text.isEmpty) return;
+    _insertText(text);
+  }
+
+  void _insertText(String insert) {
+    final value = _text.value;
+    final text = value.text;
+    final selection = value.selection;
+    final start = selection.isValid
+        ? selection.start.clamp(0, text.length)
+        : text.length;
+    final end = selection.isValid ? selection.end.clamp(0, text.length) : start;
+    _text.value = value.copyWith(
+      text: '${text.substring(0, start)}$insert${text.substring(end)}',
+      selection: TextSelection.collapsed(offset: start + insert.length),
+      composing: TextRange.empty,
+    );
+  }
+
+  void _insertEmoji(String emoji) {
+    _insertText(emoji);
+    setState(() {
+      _recentEmojis
+        ..remove(emoji)
+        ..insert(0, emoji);
+      if (_recentEmojis.length > 10) {
+        _recentEmojis.removeRange(10, _recentEmojis.length);
+      }
+    });
+    _focus.requestFocus();
+  }
+
+  Future<void> _showEmojiPicker(BuildContext buttonContext) async {
+    final box = buttonContext.findRenderObject() as RenderBox?;
+    if (box == null) return;
+    final offset = box.localToGlobal(Offset.zero);
+    final selected = await showMenu<String>(
+      context: context,
+      menuPadding: EdgeInsets.zero,
+      position: RelativeRect.fromLTRB(offset.dx, offset.dy - 8, offset.dx, 0),
+      items: [
+        PopupMenuItem<String>(
+          child: _EmojiPanel(
+            recent: _recentEmojis.isEmpty ? commonEmojis : _recentEmojis,
+            all: allEmojis,
+            onSelected: (emoji) => Navigator.of(context).pop(emoji),
+          ),
+        ),
+      ],
+    );
+    if (selected != null) _insertEmoji(selected);
   }
 
   void _insertNewline() {
@@ -179,6 +247,16 @@ class _ChatComposerState extends State<ChatComposer> {
                                   LogicalKeyboardKey.enter,
                                   control: true,
                                 ): _insertNewline,
+                                const SingleActivator(
+                                  LogicalKeyboardKey.keyV,
+                                  meta: true,
+                                ): () =>
+                                    unawaited(_pasteFromClipboard()),
+                                const SingleActivator(
+                                  LogicalKeyboardKey.keyV,
+                                  control: true,
+                                ): () =>
+                                    unawaited(_pasteFromClipboard()),
                               },
                               child: TextField(
                                 controller: _text,
@@ -212,29 +290,19 @@ class _ChatComposerState extends State<ChatComposer> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  tooltip: '表情',
-                  icon: const Icon(Icons.emoji_emotions_outlined),
-                  onPressed: () {
-                    final value = _text.value;
-                    _text.value = value.copyWith(
-                      text: '${value.text}🙂',
-                      selection: TextSelection.collapsed(
-                        offset: value.text.length + 2,
-                      ),
-                    );
-                  },
+                Builder(
+                  builder: (buttonContext) => IconButton(
+                    tooltip: '表情',
+                    icon: const Icon(Icons.emoji_emotions_outlined),
+                    onPressed: () => _showEmojiPicker(buttonContext),
+                  ),
                 ),
                 IconButton(
                   tooltip: '选择文件',
                   icon: const Icon(Icons.folder_outlined),
                   onPressed: _pickFiles,
                 ),
-                IconButton(
-                  tooltip: '粘贴图片',
-                  icon: const Icon(Icons.content_paste_outlined),
-                  onPressed: _pasteImage,
-                ),
+
                 const Spacer(),
                 TDButton(
                   type: TDButtonType.fill,
@@ -249,6 +317,84 @@ class _ChatComposerState extends State<ChatComposer> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _EmojiPanel extends StatelessWidget {
+  final List<String> recent;
+  final List<String> all;
+  final ValueChanged<String> onSelected;
+
+  const _EmojiPanel({
+    required this.recent,
+    required this.all,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 360,
+      height: 420,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(0, 10, 10, 0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              '最近使用',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF666666),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _EmojiGrid(emojis: recent, onSelected: onSelected),
+            const SizedBox(height: 18),
+            const Text(
+              '所有表情',
+              style: TextStyle(
+                fontSize: 13,
+                color: Color(0xFF666666),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 10),
+            _EmojiGrid(emojis: all, onSelected: onSelected),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmojiGrid extends StatelessWidget {
+  final List<String> emojis;
+  final ValueChanged<String> onSelected;
+
+  const _EmojiGrid({required this.emojis, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 6,
+      runSpacing: 6,
+      children: [
+        for (final emoji in emojis)
+          InkWell(
+            borderRadius: BorderRadius.circular(6),
+            onTap: () => onSelected(emoji),
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 22)),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
