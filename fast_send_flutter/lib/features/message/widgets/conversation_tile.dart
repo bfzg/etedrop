@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tdesign_flutter/tdesign_flutter.dart';
-
 import '../../../core/config/styles.dart';
 import 'message_avatar.dart';
 
@@ -13,7 +12,6 @@ class ConversationTile extends StatelessWidget {
   final bool online;
   final int unreadCount;
   final VoidCallback onTap;
-
   const ConversationTile({
     super.key,
     required this.title,
@@ -28,19 +26,15 @@ class ConversationTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withValues(alpha: .45),
-          ),
-        ),
-      ),
+    final primary = AppStyles.primary;
+    final secondaryTextColor = selected
+        ? Colors.white.withValues(alpha: .78)
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: .6);
+    return Container(
+      color: selected ? primary : Colors.transparent,
       child: ListTile(
         selected: selected,
-        selectedTileColor: AppStyles.primary.withValues(alpha: 0.08),
+        selectedColor: Colors.white,
         leading: Stack(
           children: [
             MessageAvatar(avatar: avatar, size: 44),
@@ -55,7 +49,9 @@ class ConversationTile extends StatelessWidget {
                     color: Colors.green,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Theme.of(context).colorScheme.surface,
+                      color: selected
+                          ? primary
+                          : Theme.of(context).colorScheme.surface,
                       width: 2,
                     ),
                   ),
@@ -63,24 +59,40 @@ class ConversationTile extends StatelessWidget {
               ),
           ],
         ),
-        title: Row(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Expanded(
-              child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: selected ? Colors.white : null,
+                      fontWeight: selected ? FontWeight.w600 : null,
+                    ),
+                  ),
+                ),
+                if (unreadCount > 0)
+                  TDBadge(
+                    TDBadgeType.message,
+                    count: '$unreadCount',
+                    maxCount: '99',
+                    showZero: false,
+                  ),
+              ],
             ),
-            if (unreadCount > 0)
-              TDBadge(
-                TDBadgeType.message,
-                count: '$unreadCount',
-                maxCount: '99',
-                showZero: false,
-              ),
+            const SizedBox(height: 4),
+            Text(
+              lastMessage ?? subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(color: secondaryTextColor, fontSize: 12),
+            ),
           ],
-        ),
-        subtitle: Text(
-          lastMessage ?? subtitle,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
         ),
         onTap: onTap,
       ),

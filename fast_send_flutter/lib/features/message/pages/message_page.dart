@@ -94,38 +94,51 @@ class _MessagePageState extends ConsumerState<MessagePage> {
 
   Widget _conversationList(BuildContext context, ContactBookState book) {
     final desktop = MediaQuery.sizeOf(context).width >= 700;
-    return Column(
-      children: [
-        if (desktop)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 18, 10, 10),
-            child: Row(
-              children: [
-                const Expanded(
-                  child: Text(
-                    '消息',
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+    return Container(
+      color: Color(0xFFeeeef0),
+      child: Column(
+        children: [
+          if (desktop)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 18, 10, 10),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      '消息',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.person_add_alt_1),
-                  tooltip: '添加联系人',
-                  onPressed: _addContact,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.group_add_outlined),
-                  tooltip: '创建群组',
-                  onPressed: _createGroup,
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.person_add_alt_1),
+                    tooltip: '添加联系人',
+                    onPressed: _addContact,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.group_add_outlined),
+                    tooltip: '创建群组',
+                    onPressed: _createGroup,
+                  ),
+                ],
+              ),
             ),
-          ),
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.only(bottom: 16),
-            children: [
-              for (final conversation in _sortedConversations(book))
-                ConversationTile(
+          Expanded(
+            child: ListView.separated(
+              itemCount: _getItemCount(book),
+              itemBuilder: (ctx, index) {
+                // 判断是不是空状态提示
+                if (book.contacts.isEmpty && book.groups.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text('正在寻找附近设备，或通过用户 ID 添加联系人'),
+                  );
+                }
+                final list = _sortedConversations(book);
+                final conversation = list[index];
+                return ConversationTile(
                   title: conversation.title,
                   subtitle: conversation.subtitle,
                   avatar: conversation.avatar,
@@ -135,16 +148,27 @@ class _MessagePageState extends ConsumerState<MessagePage> {
                   lastMessage: _lastMessage(book, conversation.conversationId),
                   unreadCount: _unreadCount(book, conversation.conversationId),
                   onTap: () => _selectConversation(conversation.conversationId),
-                ),
-              if (book.contacts.isEmpty && book.groups.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text('正在寻找附近设备，或通过用户 ID 添加联系人'),
-                ),
-            ],
+                );
+              },
+              separatorBuilder: (ctx, index) {
+                // 空状态不渲染分割线
+                if (book.contacts.isEmpty && book.groups.isEmpty) {
+                  return const SizedBox();
+                }
+                return Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Theme.of(
+                    ctx,
+                  ).colorScheme.onSurface.withValues(alpha: 0.05),
+                  indent: 16,
+                  endIndent: 16,
+                );
+              },
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -260,6 +284,13 @@ class _MessagePageState extends ConsumerState<MessagePage> {
     if (id != null && id.trim().isNotEmpty) {
       ref.read(contactBookProvider.notifier).addByUserId(id);
     }
+  }
+
+  int _getItemCount(ContactBookState book) {
+    if (book.contacts.isEmpty && book.groups.isEmpty) {
+      return 1; // 空状态只有1条提示文本
+    }
+    return _sortedConversations(book).length;
   }
 
   Future<void> _createGroup() async {

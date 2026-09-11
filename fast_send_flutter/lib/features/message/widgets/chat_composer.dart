@@ -205,21 +205,68 @@ class _ChatComposerState extends State<ChatComposer> {
                     ),
                     const Spacer(),
                     TDButton(
-                      type: TDButtonType.fill,
-                      size: TDButtonSize.small,
+                      type: TDButtonType.text,
+                      size: TDButtonSize.medium,
                       disabled: _sending,
-                      padding: const EdgeInsets.only(
-                        right: 12,
-                        top: 7,
-                        bottom: 0,
-                        left: 12,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      textStyle: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
                       ),
                       onTap: _sending ? null : _send,
-                      text: '发送',
+                      child: _sending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('发送'),
                     ),
                   ],
                 ),
               ],
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.resizeUpLeft,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onVerticalDragUpdate: (details) {
+                    setState(() {
+                      _height = (_height - details.delta.dy).clamp(150, 520);
+                    });
+                  },
+                  child: SizedBox(
+                    width: 28,
+                    height: 24,
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: Container(
+                        width: 16,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            top: BorderSide(
+                              color: theme.colorScheme.outlineVariant,
+                              width: 2,
+                            ),
+                            right: BorderSide(
+                              color: theme.colorScheme.outlineVariant,
+                              width: 2,
+                            ),
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(10),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
           ],
         ),
