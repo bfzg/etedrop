@@ -365,7 +365,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
         this.forwardShareSignaling(ws, message);
         break;
       case 'peer-connect':
-        this.forwardPeerConnect(message);
+        this.forwardPeerConnect(ws, message);
         break;
       default:
         this.sendSafe(ws, {
@@ -571,7 +571,11 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
     this.usageAnalyticsService.touchDeviceHeartbeat(deviceId);
   }
 
-  private forwardPeerConnect(message: WsMessage): void {
+  private forwardPeerConnect(source: WebSocket, message: WsMessage): void {
+    const sourceDeviceId = this.socketDeviceId.get(source);
+    if (!sourceDeviceId) {
+      return;
+    }
     const deviceId =
       typeof message.deviceId === 'string' ? message.deviceId.trim() : '';
     if (!deviceId) {
@@ -585,6 +589,7 @@ export class SignalingService implements OnModuleInit, OnModuleDestroy {
 
     this.sendSafe(target.ws, {
       type: 'peer-connect',
+      fromDeviceId: sourceDeviceId,
       data: message.data,
     });
   }

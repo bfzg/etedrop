@@ -26,6 +26,7 @@ class PeerDataChannel {
 
   late RTCPeerConnection _pc;
   RTCDataChannel? _dc;
+  late final Future<void> _ready;
   final int _blockSize;
   late EventQueue<dynamic> _eventQueue;
 
@@ -44,8 +45,12 @@ class PeerDataChannel {
   void Function(RTCIceCandidate candidate)? onICECandidate;
 
   /// 对应 Electron: onReceive
-  Future<void> Function(dynamic data, {required int size, required int duration})?
-      onReceive;
+  Future<void> Function(
+    dynamic data, {
+    required int size,
+    required int duration,
+  })?
+  onReceive;
 
   /// 对应 Electron: onError
   void Function(Object error)? onError;
@@ -67,8 +72,10 @@ class PeerDataChannel {
     bool initializeDataChannel = false,
   }) : _blockSize = blockSize {
     _eventQueue = EventQueue<dynamic>(_onData);
-    _init(configuration ?? {}, initializeDataChannel);
+    _ready = _init(configuration ?? {}, initializeDataChannel);
   }
+
+  Future<void> get ready => _ready;
 
   Future<void> _init(
     Map<String, dynamic> configuration,
@@ -131,7 +138,8 @@ class PeerDataChannel {
         state == RTCPeerConnectionState.RTCPeerConnectionStateFailed) {
       dispose();
       onDispose?.call();
-    } else if (state == RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
+    } else if (state ==
+        RTCPeerConnectionState.RTCPeerConnectionStateConnected) {
       onConnected?.call();
     }
   }
@@ -140,7 +148,9 @@ class PeerDataChannel {
   Future<void> _onData(dynamic data) async {
     if (_receiveOffset == _receiveCount) {
       // 新消息头
-      final header = jsonDecode(data is String ? data : utf8.decode(data as Uint8List));
+      final header = jsonDecode(
+        data is String ? data : utf8.decode(data as Uint8List),
+      );
       _receiveStartTime = DateTime.now().millisecondsSinceEpoch;
       _receiveOffset = 0;
       _receiveCount = header['count'] as int;
@@ -157,7 +167,10 @@ class PeerDataChannel {
 
       if (_receiveOffset == _receiveCount) {
         final endTime = DateTime.now().millisecondsSinceEpoch;
-        final totalSize = _receiveChunks.fold<int>(0, (sum, c) => sum + c.length);
+        final totalSize = _receiveChunks.fold<int>(
+          0,
+          (sum, c) => sum + c.length,
+        );
 
         dynamic result;
         if (_receiveType == 'string') {
@@ -207,12 +220,16 @@ class PeerDataChannel {
     final count = (bytes.length / _blockSize).ceil();
 
     // 发送头部
-    _dc!.send(RTCDataChannelMessage(jsonEncode({'count': count, 'type': type})));
+    _dc!.send(
+      RTCDataChannelMessage(jsonEncode({'count': count, 'type': type})),
+    );
 
     // 分块发送
     for (int i = 0; i < count; i++) {
       final start = i * _blockSize;
-      final end = (start + _blockSize > bytes.length) ? bytes.length : start + _blockSize;
+      final end = (start + _blockSize > bytes.length)
+          ? bytes.length
+          : start + _blockSize;
       final chunk = bytes.sublist(start, end);
 
       _dc!.send(RTCDataChannelMessage.fromBinary(chunk));
@@ -263,10 +280,16 @@ class PeerDataChannel {
     }
   }
 
+  Future<void> startOffer() async {
+    await _ready;
+    await _reNegotiation();
+  }
+
   /// 检查是否连接
   /// 对应 Electron: isConnected()
   bool get isConnected =>
-      _pc.connectionState == RTCPeerConnectionState.RTCPeerConnectionStateConnected;
+      _pc.connectionState ==
+      RTCPeerConnectionState.RTCPeerConnectionStateConnected;
 
   /// 释放资源
   /// 对应 Electron: dispose()

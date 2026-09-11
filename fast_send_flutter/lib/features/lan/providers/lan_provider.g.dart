@@ -41,7 +41,7 @@ final class LanManagerProvider
   }
 }
 
-String _$lanManagerHash() => r'dc54054fd7251df585badbb442abf4c22967d310';
+String _$lanManagerHash() => r'ef719166e7d8a619c040fff9101c2a84da60f628';
 
 abstract class _$LanManager extends $Notifier<List<LanDevice>> {
   List<LanDevice> build();

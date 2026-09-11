@@ -5,50 +5,42 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/app_layout.dart';
 import '../../widgets/bottom_nav_bar.dart';
 import '../../features/cloud/pages/cloud_page.dart';
-import '../../features/transfer/pages/send_page.dart';
 import '../../features/message/pages/message_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 
 class Routes {
   static const cloud = '/cloud';
-  static const send = '/send';
   static const messages = '/messages';
   static const settings = '/settings';
 }
 
 List<NavItemConfig> buildNavItems(AppLocalizations l10n) => [
-      NavItemConfig(
-        label: l10n.cloud,
-        outlinedIcon: Icons.cloud_outlined,
-        roundedIcon: Icons.cloud_rounded,
-        path: Routes.cloud,
-      ),
-      NavItemConfig(
-        label: l10n.nearby,
-        outlinedIcon: Icons.wifi_tethering,
-        roundedIcon: Icons.wifi_tethering,
-        path: Routes.send,
-      ),
-      NavItemConfig(
-        label: l10n.messages,
-        outlinedIcon: Icons.chat_bubble_outline,
-        roundedIcon: Icons.chat_bubble,
-        path: Routes.messages,
-      ),
-      NavItemConfig(
-        label: l10n.settings,
-        outlinedIcon: Icons.settings_outlined,
-        roundedIcon: Icons.settings_rounded,
-        path: Routes.settings,
-      ),
-    ];
+  NavItemConfig(
+    label: l10n.messages,
+    outlinedIcon: Icons.chat_bubble_outline,
+    roundedIcon: Icons.chat_bubble,
+    path: Routes.messages,
+  ),
+  NavItemConfig(
+    label: l10n.cloud,
+    outlinedIcon: Icons.cloud_outlined,
+    roundedIcon: Icons.cloud_rounded,
+    path: Routes.cloud,
+  ),
+  NavItemConfig(
+    label: l10n.settings,
+    outlinedIcon: Icons.settings_outlined,
+    roundedIcon: Icons.settings_rounded,
+    path: Routes.settings,
+  ),
+];
 
 // 定义全局 navigatorKey
 final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final router = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: Routes.cloud,
+  initialLocation: Routes.messages,
   routes: [
     // 底部导航页面
     StatefulShellRoute.indexedStack(
@@ -63,24 +55,16 @@ final router = GoRouter(
         StatefulShellBranch(
           routes: [
             GoRoute(
-              path: Routes.cloud,
-              builder: (context, state) => const CloudPage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: Routes.send,
-              builder: (context, state) => const SendPage(),
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
               path: Routes.messages,
               builder: (context, state) => const MessagePage(),
+            ),
+          ],
+        ),
+        StatefulShellBranch(
+          routes: [
+            GoRoute(
+              path: Routes.cloud,
+              builder: (context, state) => const CloudPage(),
             ),
           ],
         ),

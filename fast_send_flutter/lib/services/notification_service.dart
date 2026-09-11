@@ -142,4 +142,37 @@ class NotificationService {
       notificationDetails: details,
     );
   }
+
+  Future<void> showIncomingChat({
+    required String senderName,
+    required String text,
+  }) async {
+    await init();
+    const details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        'chat_channel',
+        'Messages',
+        channelDescription: 'Incoming message notifications',
+        importance: Importance.high,
+        priority: Priority.high,
+      ),
+      iOS: DarwinNotificationDetails(
+        interruptionLevel: InterruptionLevel.active,
+      ),
+      macOS: DarwinNotificationDetails(
+        interruptionLevel: InterruptionLevel.active,
+      ),
+      linux: LinuxNotificationDetails(defaultActionName: 'Open'),
+      windows: WindowsNotificationDetails(),
+    );
+    final id = _safeNotificationId(
+      'chat|$senderName|${DateTime.now().millisecondsSinceEpoch}',
+    );
+    await _plugin.show(
+      id: id,
+      title: senderName,
+      body: text,
+      notificationDetails: details,
+    );
+  }
 }

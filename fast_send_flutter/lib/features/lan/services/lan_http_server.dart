@@ -8,6 +8,7 @@ import 'package:path/path.dart' as p;
 import '../../../core/utils/resumable_transfer.dart';
 import '../../../core/utils/unique_file_path.dart';
 import '../models/lan_share_payload.dart';
+import '../../contact/services/lan_chat_service.dart';
 import 'lan_http_context.dart';
 
 class LanHttpServer {
@@ -45,6 +46,7 @@ class LanHttpServer {
 
   /// 收到分享邀约（仅元数据，不含文件）
   final Future<void> Function(LanShareOfferPayload offer)? onShareOffer;
+  final Future<void> Function(LanChatPayload message)? onChatMessage;
 
   /// 接收方回调发送方：用户已接受/拒绝（仅发送端需要处理）
   final Future<void> Function(LanShareAcceptPayload payload)? onShareAccept;
@@ -70,6 +72,7 @@ class LanHttpServer {
     required this.saveDirectory,
     required this.deviceId,
     this.onShareOffer,
+    this.onChatMessage,
     this.onShareAccept,
     this.onShareCancel,
     this.onReceiveUpload,
@@ -122,6 +125,9 @@ class LanHttpServer {
       } else if (request.method == 'POST' &&
           request.uri.path == '/share-cancel') {
         await _handleShareCancel(request);
+      } else if (request.method == 'POST' &&
+          request.uri.path == '/chat-message') {
+        await _handleChatMessage(request);
       } else if (request.method == 'POST' && request.uri.path == '/upload') {
         await _handleUpload(request);
       } else {
@@ -133,6 +139,26 @@ class LanHttpServer {
       request.response.statusCode = HttpStatus.internalServerError;
       await request.response.close();
     }
+  }
+
+  Future<void> _handleChatMessage(HttpRequest request) async {
+    if (onChatMessage == null) {
+      request.response.statusCode = HttpStatus.notImplemented;
+      await request.response.close();
+      return;
+    }
+    try {
+      final raw = await utf8.decoder.bind(request).join();
+      final map = jsonDecode(raw) as Map<String, dynamic>;
+      await onChatMessage!(LanChatPayload.fromJson(map));
+      request.response.statusCode = HttpStatus.ok;
+      request.response.headers.contentType = ContentType.json;
+      request.response.write(jsonEncode({'ok': true}));
+    } catch (e) {
+      request.response.statusCode = HttpStatus.badRequest;
+      request.response.write(e.toString());
+    }
+    await request.response.close();
   }
 
   void _handlePing(HttpRequest request) {

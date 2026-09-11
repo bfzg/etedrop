@@ -6,6 +6,7 @@ import 'dart:ui';
 
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:uuid/uuid.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -14,6 +15,7 @@ import '../../../core/config/server_endpoints.dart';
 import '../../../core/utils/nickname_utils.dart';
 import '../../settings/providers/server_line_provider.dart';
 import '../models/device_config.dart';
+import '../../transfer/services/peer_data_channel.dart';
 import 'share_p2p_handler.dart';
 
 enum DeviceConnectionState { disconnected, connecting, connected }
@@ -38,6 +40,10 @@ class DeviceManager {
   StreamSubscription? _wsSubscription;
   bool _disposed = false;
   final Map<String, ShareP2PHandler> _p2pHandlers = {};
+  final Map<String, PeerDataChannel> _peerChannels = {};
+  final Map<String, Completer<void>> _peerOpenWaiters = {};
+  final _peerMessageController =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   /// 由 [ServerEndpoints] / [resolveServerEndpointsSync] 初始化，随后随 [applyEndpoints] 与线路设置同步。
   late String _apiBaseUrl;
@@ -61,6 +67,8 @@ class DeviceManager {
 
   /// UI 通过此 stream 监听状态变化
   Stream<int> get stateStream => _stateController.stream;
+  Stream<Map<String, dynamic>> get peerMessageStream =>
+      _peerMessageController.stream;
 
   DeviceConfig? get config => _config;
   DeviceConnectionState get state => _state;
@@ -220,7 +228,13 @@ class DeviceManager {
       case 'device-online-ack':
         break;
       case 'peer-connect':
-        break;
+        final fromId = data['fromDeviceId'] as String?;
+        final signal = data['data'];
+        if (fromId != null && fromId.isNotEmpty && signal is Map) {
+          unawaited(
+            _handlePeerSignal(fromId, Map<String, dynamic>.from(signal)),
+          );
+        }
       case 'ping':
         _ws?.sink.add(jsonEncode({'type': 'heartbeat'}));
         break;
@@ -241,6 +255,109 @@ class DeviceManager {
         }
         break;
     }
+  }
+
+  PeerDataChannel _createPeerChannel(String peerId, {required bool initiator}) {
+    final existing = _peerChannels[peerId];
+    if (existing != null) return existing;
+
+    final open = _peerOpenWaiters.putIfAbsent(peerId, Completer<void>.new);
+    late final PeerDataChannel channel;
+    channel = PeerDataChannel(
+      configuration: {'iceServers': _pubIceServers},
+      initializeDataChannel: initiator,
+    );
+    channel.onSDP = (sdp) {
+      _sendPeerSignal(peerId, {
+        'kind': 'sdp',
+        'sdp': {'sdp': sdp.sdp, 'type': sdp.type},
+      });
+    };
+    channel.onICECandidate = (candidate) {
+      _sendPeerSignal(peerId, {
+        'kind': 'candidate',
+        'candidate': {
+          'candidate': candidate.candidate,
+          'sdpMid': candidate.sdpMid,
+          'sdpMLineIndex': candidate.sdpMLineIndex,
+        },
+      });
+    };
+    channel.onOpen = () {
+      if (!open.isCompleted) open.complete();
+    };
+    channel.onReceive = (value, {required size, required duration}) async {
+      if (value is! String) return;
+      try {
+        final message = jsonDecode(value);
+        if (message is Map) {
+          _peerMessageController.add({
+            'fromDeviceId': peerId,
+            ...Map<String, dynamic>.from(message),
+          });
+        }
+      } catch (_) {}
+    };
+    channel.onDispose = () {
+      if (_peerChannels[peerId] == channel) {
+        _peerChannels.remove(peerId);
+      }
+      final waiter = _peerOpenWaiters.remove(peerId);
+      if (waiter != null && !waiter.isCompleted) {
+        waiter.completeError(Exception('WebRTC 连接已断开'));
+      }
+    };
+    _peerChannels[peerId] = channel;
+    if (initiator) {
+      unawaited(channel.startOffer());
+    }
+    return channel;
+  }
+
+  void _sendPeerSignal(String peerId, Map<String, dynamic> signal) {
+    if (!isConnected) return;
+    _ws?.sink.add(
+      jsonEncode({'type': 'peer-connect', 'deviceId': peerId, 'data': signal}),
+    );
+  }
+
+  Future<void> _handlePeerSignal(
+    String peerId,
+    Map<String, dynamic> signal,
+  ) async {
+    final kind = signal['kind'];
+    if (kind == 'sdp') {
+      final raw = signal['sdp'];
+      if (raw is! Map) return;
+      final channel = _createPeerChannel(peerId, initiator: false);
+      await channel.setRemoteSDP(
+        RTCSessionDescription(raw['sdp'] as String?, raw['type'] as String?),
+      );
+      return;
+    }
+    if (kind == 'candidate') {
+      final raw = signal['candidate'];
+      if (raw is! Map) return;
+      final channel = _createPeerChannel(peerId, initiator: false);
+      await channel.addICECandidate(
+        RTCIceCandidate(
+          raw['candidate'] as String?,
+          raw['sdpMid'] as String?,
+          (raw['sdpMLineIndex'] as num?)?.toInt(),
+        ),
+      );
+    }
+  }
+
+  Future<void> sendPeerData(String peerId, Map<String, dynamic> message) async {
+    if (!isConnected) throw Exception('信令服务未连接');
+    final channel = _createPeerChannel(peerId, initiator: true);
+    await channel.ready;
+    final waiter = _peerOpenWaiters[peerId];
+    if (waiter != null && !waiter.isCompleted) {
+      await waiter.future.timeout(const Duration(seconds: 20));
+    }
+    await channel.sendData(jsonEncode(message));
   }
 
   /// 同一 peerId 复用 [ShareP2PHandler]，由 [ShareP2PHandler.handleOffer] 内关旧 PC。
@@ -291,6 +408,15 @@ class DeviceManager {
       unawaited(h.dispose());
     }
     _p2pHandlers.clear();
+    final channels = [..._peerChannels.values];
+    _peerChannels.clear();
+    for (final channel in channels) {
+      channel.dispose();
+    }
+    for (final waiter in _peerOpenWaiters.values) {
+      if (!waiter.isCompleted) waiter.completeError(Exception('连接已断开'));
+    }
+    _peerOpenWaiters.clear();
     _ws?.sink.close().catchError((_) {});
     _ws = null;
     _setState(DeviceConnectionState.disconnected, error: error);
@@ -306,6 +432,7 @@ class DeviceManager {
     _disposed = true;
     disconnect();
     _stateController.close();
+    _peerMessageController.close();
   }
 
   ({bool connected, String? deviceId}) get connectionStatus =>

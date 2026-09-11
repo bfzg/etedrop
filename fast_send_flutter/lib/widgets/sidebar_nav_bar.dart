@@ -6,6 +6,7 @@ import 'package:window_manager/window_manager.dart';
 import 'bottom_nav_bar.dart';
 import '../core/config/styles.dart';
 import '../features/message/providers/message_provider.dart';
+import '../features/contact/providers/contact_provider.dart';
 
 const double kSidebarWidth = 68;
 
@@ -25,6 +26,7 @@ class AppSidebarNavBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final pendingCount = ref.watch(pendingMessageCountProvider);
+    final unreadChats = ref.watch(unreadChatCountProvider);
     // macOS 下预留顶部安全距离，避免导航项与红黄绿按钮重叠（预留高度略收窄）
     final topInset = isMacOSPlatform() ? 38.0 : 10.0;
     final padding = EdgeInsets.fromLTRB(5.0, 5.0 + topInset, 5.0, 0.0);
@@ -57,9 +59,8 @@ class AppSidebarNavBar extends ConsumerWidget {
                       children: items.asMap().entries.map((entry) {
                         final index = entry.key;
                         final item = entry.value;
-                        final badge =
-                            (item.path == '/messages' && pendingCount > 0)
-                            ? pendingCount
+                        final badge = item.path == '/messages'
+                            ? pendingCount + unreadChats
                             : 0;
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 12),

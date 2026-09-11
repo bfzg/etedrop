@@ -13,6 +13,7 @@ import '../../device/providers/device_provider.dart';
 import '../../message/models/transfer_message.dart';
 import '../../message/providers/incoming_transfer_toast_provider.dart';
 import '../../message/providers/message_provider.dart';
+import '../../contact/providers/contact_provider.dart';
 import '../../settings/providers/transfer_receive_prefs_provider.dart';
 import '../../../core/http/cancel_token.dart';
 import '../../../core/utils/android_public_downloads.dart';
@@ -51,9 +52,7 @@ List<LanDevice> buildNearbyLanDevices({
   required int myHttpPort,
   required String myOs,
 }) {
-  final others = remotePeers
-      .where((d) => d.deviceId != myDeviceId)
-      .toList()
+  final others = remotePeers.where((d) => d.deviceId != myDeviceId).toList()
     ..sort(_compareRemoteLanPeers);
   final self = LanDevice(
     deviceId: myDeviceId,
@@ -152,6 +151,8 @@ class LanManager extends _$LanManager {
           : (cloudDir.isNotEmpty ? cloudDir : Directory.systemTemp.path),
       deviceId: deviceId,
       onShareOffer: _onIncomingShareOffer,
+      onChatMessage: (message) =>
+          ref.read(contactBookProvider.notifier).receiveLanMessage(message),
       onShareAccept: _onShareAcceptFromReceiver,
       onShareCancel: _onIncomingShareCancel,
       onReceiveUpload: _onReceiveUploadPermission,
@@ -241,8 +242,8 @@ class LanManager extends _$LanManager {
     final index = current.indexWhere((d) => d.deviceId == fresh.deviceId);
     final prev = index >= 0 ? current[index] : null;
     final isNew = prev == null;
-    final endpointChanged = prev != null &&
-        (prev.ip != fresh.ip || prev.port != fresh.port);
+    final endpointChanged =
+        prev != null && (prev.ip != fresh.ip || prev.port != fresh.port);
     final wasOffline = prev != null && !prev.isOnline;
 
     if (index >= 0) {

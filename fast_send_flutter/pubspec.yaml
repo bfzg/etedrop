@@ -71,6 +71,7 @@ dependencies:
   url_launcher: ^6.3.2
   flutter_foreground_task: ^9.2.2
   open_filex: ^4.7.0
+  tdesign_flutter: ^0.2.7
 
 dev_dependencies:
   flutter_test:
