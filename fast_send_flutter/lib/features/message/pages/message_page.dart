@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
+import '../../../widgets/ui/e_button.dart';
 import '../../contact/models/contact.dart';
 import '../../contact/models/chat_message.dart';
 import '../../contact/models/contact_state.dart';
@@ -276,18 +277,19 @@ class _MessagePageState extends ConsumerState<MessagePage> {
             autofocus: true,
             decoration: const InputDecoration(
               labelText: '用户 ID',
-              hintText: '输入对方的 WebRTC 用户 ID',
+              hintText: '输入对方的用户 ID',
             ),
           ),
         ),
         actions: [
-          TextButton(
+          EButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            text: '取消',
+            variant: EButtonVariant.subtle,
           ),
-          FilledButton(
+          EButton(
             onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('添加'),
+            text: '添加',
           ),
         ],
       ),

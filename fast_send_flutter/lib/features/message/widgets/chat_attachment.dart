@@ -7,6 +7,7 @@ import 'package:pasteboard/pasteboard.dart';
 import 'package:path/path.dart' as p;
 
 import '../../../core/utils/reveal_file_in_explorer.dart';
+import '../../../core/utils/file_type_icon.dart';
 import '../../contact/models/chat_message.dart';
 
 class ChatAttachment extends StatefulWidget {
@@ -102,7 +103,12 @@ class _ChatAttachmentState extends State<ChatAttachment> {
             ),
           ),
           const SizedBox(width: 16),
-          Icon(_iconForFile(name), color: const Color(0xFFE08A2E), size: 38),
+          Image.asset(
+            fileTypePngForFileName(name),
+            width: 42,
+            height: 42,
+            fit: BoxFit.contain,
+          ),
         ],
       ),
     );
@@ -204,21 +210,6 @@ class _ChatAttachmentState extends State<ChatAttachment> {
     );
     if (target == null || target.isEmpty) return;
     await source.copy(target);
-  }
-
-  IconData _iconForFile(String fileName) {
-    final ext = p.extension(fileName).toLowerCase();
-    if (ext == '.zip' || ext == '.rar' || ext == '.7z' || ext == '.tar') {
-      return Icons.folder_zip_outlined;
-    }
-    if (ext == '.pdf') return Icons.picture_as_pdf_outlined;
-    if (ext == '.mp4' || ext == '.mov' || ext == '.mkv') {
-      return Icons.movie_outlined;
-    }
-    if (ext == '.mp3' || ext == '.wav' || ext == '.flac') {
-      return Icons.audio_file_outlined;
-    }
-    return Icons.insert_drive_file_outlined;
   }
 
   String _formatFileSize(int bytes) {

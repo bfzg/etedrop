@@ -22,6 +22,7 @@ import '../services/lan_chat_service.dart';
 const _contactsKey = 'contacts_v1';
 const _groupsKey = 'contact_groups_v1';
 const _chatMessagesKey = 'chat_messages_v1';
+const _removedLanContactsKey = 'removed_lan_contacts_v1';
 
 final contactBookProvider = NotifierProvider<ContactBook, ContactBookState>(
   ContactBook.new,
@@ -34,13 +35,14 @@ final peerChatMessageProvider = StreamProvider<Map<String, dynamic>>((ref) {
 class ContactBook extends Notifier<ContactBookState> {
   @override
   ContactBookState build() {
+    final removedLan = _readStringSet(_removedLanContactsKey);
     var loaded = ContactBookState(
       contacts: _readList(_contactsKey, Contact.fromJson),
       groups: _readList(_groupsKey, ContactGroup.fromJson),
       messages: _readList(_chatMessagesKey, ChatMessage.fromJson),
     );
     state = loaded;
-    loaded = _withLanDevices(loaded, ref.read(lanManagerProvider));
+    loaded = _withLanDevices(loaded, ref.read(lanManagerProvider), removedLan);
     state = loaded;
     ref.listen<List<LanDevice>>(lanManagerProvider, (_, devices) {
       syncLanDevices(devices);
@@ -73,11 +75,14 @@ class ContactBook extends Notifier<ContactBookState> {
 
   ContactBookState _withLanDevices(
     ContactBookState current,
-    List<LanDevice> devices,
-  ) {
+    List<LanDevice> devices, [
+    Set<String>? removedLan,
+  ]) {
+    final removed = removedLan ?? _readStringSet(_removedLanContactsKey);
     final now = DateTime.now().millisecondsSinceEpoch;
     final next = [...current.contacts];
     for (final device in devices) {
+      if (!device.isOnline || removed.contains(device.deviceId)) continue;
       final index = next.indexWhere((c) => c.userId == device.deviceId);
       final existing = index >= 0 ? next[index] : null;
       final contact =
@@ -121,6 +126,16 @@ class ContactBook extends Notifier<ContactBookState> {
     }
   }
 
+  Set<String> _readStringSet(String key) {
+    final raw = LocalStorageService.instance.get<String>(key);
+    if (raw == null || raw.isEmpty) return <String>{};
+    try {
+      return (jsonDecode(raw) as List).whereType<String>().toSet();
+    } catch (_) {
+      return <String>{};
+    }
+  }
+
   void _persist() {
     LocalStorageService.instance.set<String>(
       _contactsKey,
@@ -133,6 +148,10 @@ class ContactBook extends Notifier<ContactBookState> {
     LocalStorageService.instance.set<String>(
       _chatMessagesKey,
       jsonEncode(state.messages.take(500).map((e) => e.toJson()).toList()),
+    );
+    LocalStorageService.instance.set<String>(
+      _removedLanContactsKey,
+      jsonEncode(_readStringSet(_removedLanContactsKey).toList()),
     );
   }
 
@@ -161,9 +180,22 @@ class ContactBook extends Notifier<ContactBookState> {
   }
 
   void removeContact(String userId) {
+    final matches = state.contacts.where((c) => c.userId == userId).toList();
+    final contact = matches.isEmpty ? null : matches.first;
     final next = state.contacts.where((c) => c.userId != userId).toList();
     if (next.length == state.contacts.length) return;
-    state = state.copyWith(contacts: next);
+    final conversationId = 'dm:$userId';
+    final messages = state.messages
+        .where((m) => m.conversationId != conversationId)
+        .toList();
+    if (contact?.autoDiscovered == true) {
+      final removed = _readStringSet(_removedLanContactsKey)..add(userId);
+      LocalStorageService.instance.set<String>(
+        _removedLanContactsKey,
+        jsonEncode(removed.toList()),
+      );
+    }
+    state = state.copyWith(contacts: next, messages: messages);
     _persist();
   }
 

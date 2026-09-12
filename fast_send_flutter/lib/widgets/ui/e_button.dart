@@ -17,6 +17,7 @@ enum EButtonVariant {
   outlined,
   text,
   danger,
+  subtle,
 }
 
 /// 按钮尺寸预设（影响最小高度、内边距、圆角、字号与图标）。
@@ -143,10 +144,10 @@ class EButton extends StatelessWidget {
     final primaryFg = destructive ? scheme.error : AppStyles.primary;
 
     TextStyle labelStyle(Color fg) => theme.textTheme.bodyMedium!.copyWith(
-          fontSize: spec.fontSize,
-          fontWeight: FontWeight.w500,
-          color: fg,
-        );
+      fontSize: spec.fontSize,
+      fontWeight: FontWeight.w500,
+      color: fg,
+    );
 
     Widget labelRow({required Color fg}) {
       return Row(
@@ -175,37 +176,69 @@ class EButton extends StatelessWidget {
     final minSize = Size(0, effectiveHeight);
 
     switch (variant) {
+      case EButtonVariant.subtle:
+        final bg = WidgetStateProperty.resolveWith<Color>((states) {
+          if (states.contains(WidgetState.disabled))
+            return const Color(0xFFE5E5E8);
+          if (states.contains(WidgetState.hovered) ||
+              states.contains(WidgetState.pressed))
+            return const Color(0xFFD6D6DA);
+          return const Color(0xFFEDEDF1);
+        });
+        return ConstrainedBox(
+          constraints: BoxConstraints(minHeight: effectiveHeight),
+          child: ElevatedButton(
+            onPressed: effectiveOnPressed,
+            style: ButtonStyle(
+              elevation: const WidgetStatePropertyAll(0),
+              shadowColor: const WidgetStatePropertyAll(Colors.transparent),
+              backgroundColor: bg,
+              foregroundColor: const WidgetStatePropertyAll(Colors.black),
+              padding: WidgetStatePropertyAll(effectivePadding),
+              minimumSize: WidgetStatePropertyAll(minSize),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(effectiveRadius),
+                ),
+              ),
+            ),
+            child: labelRow(fg: Colors.black),
+          ),
+        );
       case EButtonVariant.primary:
         return ConstrainedBox(
           constraints: BoxConstraints(minHeight: effectiveHeight),
           child: FilledButton(
             onPressed: effectiveOnPressed,
-            style: FilledButton.styleFrom(
-              backgroundColor: AppStyles.primary,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: AppStyles.primary.withValues(alpha: 0.38),
-              disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
-              padding: effectivePadding,
-              elevation: 0,
-              shadowColor: Colors.transparent,
-              surfaceTintColor: Colors.transparent,
-              minimumSize: minSize,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(effectiveRadius),
-              ),
-            ).copyWith(
-              overlayColor: WidgetStateProperty.resolveWith<Color?>(
-                (states) {
-                  if (states.contains(WidgetState.pressed)) {
-                    return Colors.white.withValues(alpha: 0.12);
-                  }
-                  if (states.contains(WidgetState.hovered)) {
-                    return Colors.white.withValues(alpha: 0.08);
-                  }
-                  return null;
-                },
-              ),
-            ),
+            style:
+                FilledButton.styleFrom(
+                  backgroundColor: AppStyles.primary,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppStyles.primary.withValues(
+                    alpha: 0.38,
+                  ),
+                  disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+                  padding: effectivePadding,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  minimumSize: minSize,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(effectiveRadius),
+                  ),
+                ).copyWith(
+                  overlayColor: WidgetStateProperty.resolveWith<Color?>((
+                    states,
+                  ) {
+                    if (states.contains(WidgetState.pressed)) {
+                      return Colors.white.withValues(alpha: 0.12);
+                    }
+                    if (states.contains(WidgetState.hovered)) {
+                      return Colors.white.withValues(alpha: 0.08);
+                    }
+                    return null;
+                  }),
+                ),
             child: labelRow(fg: Colors.white),
           ),
         );

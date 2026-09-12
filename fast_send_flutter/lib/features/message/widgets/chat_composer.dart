@@ -10,6 +10,8 @@ import 'package:path/path.dart' as p;
 
 import '../../../core/config/emojis.dart';
 import '../../../core/utils/clipboard_image.dart';
+import '../../../core/utils/file_type_icon.dart';
+import '../../../widgets/ui/e_button.dart';
 import '../../../core/utils/transfer_temp_cache.dart';
 
 class ChatComposer extends StatefulWidget {
@@ -303,15 +305,14 @@ class _ChatComposerState extends State<ChatComposer> {
                 ),
 
                 const Spacer(),
-                ElevatedButton(
-                  onPressed: _sending ? null : _send,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                  ),
-                  child: const Text('发送'),
+                EButton(
+                  text: '发送',
+                  onPressed: _send,
+                  loading: _sending,
+                  variant: EButtonVariant.subtle,
+                  size: EButtonSize.sm,
+                  radius: 6,
+                  padding: const EdgeInsets.symmetric(horizontal: 18),
                 ),
               ],
             ),
@@ -436,9 +437,14 @@ class _AttachmentPreview extends StatelessWidget {
               child: Image.file(file, width: 48, height: 48, fit: BoxFit.cover),
             )
           else
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 10),
-              child: Icon(Icons.insert_drive_file_outlined),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Image.asset(
+                fileTypePngForFileName(p.basename(path)),
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+              ),
             ),
           const SizedBox(width: 6),
           Expanded(
